@@ -74,7 +74,7 @@ terminal event without its start.
 | Ref rewrites | `ref.rewritten` — `repo_id`, `ref_id`, `old_sha`, `new_sha`, `operation_type`. | Use an observed Git update. Leave `operation_type` missing when the before and after IDs establish a rewrite and the operation is unavailable. The resulting audit's `rewrite_id` refers to the rewrite's `event_id`. Check the audit's head against the updated snapshot. |
 | Compaction and recovery | `context.compacted` — `session_id`, `thread_id`, `turn_id`, `compaction_id`, `trigger` (`manual`, `auto`). `task.state_changed` — `operation_id`, `action_type`, `session_id`, `thread_id`, `turn_id`, `compaction_id` when part of recovery. | Emit one event per completed compaction. A plan step transition or actual task mutation can supply the first state change. Reading state or polling a runner alone leaves the task state unchanged. Calculate time and observed token use between these boundaries. Mark usage partial when a response straddles a boundary and its attribution is unresolved. |
 | Context transfer | `session.forked` — `session_id`, `thread_id`, `source_thread_id`, `source_turn_id` at the copied boundary when known. `session.child_started` — `session_id`, `thread_id`, `parent_thread_id`, `parent_turn_id`. | Record the relationship and the inherited boundary. Attribute the child's own new work once, using root or parent turn correlation. Do not charge copied history as additional requests. |
-| Tokens | `model.usage` — `provider_id`, `session_id`, `thread_id`, `turn_id`, `root_turn_id`, `parent_thread_id`, `response_id`, `model`, `input_tokens`, `cached_input_tokens`, `cache_write_input_tokens`, `output_tokens`, `reasoning_output_tokens`. | Use per-response usage from the provider or a source with equivalent attribution. Keep ambiguous uses unassigned. See normalization below. |
+| Tokens | `model.usage` — `provider_id`, `session_id`, `thread_id`, `turn_id`, `root_turn_id`, `parent_thread_id`, `response_id`, `model`, measured request `duration_ms` when available, `input_tokens`, `cached_input_tokens`, `cache_write_input_tokens`, `output_tokens`, `reasoning_output_tokens`. | Use per-response usage from the provider or a source with equivalent attribution. Keep ambiguous uses unassigned. See normalization below. |
 | Automated permission reviews | `permission.review_started`, `permission.review_finished` — `review_id`, `session_id`, `thread_id`, `turn_id`. Finish adds `outcome`. | Use a review lifecycle source. A request for permission, policy denial, and automated review are separate events. Count distinct review IDs and measure review time separately from operator wait. |
 | Guard activations | `guard.activated` — `control_id`, `attempt_id`, `operation_id`, `head_sha`, `outcome`. | The guard emits an event when it evaluates its configured rule and reports the result. Use the attempt key once per control and report activations and blocking outcomes separately. |
 | Test disputes | `test.dispute_raised`, `test.dispute_resolved` — `dispute_id`, `test_id`, `criterion_id`, `baseline_sha`. Resolution adds `outcome`. | Use the dispute procedure and count distinct raised disputes. Repeated discussion of the same dispute keeps its ID. |
@@ -138,9 +138,9 @@ itself to confirm a live invocation and record known gaps alongside successes.
 
 | Surface | Mapping and verification boundary |
 | --- | --- |
-| Codex hooks and App Server | Map `PostCompact` to `context.compacted` using the hook turn and trigger. The live App Server `contextCompaction` item also gives an occurrence ID. Its `thread/fork` result gives lineage when available. A synchronous `SessionStart` matching `compact` can inject recovery context before the next request, including the immediate continuation of a mid-turn auto-compaction. It has no turn ID in the command input. `PostModelRequest` gives optional attempt usage and a model, with no provider response ID. The version-specific App Server `item/autoApprovalReview/*` stream supplies review ID and timings. Treat that unstable stream as a live-only adapter dependency. [Codex hooks][codex-hooks] · [App Server][codex-server] · [Review notification schema][codex-review] |
+| Codex hooks and App Server | For compaction counts, import `codex_app_server` `item/completed` notifications with a `contextCompaction` item and its stable ID. The version-specific `item/autoApprovalReview/*` notifications supply review ID and timings. `thread/fork` gives lineage when available. The `PostCompact` hook supplies a turn and trigger, but needs a separate occurrence receipt for reliable counting. A synchronous `SessionStart` matching `compact` can inject recovery context before the next request. It has no hook-input turn ID. [Codex hooks][codex-hooks] · [App Server][codex-server] · [Review notification schema][codex-review] |
 | Codex local rollout | The pinned source writes `session_meta`, `turn_context`, per-response `token_usage_record`, and `token_count` snapshots. Usage records carry response, thread, session, root turn, and turn IDs plus separate cache counters. Rolling snapshots have no response ID. This release persists `compacted` markers and treats guardian review events as transient. Pin the parser to the actual rollout producer and check these fields on a task-owned source sample. The transcript format is internal and the PATH CLI can differ from the producer. [Release usage writer][codex-writer] · [Persistence policy][codex-rollout] |
-| Claude Code hooks and monitoring | Use `PostCompact` for successful compact operations and ignore its summary. The hook gives session ID and trigger. Use a verified monitoring `prompt.id` or another observed turn key when present and leave idle or unjoined compactions without a turn ID. `SessionStart` with `source: "compact"` can add recovery context. Where monitoring is configured, use `api_request` for model, duration, request identity and usage. Correlate it by session, prompt and agent lineage where present. Fork hooks indicate a fork. Supply its source and copied boundary from a verified fork operation or leave them missing. `tool_decision` can identify an observed classifier verdict. `PermissionDenied` covers only a subset of permission events and can fire without a verdict. A complete classifier lifecycle count needs a verified source. [Claude Code hooks][claude-hooks] · [Claude Code monitoring][claude-monitoring] |
+| Claude Code hooks and monitoring | For compaction counts, import the documented `claude_code.compaction` monitoring record. Count successful events using session, native timestamp and process sequence together. A resumed session can reuse sequence numbers. Use `api_request` for usage and request duration. The `PostCompact` hook supplies session and trigger, but needs a separate occurrence receipt. Choose one primary compaction source. `SessionStart` with `source: "compact"` adds recovery context. A fork needs an explicit source relationship. A permission denial or tool decision alone cannot establish a complete automated-review lifecycle. [Claude Code hooks][claude-hooks] · [Monitoring][claude-monitoring] · [Compaction events](https://code.claude.com/docs/en/monitoring-usage#compaction-event) |
 | Claude Code CLI and VS Code panel | The panel bundles its own CLI. The panel and standalone CLI share local conversation history and project settings in the same project and profile. Use one Claude Code adapter for the shared sources. Record the engine version for each client the project uses, and verify IDE-only interactions when a metric relies on them. Check the allowlisted shape and live event path on the selected surfaces. [VS Code client and CLI][claude-vscode] |
 | CI and GitHub | Use workflow jobs for job and step status and timestamps, and the provider's run attempt for reruns. Use verified queue transitions and runner assignment events where exposed. A completed job payload alone leaves queue and assignment transitions unverified. Use the PR and push records for PR timing and observed ref changes. Use the existing task or audit record for acceptance and the structured runner for suite and failure facts. [Workflow jobs][github-jobs] · [GitHub webhooks][github-webhooks] |
 
@@ -150,6 +150,29 @@ measurement. Verify on a task-owned sample that the selected adapters emit the
 expected normalized events, handle cancellation and repeat delivery, and report
 missing intervals. Schema approval, adapter verification in both harnesses, and
 the measured adoption pilot are separate milestones.
+
+## Collect one task
+
+1. Agree the task, time window, data owner, allowed sources and journal
+   location. Take the [historical baseline](../ADOPTION.md#7-accept-the-profile)
+   before enabling collection. Choose one primary source per fact.
+2. Install a verified build of the companion. Create a private local profile
+   using the package's example. Give the task a stable alias. Set paths for
+   the task, audit or development records the project actually keeps. The
+   [companion instructions](https://github.com/kostysh/development-methodology/tree/v5/tools)
+   explain the profile, supported inputs, installation and recovery. Record
+   the chosen commit, package version and integrity value with the project.
+3. Record `task.started` and any subsequent `task.switched` through the
+   installed `methodology-metrics record PROFILE` command. Use
+   `methodology-metrics collect PROFILE SOURCE` to import an approved local
+   input. A project-scoped hook may call `methodology-metrics hook PROFILE SOURCE`
+   with the documented payload. Verify an allowed event, a replay and a
+   malformed or missing source. A passive hook reports a gap and returns
+   control to the task. Check the journal for approved fields before use.
+4. At acceptance, record `task.accepted`. An operator reads
+   `methodology-metrics summary PROFILE TASK --as-of UTC` and compares the
+   timing, counts and gaps to the manual chronology. Recheck corrective work
+   seven days after merge. Remove the local hook if the owner ends the pilot.
 
 [codex-hooks]: https://learn.chatgpt.com/docs/hooks
 [codex-server]: https://learn.chatgpt.com/docs/app-server

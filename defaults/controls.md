@@ -1,7 +1,7 @@
 # Defaults for deterministic controls
 
-**Status — proposed register.** Use this register to select checks for an
-adopting project. The project owner records the applicable rows, owners,
+Use this register to select checks for an adopting project. The project
+owner records the applicable rows, owners,
 inputs, supported hosts, commands, and mandatory gates in the
 [project profile](../PROJECT-PROFILE.md#tools-and-checks). Each row transfers
 only the stated mechanical check. Keep the existing review obligation until

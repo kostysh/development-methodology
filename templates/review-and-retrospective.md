@@ -36,11 +36,12 @@ For a formal plan, give a separate verdict for each subject from the
 
 - Question, time slice, and targeted/full mode: `{{SCOPE}}`.
 - Source universe, availability, exclusions: `{{SOURCES}}`.
+- Computed summary, reporting window, missing metrics: `{{SUMMARY}}`.
 - Established sequence of material events: `{{TIMELINE}}`.
 - What is an observation, a hypothesis, and a proven cause: `{{CAUSALITY}}`.
 - Earlier measures and their actual state with the owner: `{{PRIOR_FIXES}}`.
 
-| Problem ID | Primary events/evidence | Cause and confidence | Measure already taken | Remaining recommendation / disposition | Owner / acceptance / trigger |
+| Problem ID and linked repeats | Primary events/evidence | Cause, layer and confidence | Measure already taken | Remaining recommendation / disposition | Owner / control / acceptance |
 | --- | --- | --- | --- | --- | --- |
 | `{{PROBLEM}}` | `{{EVENTS}}` | `{{CAUSE}}` | `{{PRIOR_ACTION}}` | `{{RECOMMENDATION}}` | `{{OWNERSHIP}}` |
 
@@ -53,6 +54,7 @@ targeted case, a separate JSON/registry is not required.
 - Separate permission to create tasks / implement measures: `{{ACTION_AUTHORITY}}`.
 - Check for duplicates and the final readback: `{{TRACKING_RECONCILIATION}}`.
 - Next comparable work and the effectiveness criterion: `{{EFFECTIVENESS_CHECK}}`.
+- Resolved control, expected zero, observed value and coverage: `{{CONTROL}}`.
 
 An accepted report does not mean permission for external mutations and does
 not prove the effectiveness of the proposed measure.

@@ -96,11 +96,24 @@ FAILs, and the actual earlier fixes. Separate observation, a causal hypothesis,
 and confirmed causality. A search analyzer helps find an event, but does not
 automatically count semantic defects and does not prove completeness.
 
+Use the computed [process summary](../defaults/process-metrics.md) for counts
+and time. Verify direct quotations against the original record. If a source
+is missing, identify the conclusions its absence limits. Count negative
+verdicts, individual findings, distinct observations and confirmed causes
+separately. Link a repeat to its first observation.
+
 Deduplicate one problem across repeated observations. For each
 recommendation, state the persisting defect, the minimal change, the owner,
 acceptance, the activation condition, and the status: active, already
 implemented, rejected, superseded, or not applicable. Check an accepted
 earlier measure in its actual owner.
+
+Trace each cause to the layer that can correct it: environment or tools,
+harness configuration, methodology, project adaptation, skill, or requirements
+and specification. Compare the project rule with the package before assigning
+a package defect. Consider model behavior after checking those alternatives.
+Prioritize by frequency and time lost. At equal cost, address the environment
+or tools first.
 
 A full retrospective needs a consistent "source → event → cause → earlier fix
 → remaining measure" matrix and an independent check of completeness,
@@ -124,6 +137,10 @@ size, and changes in the composition of tasks.
 
 A new document, script, task, or audit PASS does not prove a speed-up or
 quality. On the next comparable work, check whether the measure prevented the
-original failure. If not, revisit the hypothesis and the narrowest rule. Do
+original failure, where it was first detected and whether acceptance required
+rework. Give each remedy a metric and carry one previously resolved defect as
+a control expected to stay at zero. For a rare case, exercise a known violation
+on a disposable input. Keep field effectiveness unknown until comparable work
+occurs. If the measure fails, revisit the hypothesis and the narrowest rule. Do
 not grow the process for every incident and do not introduce a metrics
 platform without a separate need.

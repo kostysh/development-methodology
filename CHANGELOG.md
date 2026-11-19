@@ -4,6 +4,20 @@ These entries are for a project that updates its copy of the package
 ([update procedure](ADOPTION.md#updating-the-methodology)). Each version
 states what requires action in the adopting project.
 
+## Unreleased — v5
+
+- Reviewers classify each finding using the [closure rules](method/06-verification.md#closing-review-findings).
+  Adopt the updated review form and choose the matching review skills. A
+  deterministic fix needs a failing-before and passing-after check through
+  the required operation and transport. Preserve the applicable domain review.
+- Record available historical metrics and their limits before enabling a
+  task-scoped [collector trial](defaults/process-metrics.md#collect-one-task).
+  Update the profile and retrospective form. The project owner decides
+  whether to keep the collector after the pilot.
+- Select applicable [deterministic controls](defaults/controls.md). Verify
+  the installed command against a known violation and a clean candidate
+  before transferring a check out of manual review.
+
 ## 0.4 — 2026-11-12
 
 Rule layers, document kinds, parallel work, teams.

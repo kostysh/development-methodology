@@ -118,6 +118,14 @@ union of overlapping intervals within each activity and report uncovered time
 as unexplained. Record missing history as unknown. A project starting without
 comparable history can use its first trial as the first observation.
 
+For a collector trial, authorize the named task and its sources, choose a
+private destination outside the task worktree, and verify the
+[selected adapters](defaults/process-metrics.md#source-adapters-and-evidence).
+Run the [setup and checks](defaults/process-metrics.md#collect-one-task)
+before relying on the journal. After the seven-day follow-up, compare its
+results to the manual chronology and let the project owner decide whether to
+keep collection enabled.
+
 Choose the `solo` or `team` mode and name the role owners
 ([team composition](method/12-agents.md#team-composition)).
 The project owner confirms the chosen route, mandatory checks, authority,

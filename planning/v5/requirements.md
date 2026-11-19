@@ -78,10 +78,10 @@ skills use the `v5` branch of `kostysh/skills`, based on the head of
 `5e3ded85aaeebe21260fae152841261874292fbc`. Both repositories publish
 implementation work to their respective `v5` branches.
 
-Document the verified runtime and host versions with each distribution. Claude
-Code may run in a terminal or an editor. The maintainer's current VS Code
-Insiders installation is one verification environment. Stage 1 records what
-each source exposes. The adopting owner decides on permanent collection after
+Document the verified runtime and host versions with each distribution. A
+project selects its Claude Code clients in the profile. Use the shared adapter
+and verify any client-specific events required by the project. Stage 1 records
+what each source exposes. The adopting owner decides on permanent collection after
 the pilot and on practices whose trigger is met.
 
 The owner selected the next suitable methodology development task on `v5`

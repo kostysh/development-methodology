@@ -5,6 +5,7 @@
 Read the [impact matrix and conclusions](impact-matrix.md) for the expected
 cost of each stage and the [execution requirements](requirements.md) for the
 build, test and acceptance obligations that apply across stages.
+The [implementation status](status.md) links stage decisions and pilot evidence.
 
 The goal is to shorten the time to an accepted task while preserving quality.
 Move checks that can reach a reliable verdict without model judgment out of

@@ -100,9 +100,15 @@ test("packs once and invokes the installed commands with isolated local data", {
   assert.deepEqual(run(["record", path, "extra"]), {
     status: 2, stdout: "", stderr: "methodology-metrics: invalid_arguments\n",
   });
-  const contract = spawnSync(process.execPath, ["--test", join(tools, "test/baseline-contract.test.ts")], {
+  const contract = spawnSync(process.execPath, [
+    "--test", join(tools, "test/baseline-contract.test.ts"), join(tools, "test/recovery-contract.test.ts"),
+  ], {
     cwd: project,
-    env: { ...process.env, METHODOLOGY_BASELINE_BIN: installedBin("methodology-baseline") },
+    env: {
+      ...process.env,
+      METHODOLOGY_BASELINE_BIN: installedBin("methodology-baseline"),
+      METHODOLOGY_RECOVERY_BIN: installedBin("methodology-recovery"),
+    },
     encoding: "utf8",
     timeout: 90_000,
   });

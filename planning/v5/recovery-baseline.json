@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "source": "9aa2a06277bdb7e14fbbe6bb32b0c0313efb7c0d",
+  "paths": [
+    ".github/workflows/methodology-tools.yml",
+    "tools/package-lock.json",
+    "tools/package.json",
+    "tools/test/package.packed.ts",
+    "tools/test/recovery-contract.test.ts",
+    "tools/tsconfig.json"
+  ],
+  "entries": [
+    {
+      "path": ".github/workflows/methodology-tools.yml",
+      "mode": "100644",
+      "oid": "9a9f9059b4b8112a221813e14842e8b5868b7431"
+    },
+    {
+      "path": "tools/package-lock.json",
+      "mode": "100644",
+      "oid": "b25d292624af8e4a303cc5126a1e12743dc36c14"
+    },
+    {
+      "path": "tools/package.json",
+      "mode": "100644",
+      "oid": "91db3f757344e40319b8baa81c863a1094c1659b"
+    },
+    {
+      "path": "tools/test/package.packed.ts",
+      "mode": "100644",
+      "oid": "e1813f9832b7edaf398976156beed429b906339a"
+    },
+    {
+      "path": "tools/test/recovery-contract.test.ts",
+      "mode": "100644",
+      "oid": "07dda10f79e2840b8915158493988e1bdb21bff2"
+    },
+    {
+      "path": "tools/tsconfig.json",
+      "mode": "100644",
+      "oid": "8c1640bc33e870229149c4eb8ecf3f04485bc13a"
+    }
+  ]
+}

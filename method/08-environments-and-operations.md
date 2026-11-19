@@ -59,6 +59,12 @@ according to real resources and isolation, not only different task names. A
 check of free memory/CPU/disk is an admission snapshot, not a guarantee of
 future load.
 
+When independent checks share mutable state, give each an isolated resource
+or serialize them across all runners that use it. Keep the participants of a
+deliberate concurrency test inside the same test run. The
+[control register](../defaults/controls.md#common-checks) describes how to
+verify the selected mechanism.
+
 If base images or caches are used, check their identity, provenance,
 compatibility, and the necessary hashes. Do not promote a provisional image to
 verified by hand-editing metadata. Distinguish the tool's baseline from the

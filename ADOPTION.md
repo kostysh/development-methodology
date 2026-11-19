@@ -19,7 +19,9 @@ conflicts. Keep its current owners. Do not replace the existing `AGENTS.md`,
 
 ## 2. Place and configure
 
-Copy this package into the chosen methodology folder. The recommended path is
+Copy the root Markdown files listed in the [contents](README.md#contents) and
+the `method/`, `defaults/`, and `templates/` directories into the chosen
+methodology folder. The recommended path is
 `docs/development-methodology/`; another path is acceptable if navigation is
 updated. Record the package version from the [README](README.md) in the profile.
 
@@ -27,6 +29,11 @@ Fill in the [profile](PROJECT-PROFILE.md). Every material choice must have an
 owner and a basis. Use real, existing commands and verify their semantics,
 environment, and side effects. If a command does not exist, record the gap;
 an invented command does not become a working control.
+
+Choose applicable checks from the [control register](defaults/controls.md).
+Record the trusted package version, command, owner and enforcing boundary in
+the profile. Verify the installed check on a clean input and a known
+violation before transferring its rule out of manual review.
 
 Decide the applicability of every section. A conditional section may be
 switched off only with an explanation, for example "no persistent storage,
@@ -98,6 +105,19 @@ scheme; old ones receive an ID and metadata when they are materially changed.
 
 ## 7. Accept the profile
 
+Before enabling a collector, establish the project's own process baseline.
+Select comparable completed tasks and a cutoff. With the data owner's
+permission, match their task records, local logs, Git revisions and CI attempts.
+Record the time window, number of tasks, sources and gaps in the
+[profile](PROJECT-PROFILE.md#process-metrics). Use the recorded execution
+start and acceptance for lead time. Keep card-to-merge and PR-to-merge as
+separate measures when those are the only timestamps available.
+
+Count an operator wait only while an explicit request blocks work. Take the
+union of overlapping intervals within each activity and report uncovered time
+as unexplained. Record missing history as unknown. A project starting without
+comparable history can use its first trial as the first observation.
+
 Choose the `solo` or `team` mode and name the role owners
 ([team composition](method/12-agents.md#team-composition)).
 The project owner confirms the chosen route, mandatory checks, authority,
@@ -126,8 +146,8 @@ the intended completion. Verify that the executor:
 7. Runs the real applicable commands and records their outcome.
 8. Confirms the final refs, environment, and statuses if they are part of the task.
 9. Preserves other people's state and finishes its own resources.
-10. Records, for the trial task, the values of the [metrics from the profile](PROJECT-PROFILE.md#process-metrics).
-    They become the baseline for later comparison.
+10. Records the trial's [process metrics](PROJECT-PROFILE.md#process-metrics)
+    using the same definitions as the baseline, with any gaps identified.
 
 Separately work through a negative case: a missing mandatory result, unclear
 access, a wrong record in an end-to-end test, or a lost response from an
@@ -146,8 +166,8 @@ require deliberately damaging the system.
 - [ ] The root `AGENTS.md`, `CONTRIBUTING.md`, and, if needed, `PLANS.md`
       link to the methodology; no `{{...}}` remain in them.
 - [ ] Relative links from entry points to the methodology and documents work.
-- [ ] The trial task is completed, including the negative case; baseline
-      metrics are recorded.
+- [ ] The trial task and negative case are complete. The profile identifies
+      the historical baseline or first observation and its evidence limits.
 - [ ] An owner for maintaining the methodology and the next review event are assigned.
 
 These checkmarks confirm adoption, not the effectiveness of the process.

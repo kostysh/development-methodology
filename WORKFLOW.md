@@ -47,7 +47,8 @@ No stage documents are created.
 8. **Implementation** in a task worktree, tests, living documentation.
    [05](method/05-implementation.md), [07](method/07-integration.md#isolation-and-preparation)
 9. **Checks and review**: fast checks, self-check, review by risk subjects,
-   then expensive runs. [06](method/06-verification.md)
+   [resolve findings](method/06-verification.md#closing-review-findings),
+   then expensive runs on the stable candidate. [06](method/06-verification.md)
 10. **Integration**: PR, candidate freshness, merge, readback.
     [07](method/07-integration.md)
 11. **Acceptance** in the target environment, if it is part of the task.

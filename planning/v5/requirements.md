@@ -1,6 +1,6 @@
 # Requirements for executing the development plan
 
-**Status — draft for the methodology owner and the maintainers of its tools.**
+**Status — execution contract for work on `v5`.**
 The owner requires every script delivered under this plan to be built from a
 properly configured package and covered by the tests it needs. The contract
 below defines observable acceptance for that requirement. It applies equally
@@ -70,11 +70,24 @@ contract applies whenever a stage delivers executable code.
 
 ## Decisions and handoff
 
-The owner still needs to choose the tooling repository and maintainer, and the
-supported package and host versions before promising a distribution. Stage 1
-will establish actual hook availability. Each conditional stage has its own
-adoption decision. These decisions affect the relevant delivery. They can be
-made separately as the evidence becomes available.
+The owner chose `tools/` in this repository for the executable companion.
+The methodology maintainers own the package, its build, tests and CI. The
+portable copy has a separate adoption boundary. Changes to the companion
+skills use the `v5` branch of `kostysh/skills`, based on the head of
+[skills PR 40](https://github.com/kostysh/skills/pull/40) at
+`5e3ded85aaeebe21260fae152841261874292fbc`. Both repositories publish
+implementation work to their respective `v5` branches.
+
+Document the verified runtime and host versions with each distribution. Claude
+Code may run in a terminal or an editor. The maintainer's current VS Code
+Insiders installation is one verification environment. Stage 1 records what
+each source exposes. The adopting owner decides on permanent collection after
+the pilot and on practices whose trigger is met.
+
+The owner selected the next suitable methodology development task on `v5`
+for the collector pilot. Agree the task identity, permitted records and hook
+configuration with the owner before reading its logs or enabling collection.
+Use only that task's data. Its seven-day follow-up starts at its real merge.
 
 For a methodology release, record adoption actions in the changelog and bump
 the version in the README. For a tool release, associate the instructions with

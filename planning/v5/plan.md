@@ -1,6 +1,6 @@
 # Development plan for deterministic checks and process measurement
 
-**Status — prepared for execution planning.** This is the maintainer plan on the
+**Status — implementation in progress.** This is the maintainer plan on the
 `v5` branch. The starting point is [methodology 0.4](../../README.md).
 Read the [impact matrix and conclusions](impact-matrix.md) for the expected
 cost of each stage and the [execution requirements](requirements.md) for the

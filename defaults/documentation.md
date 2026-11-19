@@ -9,6 +9,17 @@ directories map to the document classes and does not relocate documents en
 masse to match the names. A directory is created together with the first
 real document.
 
+## Verify links and anchors
+
+Run the project's renderer-aware link check on the candidate, including pages
+that the change did not edit. A renamed heading can break an incoming link
+from any of them. For GitHub-style Markdown, the built companion command is
+`methodology-check-links <project-root>`. On first adoption, remove a linked
+heading in a disposable copy and check that the command exits nonzero and
+identifies the referring page. Verify a clean copy as well. Use the site's own
+checks for generated routes. Record the installed package version and required
+check in the [profile](../PROJECT-PROFILE.md#tools-and-checks).
+
 ## Layout
 
 ```text

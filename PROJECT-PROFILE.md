@@ -138,6 +138,9 @@ Separately set the resource owner, data isolation, origin/target identity,
 CPU/RAM/disk admission, deadlines, retry limits, how results are stored,
 cleanup, and recovery after loss of control.
 
+For checks that share mutable state, name the resource, the runners that
+reach it, the isolation or lock they use, and its owner.
+
 Keep the secret/config inventory with the environment owner. The profile
 needs links and the names of secret classes, but not values and not user
 credentials.
@@ -159,16 +162,26 @@ credentials.
 
 ## Process metrics
 
-Baseline values are taken on the adoption trial task and serve as the basis
-for the [effectiveness check](method/14-learning-and-recovery.md#effectiveness-check).
+Use the [adoption procedure](ADOPTION.md#7-accept-the-profile) to establish the
+baseline before collection. Record comparable trial results for the
+[effectiveness check](method/14-learning-and-recovery.md#effectiveness-check).
+
+| Measurement setting | Project value |
+| --- | --- |
+| Evidence owner, approved inputs, local collection and summary access | Not set |
+| Task, audit and development-log locations; task key and worktree mapping | Not set |
+| Agent interfaces and versions in use; verified event sources and gaps | Not set |
+| Baseline dates, task selection and count; first observation if history is unavailable | Not set |
 
 | Metric | Measurement method | Baseline value and date |
 | --- | --- | --- |
 | Time from Ready to Done | Not set | Not set |
+| Execution start to acceptance; operator, agent, machine and unexplained time | Not set | Not set |
 | Review rounds per task | Not set | Not set |
 | Share of work after the first review | Not set | Not set |
 | Time waiting for the owner | Not set | Not set |
 | Duration of mandatory checks | Not set | Not set |
+| Corrective follow-ups within seven days of merge, with open windows identified | Not set | Not set |
 
 ## Roles and independence
 

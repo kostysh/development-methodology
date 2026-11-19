@@ -32,12 +32,11 @@ staffing, line counts or a delivery date.
 
 ## Conclusions
 
-1. **The largest structural decision is who ships the code.** The existing
-   package distributes principles, adoption instructions and blank templates.
-   The plan permits a collector skill or a set of scripts. The tooling
-   repository, maintainer, versions and compatibility policy remain choices for
-   the owner. Use the package and test contract for every selected delivery
-   route. [Package boundary](../../AGENTS.md#scope) ·
+1. **The largest structural change is maintaining executable tools.** The
+   owner chose a separately built companion in this repository's `tools/`.
+   Adopters still copy portable guidance and blank templates. The maintainers
+   now own versioned builds, host compatibility and installed-package tests.
+   [Package boundary](../../AGENTS.md#scope) ·
    [Execution requirements](requirements.md#build-and-test-contract)
 2. **Three chapters concentrate the coordination work.** Chapter 03 appears
    in stages 5, 6 and 8, chapter 06 in stages 4, 5 and 6, and chapter 12 in

@@ -13,15 +13,22 @@ Rules: [verification](../method/06-verification.md),
 - Coverage actually checked: `{{COVERAGE}}`.
 - Limitations and unknowns: `{{LIMITS}}`.
 
-| ID / severity | Locator | Violated contract | Observation and impact | Required fix | Evidence / status |
+| ID / severity / type | Locator | Violated contract | Observation and impact | Required fix or disposition | Evidence / status |
 | --- | --- | --- | --- | --- | --- |
-| `{{FINDING}}` | `{{LOCATION}}` | `{{CONTRACT}}` | `{{IMPACT}}` | `{{ACTION}}` | `{{EVIDENCE}}` |
+| `{{FINDING / SEVERITY / TYPE}}` | `{{LOCATION}}` | `{{CONTRACT}}` | `{{IMPACT}}` | `{{ACTION}}` | `{{EVIDENCE}}` |
 
 Verdict: `{{PASS_FAIL_BLOCKED_WITH_BOUNDARY}}`.
 
+Use the [finding types and closure rules](../method/06-verification.md#closing-review-findings).
+Record closure evidence and any evidence-backed objection and disposition in
+the existing finding row.
+
 A primary review requires the full claimed coverage. For a delta review, name
-the unchanged, previously checked evidence of exactly this subject and the new
-area. A PASS on another subject does not replace this subject's own check.
+the prior and current stable snapshots and link the original findings, fix
+commits, delta diff, and check results. Identify the unchanged evidence
+carried forward for this subject and the coverage of the new or previously
+missing area. A PASS on another subject does not replace this subject's own
+check.
 For a formal plan, give a separate verdict for each subject from the
 [planning rules](../method/03-planning.md).
 

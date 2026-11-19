@@ -7,9 +7,9 @@ initial request to a verified result, integration, operation, and process
 improvement. It is intended for the project owner, the technical lead, the
 executor, and the reviewer. Technology, team size, and domain are not fixed.
 
-It contains only the methodology and blank templates. There is no application,
-no requirements, contracts, tasks, data, mockups, configuration, migrations,
-CI code, or copies of files from the originating project. The formats of PRDs,
+The portable package contains the guidance and blank templates listed below.
+The hosting repository also maintains a separately built companion in `tools/`.
+An adopting project chooses its checks in the profile. The formats of PRDs,
 SPECs, decisions, plans, and review reports are defined by
 [agent skills](method/15-skills.md); the methodology defines when these
 documents are needed, what kind they are, and how they are accepted.
@@ -92,7 +92,7 @@ evidence at the stated boundary.
 | [PROJECT-PROFILE.md](PROJECT-PROFILE.md) | Blank project profile: owners, authority, checks, documentation, skills |
 | [WORKFLOW.md](WORKFLOW.md) | Three step-by-step routes: small change, feature, document |
 | [method/](method/) | Chapters 01–15: canonical rules |
-| [defaults/](defaults/) | Defaults: [documentation](defaults/documentation.md), [skills](defaults/skills.md) |
+| [defaults/](defaults/) | [Documentation](defaults/documentation.md), [skills](defaults/skills.md), [controls](defaults/controls.md), and [process metrics](defaults/process-metrics.md) |
 | [templates/](templates/README.md) | Blank forms and entry-point templates |
 | [GLOSSARY.md](GLOSSARY.md) | Terms |
 | [CHANGELOG.md](CHANGELOG.md) | Version history and actions on update |

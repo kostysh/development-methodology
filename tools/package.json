@@ -1,0 +1,33 @@
+{
+  "name": "@kostysh/development-methodology-tools",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Deterministic checks for the development methodology",
+  "type": "module",
+  "engines": {
+    "node": ">=24.12 <25"
+  },
+  "bin": {
+    "methodology-check-links": "./dist/check-links.js"
+  },
+  "files": [
+    "dist/"
+  ],
+  "scripts": {
+    "prebuild": "node --input-type=module -e \"import { rmSync } from 'node:fs'; rmSync('dist', { recursive: true, force: true });\"",
+    "build": "tsc --project tsconfig.json",
+    "prepack": "npm run build",
+    "test": "node --test test/*.test.ts",
+    "test:packed": "node --test test/*.packed.ts",
+    "check:links": "node dist/check-links.js"
+  },
+  "dependencies": {
+    "github-slugger": "2.0.0",
+    "markdown-it": "15.0.3",
+    "parse5": "8.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "typescript": "6.0.3"
+  }
+}

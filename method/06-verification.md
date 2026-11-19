@@ -13,7 +13,8 @@ checks are defined by the profile and by the owners of the changed areas.
 2. Run the fast checks of the affected parts: format, lint, types, build, tests.
 3. Do the self-check.
 4. Submit the stable version for review on the subjects the risk requires.
-5. After PASS, run the expensive checks once on the same version.
+5. [Resolve review findings](#closing-review-findings) in one batch. After
+   review passes, run the expensive checks once on the same stable candidate.
 6. Record the results with revision and locator. A red or unknown mandatory
    result blocks the transition.
 7. For the target environment, reconcile the deployed revision, run the matrix
@@ -101,13 +102,9 @@ and the reliability of the evidence. Handing over a result known to be
 unverified while counting on the auditor is not acceptable.
 
 Formal review starts on a stable scope after the self-check and the fast
-checks: format, lint, types, build, tests of the affected parts. Expensive
-runs (the full end-to-end suite, a migration rehearsal, target environment
-acceptance) are run once, after PASS, on the same version. If an expensive run
-required an edit, review is repeated only for the delta. Which checks count as
-expensive is defined by the profile. An exploratory review may happen earlier
-but does not give a final PASS. The package names the commit/diff, files,
-sources, criteria, results, and limitations.
+checks: format, lint, types, build, tests of the affected parts. An exploratory
+review may happen earlier but does not give a final PASS. The package names
+the commit/diff, files, sources, criteria, results, and limitations.
 
 Choose separate subjects by risk: conformance to requirements, code,
 architecture, security/privacy, data/migration, UI/accessibility, and
@@ -117,15 +114,56 @@ formal audit; a change to authority or acceptance rules may require one
 regardless of size.
 
 A finding names the locator, the violated contract, the impact, the evidence,
-and the required fix. The first FAIL must contain the whole material set
-discovered. The report format is in the
+and the required fix or disposition. The first FAIL must contain the whole
+material set discovered. The report format is in the
 [review template](../templates/review-and-retrospective.md).
 
-A material edit after PASS makes the affected evidence stale. Re-review is
-limited to the delta and its direct consequences if the original coverage was
-sufficient; otherwise the missing area is reviewed as well. A change of
-auditor does not cancel findings. The procedure for repeated FAILs is in
-[diagnostics](14-learning-and-recovery.md).
+## Closing review findings
+
+Assign each finding one type in the existing report. Refer findings outside
+the task to their owner first. For an in-scope finding, determine whether it
+blocks acceptance, then choose the closure evidence for a blocker.
+
+- **(a) Deterministically verifiable.** A test can prove the correction of a
+  defect, missing check, or weak test.
+- **(b) Requires judgment.** Closing it requires assessing the structure,
+  architecture, algorithm, or a document edit that changes meaning.
+- **(c) Non-blocking.** Record the finding and any disposition. The current
+  review can pass with this finding open.
+- **(d) Outside the task.** Refer the finding to its owner for separate
+  disposition.
+
+Fix all in-scope blocking findings in one batch. Run fast checks on the
+affected parts and submit the stable batch for the applicable closure checks:
+
+- For **(a)**, show that the same test fails for the violated contract on the
+  earlier snapshot and passes on the fixed snapshot. Exercise the operation
+  and transport required by the contract. With that evidence, close the
+  finding on the fixed snapshot without another audit of the finding. If
+  the test is unavailable or its evidence falls short, keep the finding
+  open and retain the applicable review obligation. For security, money,
+  permissions, and migrations, a domain reviewer still checks the delta.
+- For **(b)**, use one delta audit per applicable review subject for the
+  batch. Verify the fixes and check for problems introduced by the delta.
+  Provide the original findings, fix commits, delta diff, and check results.
+
+Carry forward coverage of unchanged parts when the original review covered
+them sufficiently. Review any missing area required by the original scope.
+
+If the executor disagrees with a finding, record an objection with evidence
+in the existing report and submit it to the applicable delta audit or the
+operator for resolution. Keep the finding open until it has a disposition.
+The [existing round limits](14-learning-and-recovery.md#repeated-review-fails)
+still apply. A change of auditor does not cancel findings.
+
+Preserve the prior audit for a document edit that keeps its meaning. For a
+material edit after PASS, refresh the affected evidence and review the delta
+and its direct consequences where review applies.
+
+Run the profile's expensive checks once on the stable candidate after its
+applicable reviews pass. If a check leads to a material edit, follow the
+rules above for the delta and the [run composition rules](#run-composition)
+for the changed candidate.
 
 ## Target environment acceptance
 

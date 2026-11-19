@@ -6,7 +6,10 @@ or the policy of its hosting repository. Start with [README.md](README.md),
 
 ## Scope
 
-- Keep only reusable process guidance, adoption instructions, and blank templates.
+- Keep the portable package limited to reusable guidance, adoption instructions,
+  and blank templates. The hosting repository also maintains its executable
+  companion in `tools/`, its checks in `.github/workflows/`, and maintainer
+  plans in `planning/`. Keep those outside the copy taken by an adopter.
 - Do not import application code, contracts, product requirements, customer data,
   task registers, designs, migrations, workflows, environment files, credentials,
   or historical project evidence.

@@ -92,7 +92,7 @@ evidence at the stated boundary.
 | [PROJECT-PROFILE.md](PROJECT-PROFILE.md) | Blank project profile: owners, authority, checks, documentation, skills |
 | [WORKFLOW.md](WORKFLOW.md) | Three step-by-step routes: small change, feature, document |
 | [method/](method/) | Chapters 01–15: canonical rules |
-| [defaults/](defaults/) | [Documentation](defaults/documentation.md), [skills](defaults/skills.md), [controls](defaults/controls.md), and [process metrics](defaults/process-metrics.md) |
+| [defaults/](defaults/) | [Documentation](defaults/documentation.md), [skills](defaults/skills.md), [controls](defaults/controls.md), [metrics](defaults/process-metrics.md), [task recovery](defaults/task-recovery.md), [merge train](defaults/merge-train.md) |
 | [templates/](templates/README.md) | Blank forms and entry-point templates |
 | [GLOSSARY.md](GLOSSARY.md) | Terms |
 | [CHANGELOG.md](CHANGELOG.md) | Version history and actions on update |

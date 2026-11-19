@@ -16,6 +16,8 @@ checks are defined by the profile and by the owners of the changed areas.
 4. Submit the stable version for review on the subjects the risk requires.
 5. [Resolve review findings](#closing-review-findings) in one batch. After
    review passes, run the expensive checks once on the same stable candidate.
+   With the merge train enabled, keep the per-task gates and run the expensive
+   suite [on the train](#verification-for-a-merge-train).
 6. Record the results with revision and locator. A red or unknown mandatory
    result blocks the transition.
 7. For the target environment, reconcile the deployed revision, run the matrix
@@ -129,6 +131,39 @@ A red, missing, or unknown mandatory result blocks the transition that
 depends on it. Another green test, a review PASS, or a residual-risk record
 does not cancel the gate. Changing the gate requires a decision of the rule
 owner; the executor does not replace a mandatory result with weaker evidence.
+
+## Verification for a merge train
+
+For admission, require passing format, lint, types, build, package tests,
+affected end-to-end scenarios, and the applicable task baseline tests on the
+current PR head. Require clean migration replay when a PR changes migrations.
+Close the applicable audit and publish its passing verdict as a status on
+that same head. The [train](07-integration.md#merge-train) runs the full
+expensive suite from the profile on the combined candidate. Serialize
+checks that share a mutable resource or give them isolated environments.
+
+1. Run the full suite on `C0`. Allow one infrastructure retry per train.
+   A second infrastructure failure stops integration and adds an environment
+   action to the report.
+2. Rerun only the failed tests on the same `C0`. If they pass, accept `C0`
+   under the flaky-test rule and record a defect with an owner. A recurrence
+   of the same flaky test within the profile's recurrence window makes the
+   defect blocking and holds integration.
+3. For a reproducible failure, rerun only the failed tests on ordered
+   prefixes of the queue. Attribute failure to the PR added at the first
+   failing prefix after a passing prefix or base. If two PRs fail only
+   together, exclude the later one. If the base also fails or no exclusion
+   is established by tests, hold integration for diagnosis.
+4. Rebuild as `C1` from the same base without the excluded PR and its
+   dependants. Give it the second and final full suite run if the budget
+   permits. A failing `C1` stops integration.
+
+Retry an interrupted operation on the same candidate. Count a full-suite
+retry against the full-run budget. Record each actual attempt. Hold
+integration if the remaining budget cannot verify the required candidate.
+
+Use the flaky-test rule only for this train suite. A failed mandatory build
+or test of the package that supplies the train still holds tool delivery.
 
 ## Self-check and independent review
 

@@ -19,7 +19,7 @@ risk triggers can move a task to a stricter route at any time.
 6. Do the self-check, including living documentation.
    [06](method/06-verification.md#self-check-and-independent-review),
    [13](method/13-artifacts-and-communication.md#living-documentation)
-7. Commit and integrate according to the profile. [07](method/07-integration.md)
+7. Commit and integrate through the [profile's route](method/07-integration.md#integration-queue).
 8. Give the operator the [checkpoint report](templates/checkpoint-report.md).
    Update the local [task state](templates/task-state.md) for agent recovery.
 
@@ -53,9 +53,10 @@ No stage documents are created.
    [05](method/05-implementation.md), [07](method/07-integration.md#isolation-and-preparation)
 9. **Checks and review**: fast checks, self-check, review by risk subjects,
    [resolve findings](method/06-verification.md#closing-review-findings),
-   then expensive runs on the stable candidate. [06](method/06-verification.md)
-10. **Integration**: PR, candidate freshness, merge, readback.
-    [07](method/07-integration.md)
+   then expensive runs on the stable candidate or the
+   [enabled train](method/06-verification.md#verification-for-a-merge-train).
+10. **Integration**: confirm PR readiness, integrate and read back the result.
+    Submit the PR to the [train](method/07-integration.md#merge-train) when enabled.
 11. **Acceptance** in the target environment, if it is part of the task.
     [06](method/06-verification.md#target-environment-acceptance), [08](method/08-environments-and-operations.md)
 12. **Closure**: reconciliation of tasks and dependencies, a validation record
@@ -80,8 +81,9 @@ step from steps 6–8.
    [06](method/06-verification.md#self-check-and-independent-review)
 5. Hand it over for acceptance to the owner of its class.
    [13](method/13-artifacts-and-communication.md#statuses-and-acceptance)
-6. Update the module index and links; integrate according to the profile.
-   [07](method/07-integration.md)
+6. Update the module index and links. Integrate according to the profile,
+   including the [documentation route](method/07-integration.md#merge-train)
+   if the train is enabled and the PR qualifies. [07](method/07-integration.md)
 
 A document is not declared a working feature. Runtime and deploy checks are
 added only when a corresponding claim is made.

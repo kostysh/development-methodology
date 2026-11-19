@@ -11,14 +11,11 @@ real document.
 
 ## Verify links and anchors
 
-Run the project's renderer-aware link check on the candidate, including pages
-that the change did not edit. A renamed heading can break an incoming link
-from any of them. For GitHub-style Markdown, the built companion command is
-`methodology-check-links <project-root>`. On first adoption, remove a linked
-heading in a disposable copy and check that the command exits nonzero and
-identifies the referring page. Verify a clean copy as well. Use the site's own
-checks for generated routes. Record the installed package version and required
-check in the [profile](../PROJECT-PROFILE.md#tools-and-checks).
+For GitHub-style Markdown, use `methodology-check-links <project-root>`
+on the whole candidate. Use the site's own checker for generated routes.
+Record the version and required check in the [profile](../PROJECT-PROFILE.md#tools-and-checks).
+If its result for this revision covers the link, the reviewer can use that
+result and focus on whether the destination serves the reader.
 
 ## Layout
 

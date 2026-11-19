@@ -45,6 +45,23 @@ reason; `unknown` blocks only the actions that depend on the missing decision.
 | Location of requirements, decisions, specs, plans, and evidence | See [Documentation and artifacts](#documentation-and-artifacts) |
 | Permitted exceptions and their review dates | No accepted exceptions |
 
+## Merge train
+
+Fill in this section only for the [conditional practice](method/07-integration.md#merge-train).
+Use the [GitHub default](defaults/merge-train.md) when it fits the project.
+
+| Setting | Project value |
+| --- | --- |
+| Activation decision, owner, and measured trigger evidence | Not set |
+| Protected branch, sole writer identity, and protection evidence | Not set |
+| Trusted train package and version, scheduler, runner, lock and status sources | Not set |
+| Expensive suite, approved temporary resource types and test environment, if applicable | Not set |
+| Night window, time zone, interval and maximum run duration | Not set |
+| PR limit `N`, migration PR limit, and full-suite run budget | Not set |
+| Recurrence window `M` in days | Not set |
+| Paths eligible for the documentation-only route | Not set |
+| Dry-run evidence, metrics source and report location | Not set |
+
 ## Documentation and artifacts
 
 Rules are in [documentation and artifacts](method/13-artifacts-and-communication.md),
@@ -102,7 +119,7 @@ install commands are in [defaults/skills.md](defaults/skills.md).
 | Implementation | `implementation-discipline`, `git-engineer`, stack skills | Not set | Not set |
 | Code and conformance review | `code-reviewer`, `spec-conformance-reviewer` | Not set | Not set |
 | Security and privacy review | `security-reviewer`, `gdpr-compliance` | Not set | Not set |
-| UI | `web-ux-engineer`, `frontend-design`, `web-ui-reviewer`, `pencil-dev` | Not set | Not set |
+| UI | `web-ux-engineer`, `frontend-design`, `web-ui-reviewer` | Not set | Not set |
 | Documentation | `documentation` | Not set | Not set |
 | Retrospective | `retrospective-analysis` | Not set | Not set |
 

@@ -44,11 +44,10 @@ or the policy of its hosting repository. Start with [README.md](README.md),
   claim. Preserve technical identifiers.
 - Record every released change in `CHANGELOG.md` with the actions an adopting
   project must take, and bump the version in `README.md`.
-- Check relative links and anchors, terminology against `GLOSSARY.md`, scope
-  leakage, consistency of conditional gates, that skill names appear only where
-  allowed, and that skill names and install commands still match the skills
-  repository. Review what a future reader must do,
-  not only whether a file exists.
+- Use the [documentation check](defaults/documentation.md#verify-links-and-anchors)
+  for local links and anchors. Review destinations, [terminology](GLOSSARY.md), scope,
+  conditional gates, and the reader's actions. Verify skill names, permitted
+  locations and install commands against the active catalog.
 - Report structural checks and walkthroughs separately from real-world adoption
   or measured process effectiveness. Do not claim either without evidence.
 - Follow the hosting repository and current user request for Git, publication,

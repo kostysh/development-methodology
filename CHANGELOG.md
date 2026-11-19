@@ -17,10 +17,16 @@ states what requires action in the adopting project.
 - Select applicable [deterministic controls](defaults/controls.md). Verify
   the installed command against a known violation and a clean candidate
   before transferring a check out of manual review.
+- Update the UI skill selection in the profile. The current catalog retired
+  `pencil-dev`. Projects with an earlier pinned copy can record their chosen
+  replacement when they update. [Catalog and update behavior](https://github.com/kostysh/skills/blob/082e6d78720c87e047e2ad08be45a4528259876c/README.md).
 - For the [protected test baseline](method/06-verification.md#protected-test-baseline),
   update the profile and plan entry point. Set up a trusted hook and required
   CI, then [pilot the route](ADOPTION.md#8-verify-on-one-task) on a medium-risk
   behavior change before adopting it.
+- Assess the [merge train trigger](method/07-integration.md#merge-train)
+  using process metrics. Fill in the train profile and
+  [pilot the route](ADOPTION.md#pilot-the-merge-train) before enabling it.
 - Replace links to the former combined handoff form with the
   [checkpoint report](templates/checkpoint-report.md) for people and the
   [task state file](templates/task-state.md) for the agent. Set its line

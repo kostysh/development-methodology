@@ -13,8 +13,9 @@ explicitly, not as its PASS.
 4. Open a PR with the problem, result, risk, links, and evidence.
 5. Before merge, check base, head, conflicts, checks, findings, approvals,
    and the uniqueness of new IDs.
-6. Merge according to the profile and re-read the PR, the final commit, and
-   the branches.
+6. Use the integration route in the profile. If the [merge train](#merge-train)
+   is enabled, the coordinator hands off to it. Re-read the PR, final commit,
+   and branches after integration.
 7. After deploy, check the actually deployed revision.
 8. Finish your own resources and synchronize the main checkout.
 
@@ -82,6 +83,62 @@ If several tasks are ready at the same time, the integration owner assembles
 them into one candidate: one rebase, one expensive run on the combined tree.
 On failure, the candidate is split by task to find the cause. Tasks with
 incompatible migrations do not go into one batch.
+
+## Merge train
+
+Consider a merge train when comparable tasks show both a material difference
+between expensive and fast check times and repeated delays between ready PRs.
+Use measured queue waits, rebases, and CI reruns after base updates. Use the
+[integration queue](#integration-queue) until the trigger is established and
+the owner completes [adoption](../ADOPTION.md#pilot-the-merge-train).
+
+Protect the integration branch so only the train's service account can
+update it. Agents submit PRs and cannot merge. The same account handles a
+documentation-only PR through fast checks when its entire delta matches the
+profile's approved paths. It waits for an active train to finish, then takes
+the same lock. It reconciles any unresolved write and rechecks the current
+base, PR head, and applicable gates before integrating.
+
+1. **Admit.** The train alone manages the queue label. Require
+   [per-task verification](06-verification.md#verification-for-a-merge-train),
+   including the published audit verdict on the current PR head, and check
+   that the PR integrates without conflicts. Remove the label on any new
+   commit and reconsider the PR on fresh evidence.
+2. **Start and recover.** Try the shared lock without waiting. Record an
+   overlap as a skip and exit. An urgent single-PR run needs operator
+   authorization and takes the same lock. After acquiring it, reconcile
+   any interrupted run, clean up its owned resources, and, if a prior
+   merge left the configured test environment behind, deploy the current
+   integration revision and read it back before proceeding. On an empty
+   queue, exit before allocating run resources. Enforce the profile timeout
+   across the run, including diagnosis, and record a timeout as an incident.
+3. **Assemble.** Take ready PRs in queue order up to the profile's limits
+   for total PRs and migration PRs. Record the current integration branch
+   OID and the exact PR heads. Assemble them in order on that fresh base.
+   Return a conflicting PR to its owner for resolution. A dependent PR
+   travels with its ready parent and leaves with it if the parent is
+   excluded. Freeze the first candidate, `C0`.
+4. **Verify.** Run the [expensive suite and bounded diagnosis](06-verification.md#verification-for-a-merge-train).
+   Integrate only an accepted candidate. Return an excluded PR with the
+   reason, failed test when applicable, run ID and log locator. A fix
+   follows the [type (a) route](06-verification.md#closing-review-findings)
+   for a reproducible defect. Count an exclusion as a
+   [fix and check cycle](14-learning-and-recovery.md#limit-on-a-chain-of-fixes).
+   A second exclusion for the same cause stops the task for the operator.
+5. **Integrate and read back.** Recheck the pinned heads and applicable
+   gates. Fast-forward the branch to the tested commit only if the remote
+   branch still has the expected OID. Hold the update if any check is stale.
+   Verify the actual branch OID and tree and confirm the included PRs are
+   marked merged and the excluded PRs remain out. Reconcile an uncertain
+   write before retrying. Deploy to the test environment within the
+   authority recorded in the profile and read back the deployed revision
+   when required. Production needs a separate operator decision and the
+   tree that passed the train.
+6. **Report.** Record each run and give the operator one morning summary
+   with pending decisions first. Use the [report form](../defaults/merge-train.md#morning-report).
+
+The [profile](../PROJECT-PROFILE.md#merge-train) and
+[GitHub default](../defaults/merge-train.md) specify the runner and controls.
 
 ## Pipeline and release
 

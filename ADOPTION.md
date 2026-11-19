@@ -135,6 +135,10 @@ before relying on the journal. After the seven-day follow-up, compare its
 results to the manual chronology and let the project owner decide whether to
 keep collection enabled.
 
+Record any measured [merge train trigger](method/07-integration.md#merge-train)
+in the [profile](PROJECT-PROFILE.md#merge-train). Use the ordinary queue
+until the owner accepts the [pilot](#pilot-the-merge-train).
+
 Choose the `solo` or `team` mode and name the role owners
 ([team composition](method/12-agents.md#team-composition)).
 The project owner confirms the chosen route, mandatory checks, authority,
@@ -186,6 +190,30 @@ For agent tasks, configure [task recovery](defaults/task-recovery.md).
 Exercise a compaction, an interrupted session and a long run. Verify that
 the agent reconciles the current revision and reads the saved outcome.
 Keep the checkpoint report in the task or PR for its reader.
+
+### Pilot the merge train
+
+When the trigger is met, the owner selects a built, tested train and
+verifies the [branch and runner controls](defaults/merge-train.md#github-setup),
+the [audit closure](method/06-verification.md#closing-review-findings), and
+the [protected test baseline](method/06-verification.md#protected-test-baseline)
+where applicable. Run the [seven cases](defaults/merge-train.md#dry-run-cases)
+in a disposable setup and run in dry mode for several nights with the real
+integration update and test deployment suppressed. Compare each report with
+the operator's decisions. Enable live integration only after the operator
+accepts the evidence, verifies the sole writer in the target repository,
+and approves the switch. Until then use the ordinary integration queue.
+After activation, hold integration when a required control is unavailable.
+Restore it or use a separately approved route that preserves protection and
+mandatory checks.
+
+Before relying on the collector, verify queue wait, exclusions by cause,
+flaky tests, full-suite runs per train, train duration, and skipped starts
+against the train's recorded facts. Measure queue wait from admission to
+selection. Count a retry of an entire suite as a full run and record
+targeted reruns separately. Compare time to acceptance and CI runs
+per task with comparable baseline tasks and track verification outcomes.
+Record missing coverage or an inconclusive comparison.
 
 ## Adoption is complete when
 

@@ -21,15 +21,22 @@ the repository README.
 | Architecture | `architecture-engineer` | Architecture brief, delta, PD, ADR, and other architecture artifacts |
 | Delivery | `delivery-planner` | Delivery plan, task brief, backlog audit |
 | Specification | `spec-engineer` | Implementation-ready SPEC and verification map |
+| Protected baseline, where applicable | An independent test author with the accepted specification and a way to exercise the public boundary | Assertions traced to the specification. Send gaps to its owner before freezing. |
 | Implementation | `implementation-discipline`, `error-fixer`, `git-engineer`, `gh-utility`, and stack skills | Change, tests, living documentation |
 | Review | `code-reviewer`, `spec-conformance-reviewer`, `concept-conformance-reviewer`, `security-reviewer`, `web-ui-reviewer`, `gdpr-compliance` | Verdict and findings within the subject |
-| UI and design | `web-ux-engineer`, `frontend-design`, `pencil-dev` | Scenario, mockup, design handoff |
+| UI and design | `web-ux-engineer`, `frontend-design` | Scenario, mockup, design handoff |
 | Documentation | `documentation`, `docusaurus-repo` | Tutorial, how-to, reference, explanation, documentation site |
 | Learning | `retrospective-analysis` | Retrospective and action plan |
 
 Stack skills (`typescript-engineer`, `node-engineer`, `react-spa-engineer`,
 `supabase-engineer`, `financial-calculations-engineer`, and others) are chosen
 according to the project's technologies.
+
+For a protected baseline, select a test author who can work within the
+[specification-only assignment](../method/06-verification.md#protected-test-baseline).
+Give the conformance reviewer the assertion map, the candidate's verified
+baseline result and its uncovered criteria. Trace every criterion and focus
+new inspection on gaps in the demonstrated operation and transport.
 
 ## Artifact templates in skills
 
@@ -48,7 +55,7 @@ according to the project's technologies.
 | Base | `prd-engineer`, `architecture-engineer`, `delivery-planner`, `spec-engineer`, `implementation-discipline`, `code-reviewer`, `spec-conformance-reviewer`, `documentation`, `git-engineer`, `retrospective-analysis` | Any project with the full lifecycle route |
 | Requirements owner outside the team | `requirements-approval` | A customer or another external owner makes the decisions |
 | Security and data | `security-reviewer`, `gdpr-compliance` | Permissions, secrets, trust boundary; personal data |
-| UI | `web-ux-engineer`, `frontend-design`, `web-ui-reviewer`, `pencil-dev` | User interface; `pencil-dev` if mockups are in Pencil |
+| UI | `web-ux-engineer`, `frontend-design`, `web-ui-reviewer` | User interface |
 | Hosting and tools | `gh-utility`, `docusaurus-repo`, `error-fixer`, `concept-conformance-reviewer` | According to the services used and the need |
 | Stack | Skills for the project's technologies | According to the profile |
 

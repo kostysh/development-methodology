@@ -67,3 +67,20 @@ The aggregate gives lower bounds of 15 CI job attempts, 2 retries, 3 review
 attempts and 176 model responses. Its seven-day window remains open.
 Working time, owner wait, a comparable historical denominator and a change
 in delivery time or quality remain unknown.
+
+## Comparison with the earlier audit process
+
+The published I1 retrospective counted 46 negative audit attempts across
+its study period, including 11 on its main integration PR. The underlying
+study describes audit coverage as partial. In the `v5` pilot the manual
+chronology identified one changes-requested decision and the collector
+observed at least three completed review rounds. The two observations in
+the negative decision were a reproducible false denial and an omitted
+host configuration. The corrected guard and the host configuration were
+independently rechecked before acceptance.
+
+I1 covers multiple deliveries, products and review subjects. The single
+`v5` package change has a different risk and task mix. These counts can
+be compared as observations. They do not establish a reduction in rounds
+per comparable task or a quality improvement. The [research provenance
+in the plan](plan.md) identifies the earlier study.

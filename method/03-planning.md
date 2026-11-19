@@ -92,6 +92,11 @@ an external effect), before a material unresolved choice, and where the owner
 has explicitly required it.
 Do not add new stops for optional questions.
 
+An adopted [merge train](07-integration.md#merge-train) can integrate to
+its protected branch under its accepted authority without a hard stop for
+each merge. Keep hard stops for production, migrations on environments with
+real data, external effects, and any other action the owner reserved.
+
 Before a hard stop, finish the permitted scope, self-check, applicable checks,
 saving the work, and cleanup. If a local commit without push was agreed, make
 exactly that. Preparing a result does not authorize publishing it. Approval of

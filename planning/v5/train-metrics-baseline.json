@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "source": "eae9499ed9f33041b6105e00daa464842f20fdae",
+  "paths": [
+    ".github/workflows/methodology-tools.yml",
+    "tools/package-lock.json",
+    "tools/package.json",
+    "tools/test/package.packed.ts",
+    "tools/test/train-metrics-contract.test.ts",
+    "tools/tsconfig.json"
+  ],
+  "entries": [
+    {
+      "path": ".github/workflows/methodology-tools.yml",
+      "mode": "100644",
+      "oid": "9a9f9059b4b8112a221813e14842e8b5868b7431"
+    },
+    {
+      "path": "tools/package-lock.json",
+      "mode": "100644",
+      "oid": "acb978d8a286a9b2a8a800428dcfc4baaf980f48"
+    },
+    {
+      "path": "tools/package.json",
+      "mode": "100644",
+      "oid": "a4876a72aacd03e10b4761be6f644417bfa25ea6"
+    },
+    {
+      "path": "tools/test/package.packed.ts",
+      "mode": "100644",
+      "oid": "6fb4094c9fd4a1e4b4cec35a21ba2490873856a6"
+    },
+    {
+      "path": "tools/test/train-metrics-contract.test.ts",
+      "mode": "100644",
+      "oid": "e0bb4e9b5c5b92f154f86acb764c58b9589b1f54"
+    },
+    {
+      "path": "tools/tsconfig.json",
+      "mode": "100644",
+      "oid": "8c1640bc33e870229149c4eb8ecf3f04485bc13a"
+    }
+  ]
+}

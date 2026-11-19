@@ -74,3 +74,25 @@ test("Both path interpretations, the complete patch and unique JSON fields must 
     assert.ok(!rejected.stderr.includes("+sample"));
   }
 });
+
+for (const [variant, begin, end] of [
+  ["trailing space on Begin", "*** Begin Patch ", "*** End Patch"],
+  ["leading space on End", "*** Begin Patch", " *** End Patch"],
+  ["outer blank lines", "\n\n*** Begin Patch", "*** End Patch\n\n"],
+]) {
+  test(`Codex outer whitespace preserves target decisions: ${variant}`, (t) => {
+    const { cwd, hook } = fixture(t);
+    const edit = (path: string) => hook(JSON.stringify({
+      hook_event_name: "PreToolUse", cwd, tool_name: "apply_patch",
+      tool_input: { command: [begin, `*** Add File: ${path}`, "+sample", end].join("\n") },
+    }));
+    const independent = edit("notes.txt");
+    assert.equal(independent.status, 0, independent.stderr);
+    assert.equal(independent.stdout, "");
+    assert.equal(independent.stderr, "");
+    const denied = edit(protectedFile);
+    assert.equal(denied.status, 2, denied.stderr);
+    assert.equal(denied.stdout, "");
+    assert.ok(denied.stderr.includes(protectedFile), denied.stderr);
+  });
+}

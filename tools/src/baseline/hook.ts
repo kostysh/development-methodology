@@ -11,9 +11,13 @@ function invalidPatch(): never {
 // header-like text in context lines. The host trims Unicode whitespace at header ends.
 function patchTargets(command: unknown): string[] {
   if (typeof command !== "string" || !command.isWellFormed()) invalidPatch();
-  const lines = command.replace(/\r\n/g, "\n").split("\n");
-  if (lines.at(-1) === "") lines.pop();
-  if (lines.shift() !== "*** Begin Patch" || lines.pop() !== "*** End Patch") invalidPatch();
+  const raw = command.split(/\r?\n/);
+  const hasText = (line: string) => /\P{White_Space}/u.test(line);
+  const first = raw.findIndex(hasText);
+  const last = raw.findLastIndex(hasText);
+  if (first < 0 || !/^\p{White_Space}*\*\*\* Begin Patch\p{White_Space}*$/u.test(raw[first])
+      || !/^\p{White_Space}*\*\*\* End Patch\p{White_Space}*$/u.test(raw[last])) invalidPatch();
+  const lines = raw.slice(first + 1, last);
 
   const targets: string[] = [];
   let i = 0;

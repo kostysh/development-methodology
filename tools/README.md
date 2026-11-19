@@ -199,12 +199,15 @@ The integrity check and executing the contract tests are separate results.
 For a local synchronous `PreToolUse` command hook, invoke the same installed
 binary with `hook --host claude` or `hook --host codex`, followed by
 `--repo` with the absolute worktree root and the same `--baseline` and
-`--manifest` arguments. On Claude Code match `Edit` and `Write`. On
-Codex match `apply_patch` in the local single-environment tool surface.
+`--manifest` arguments. On Claude Code match `Edit` and `Write` and set
+`onFailure` to `"block"` on the command handler. Use a version with blocking
+hook-failure support. Test an unavailable command as well as an ordinary
+exit-2 denial. [Claude Code hook failure policy](https://code.claude.com/docs/en/hooks#block-the-action-when-a-hook-fails).
+On Codex match `apply_patch` in the local single-environment tool surface.
 The host passes a JSON event on stdin. An allowed edit exits 0. A denied or
 uninspectable request exits 2 with the reason on stderr. Check both outcomes
 through the actual host. Record that host, its version and which actions
 the hook sees. Required CI covers committed shell edits. The
-[contract](../planning/v5/baseline-manifest.md) describes path selection,
+[contract](https://github.com/kostysh/development-methodology/blob/537d54bfa1c1581ec27cc626b72a6f56514dfca5/planning/v5/baseline-manifest.md) describes path selection,
 modes, host input and recovery. Restore the last verified archive and trusted
 settings after a bad update.

@@ -40,7 +40,7 @@ actual caller, such as an agent harness, CI runner or scheduled job.
 | B4 | The package MUST include automated tests matched to the behavior and risk of every delivered script. Its canonical test command MUST discover and run them. | Use unit tests for applicable transformation or decision rules, contract tests for public inputs, outputs and error handling, and integration tests at the real boundary the claim depends on. Each enforcement rule needs a known violation and a clean control. Test malformed or missing input, relevant edge cases and a previously observed defect where applicable. A deliberate defect must turn the corresponding test red for the expected reason. |
 | B5 | A package that depends on a harness, log format, provider or shared resource MUST state the versions or capabilities it supports and its behavior when the dependency changes or fails. | Use deterministic, sanitized fixtures for repeatable regressions. Exercise the built integration on each claimed host at its real entry point. Simulate missing capability and interrupted input. Record the tested versions and any limit on support. Use a disposable resource or dry mode for checks with external effects. |
 | B6 | A script with state or side effects MUST preserve its stage's rules for authority, retries, concurrency, interruption and recovery wherever they apply. | Drive two contenders, retry an interrupted operation, or change the observed revision between check and write as appropriate. Assert the resulting state through an independent readback. Verify cleanup and ownership of affected resources. A routine parser with no such effects only needs tests of its own contract. |
-| B7 | CI for the owning package MUST run its checks, clean build, automated tests and distribution smoke test on the revision intended for delivery. Integration or release of the tool MUST require successful results for that revision or a verified identical artifact under the repository's existing rules. | A broken build, a missing public entry point or a failing required test blocks delivery. Record the revision, package version, artifact identity and check results. Confirm that the installed artifact exercised by the smoke test is the one supplied to adopters. |
+| B7 | CI for the owning package MUST run its checks, clean build, automated tests and distribution smoke test on the revision intended for delivery. Integration or release of the tool MUST require successful results for that revision or a verified identical artifact under the repository's existing rules. | A broken build, missing public entry point or failing required test blocks delivery. For a nested suite, propagate the exit status and confirm that its tests actually ran. Record the revision, version, artifact identity and results. Verify that adopters receive the installed artifact exercised by the smoke test. |
 | B8 | The adopting project MUST be able to identify the tool release in use and recover a working configuration after a bad update. | Provide versioned installation, compatibility, upgrade and recovery instructions in the appropriate owner. Exercise an update and the return to a previously verified version when the delivery changes an existing installation. Restore previously effective protection before resuming a guarded action. |
 
 The package owner chooses the language, package layout, build tool and test
@@ -88,6 +88,15 @@ The owner selected the next suitable methodology development task on `v5`
 for the collector pilot. Agree the task identity, permitted records and hook
 configuration with the owner before reading its logs or enabling collection.
 Use only that task's data. Its seven-day follow-up starts at its real merge.
+
+Separate owner decisions authorize the [three recovery jobs](recovery-pilot.md)
+and the [prospective solo observation](solo-observation.md). Each record
+defines its own eligible tasks, fields and observation period.
+
+For stage 6 the owner selected portable guidance, seven verification
+scenarios and observational metrics for this branch. Implementation of a
+write-capable train and its nightly pilot start only after an adopting
+project demonstrates the trigger.
 
 For a methodology release, record adoption actions in the changelog and bump
 the version in the README. For a tool release, associate the instructions with

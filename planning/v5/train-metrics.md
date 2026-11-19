@@ -84,3 +84,28 @@ A separate top-level test process reinstalled each exact archived version
 and ran its frozen suites. The 0.3.0 pilot archive passed 27 of 27.
 The corrected 0.4.0 recovery archive passed 35 of 35. Both reported zero
 skips. These later runs establish the installed behavior of those archives.
+
+## Accepted observation package
+
+The independent author froze four public cases before implementation.
+The [trusted manifest](train-metrics-baseline.json) covers their bytes and
+the build, test and CI inputs at the corrected runner revision.
+
+The initial independent code review found that a conflict outside the pilot
+window or a failure on another task could influence its skipped-start count.
+It also found an unrelated coverage declaration and sub-millisecond boundary
+cases. Six regression cases failed on the first implementation, then passed.
+A delta review exposed two further false counts involving disputed task
+acceptance and a rejected receipt on a second source for the same pilot.
+Both failed before correction. The final independent check passed. A
+disputed window withholds uncertain rows and counts. An unrelated task
+can retain its own verified zero.
+
+The integrated 0.5.0 build passed 103 canonical tests. The installed smoke
+reported 27 baseline, eight recovery and four train contract cases. Its
+tarball SHA-256 was
+`0023e519004966ca835ea57978a3bdd700b2bc58ae02a1c7e99038336f0345ed`.
+An isolated upgrade from 0.4.0 and rollback reproduced the earlier task
+summary and preserved the train journal separately. The trials used
+synthetic terminal receipts. The owner deferred the write-capable train
+and nightly operations until an adopter demonstrates the trigger.

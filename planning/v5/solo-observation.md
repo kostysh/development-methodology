@@ -15,7 +15,9 @@ tasks. Keep the default decision classes empty throughout observation.
    material choice with an evident reversible default, `material_other` for
    other material choices, `permission` for an observed permission request,
    and `unclassified` when the category is unclear. Use the class as the
-   manual source name. Record no question, answer, command, or work content.
+   manual source name. Use `methodology-metrics record PROFILE` on the
+   normalized events. Keep question text, answers, commands and work content
+   outside the observation.
 3. Use `decision.requested` with its observed blocking flag. Emit
    `decision.blocked` only when the dependent operation actually stops,
    and `decision.resolved` when it can proceed. A later response or elapsed

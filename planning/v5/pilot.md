@@ -93,6 +93,11 @@ had integrity
 [Final package checks](https://github.com/kostysh/development-methodology/actions/runs/44596795932).
 
 The seven-day observation closes **November 26, 2026 at 19:22:27 UTC**.
+One corrective follow-up was verified on November 19. The [packed runner
+correction](train-metrics.md#packed-runner-correction) fixes the installed
+contract gate introduced for PR 2. The private journal and manual chronology
+both count it once. Reimport reported one repeat. The count is a lower
+bound while the window is open.
 The [first retrospective](pilot-retrospective.md) records the causes and
 the controls to exercise on a comparable change.
 At the end of the window classify subsequent changes by their verified purpose,

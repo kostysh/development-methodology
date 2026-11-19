@@ -5,6 +5,9 @@ the most. Stages 1 and 6 carry the greatest tooling and maintenance cost.**
 Stage 8 also needs substantial implementation. Stage 7 moves the most
 decision authority, even though it involves relatively little code.
 
+The [implementation and evidence matrix](status.md) records what shipped to
+the development branches, what the owner deferred and which pilots are open.
+
 This assessment compares the [eight-stage plan](plan.md) with
 [version 0.4](../../README.md) at `d923b29`. That revision contains 35
 Markdown files and 3,373 lines of Markdown, including 1,903 lines in the

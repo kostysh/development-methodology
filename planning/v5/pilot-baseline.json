@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "source": "212ca889d56833c66d1840a63cc55d25ccd14b01",
+  "paths": [
+    ".github/workflows/methodology-tools.yml",
+    "tools/package-lock.json",
+    "tools/package.json",
+    "tools/test/baseline-contract.test.ts",
+    "tools/test/package.packed.ts",
+    "tools/tsconfig.json"
+  ],
+  "entries": [
+    {
+      "path": ".github/workflows/methodology-tools.yml",
+      "mode": "100644",
+      "oid": "9a9f9059b4b8112a221813e14842e8b5868b7431"
+    },
+    {
+      "path": "tools/package-lock.json",
+      "mode": "100644",
+      "oid": "97557159c556d56fff2780de51d2d6a7cb50022e"
+    },
+    {
+      "path": "tools/package.json",
+      "mode": "100644",
+      "oid": "6407d758645a5134110086446c1cecb3e0d40585"
+    },
+    {
+      "path": "tools/test/baseline-contract.test.ts",
+      "mode": "100644",
+      "oid": "723dc9015a64bf1db5ad91fdcc5e9daa9f276c4d"
+    },
+    {
+      "path": "tools/test/package.packed.ts",
+      "mode": "100644",
+      "oid": "8031286bd3479fda82c9de18fec69ee5543ef6a0"
+    },
+    {
+      "path": "tools/tsconfig.json",
+      "mode": "100644",
+      "oid": "8c1640bc33e870229149c4eb8ecf3f04485bc13a"
+    }
+  ]
+}

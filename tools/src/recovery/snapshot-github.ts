@@ -151,8 +151,19 @@ function readRun(cwd: string, endpoint: string, selection: GithubSelection, id: 
 
 export function readGithub(selection: GithubSelection, cwd: string, local: LocalHead, gaps: string[]) {
   const endpoint = `repos/${selection.repository}`;
+  let publication = null;
+  if (local.branch !== null) {
+    const ref = "refs/heads/" + local.branch;
+    const encoded = local.branch.split("/").map(encodeURIComponent).join("/");
+    const current = api(cwd, `${endpoint}/git/ref/heads/${encoded}`);
+    const object = recordObject(current?.object);
+    const remoteOid = current?.ref === ref && object?.type === "commit" ? oid(object.sha) : null;
+    if (remoteOid === null) gaps.push("github.publication");
+    publication = { ref, oid: remoteOid,
+      head_matches_local: remoteOid !== null && local.head_oid !== null ? remoteOid === local.head_oid : null };
+  }
   const issue = selection.issue === undefined ? undefined : readIssue(cwd, endpoint, selection.issue, gaps);
   const pr = selection.pr === undefined ? undefined : readPull(cwd, endpoint, selection, selection.pr, local, gaps);
   const run = selection.run === undefined ? undefined : readRun(cwd, endpoint, selection, selection.run, pr, local, gaps);
-  return { repository: selection.repository, issue, pr, run };
+  return { repository: selection.repository, publication, issue, pr, run };
 }

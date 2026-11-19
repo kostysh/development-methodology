@@ -64,6 +64,9 @@ facts in a partial snapshot. Re-read each configured source on every call.
 | Owned resources | Optional `resources` lists `type`, `id` and absolute `record` paths in the trusted profile. Only a record the resource owner designates as authoritative can establish a resource state. Read its task, type, ID, state (`active` or `released`) and any UTC `expires_at`. Report remaining lease time. Expiry alone does not establish release. For a registered Linux process, match `pid`, `boot_id` and `start_ticks` against the live system before claiming it is running. Unknown or mismatched ownership stays unavailable. |
 
 Return only IDs, Git facts, timestamps, counts, status and named gaps. Keep
+the current branch's publication in the configured repository separate from
+the head recorded by a PR. Read the matching remote branch even before a
+PR exists. An inaccessible remote ref has unknown publication. Keep
 filenames in changes, command arguments, environment, provider bodies,
 transcripts, run output and credentials out of the snapshot and diagnostics.
 The tool does not start, stop or repeat operational jobs.

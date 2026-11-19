@@ -245,9 +245,11 @@ Ahead and behind use the local upstream ref. If remote or resource facts
 are applicable, the profile accepts the following additional fields.
 
 - `github` takes a GitHub.com `repository` and the applicable positive
-  `issue`, `pr` and `run` numbers. Configure read-only `gh` access. Only
-  selected objects are queried. A PR identifies its recorded head, and a
-  CI result applies to the reported revision and attempt.
+  `issue`, `pr` and `run` numbers. Configure read-only `gh` access. For a
+  local branch, the snapshot compares its HEAD with the same named branch
+  in that repository, including before a PR exists. An unavailable ref is
+  a gap. A PR identifies its own recorded head, and a CI result applies to
+  the reported revision and attempt.
 - Each `resources` entry has a `type`, an `id` and an absolute `record`
   path. The resource owner writes JSON with the same `task_id`, `type`,
   `id`, its `state` (`active` or `released`) and optional UTC `expires_at`.

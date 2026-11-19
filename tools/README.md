@@ -1,7 +1,7 @@
 # Methodology tools
 
 This private npm package contains executable checks for use with the
-[methodology](../README.md). It builds TypeScript directly to JavaScript and
+[methodology](https://github.com/kostysh/development-methodology/blob/7bbb60d714651e4549bcd264f608448dae4632b8/README.md). It builds TypeScript directly to JavaScript and
 uses the lockfile for dependency resolution. The supported runtime is Node.js
 24.12 or later in the 24.x series. The automated package and installed-command
 checks run on Linux.
@@ -78,12 +78,14 @@ the installed-command checks before relying on enforcement.
 On Linux, install the package with Node.js 24 and make `flock` from util-linux
 available on `PATH`. Use a local filesystem for the journal. The event format
 and interpretation are in the
-[process metrics contract](../defaults/process-metrics.md).
+[process metrics contract](https://github.com/kostysh/development-methodology/blob/7bbb60d714651e4549bcd264f608448dae4632b8/defaults/process-metrics.md).
 
 Keep the private JSON profile and journal in an existing local directory
 outside Git worktrees. Set the profile's file mode to `0600`. Generate a random
 32-byte identity key locally and retain its 64 lowercase hex characters in
 `identity_key`. Keep that key and the issued alias list stable for the journal.
+For follow-up after deleting a task worktree, select a surviving local
+repository as `project_root` and keep the sources bound to their task IDs.
 Store approved aliases and categorical vocabularies in the following shape.
 
 ```json
@@ -211,3 +213,56 @@ the hook sees. Required CI covers committed shell edits. The
 [contract](https://github.com/kostysh/development-methodology/blob/537d54bfa1c1581ec27cc626b72a6f56514dfca5/planning/v5/baseline-manifest.md) describes path selection,
 modes, host input and recovery. Restore the last verified archive and trusted
 settings after a bad update.
+
+## Recover a task after interruption
+
+On Linux with Git, install the accepted package and verify
+`methodology-recovery --version`. Set up the
+[task-local state and ignore rule](https://github.com/kostysh/development-methodology/blob/a8332460c858b2bee0b1cac20f8a05097dfbdd76/defaults/task-recovery.md).
+Keep this example profile outside the worktree, substitute the actual
+values and restrict its permissions to its owner.
+
+```json
+{
+  "task_id": "task_17",
+  "worktree": "/work/task-17",
+  "line_limit": 100,
+  "base_ref": "refs/heads/main"
+}
+```
+
+The example line limit is a project choice. To write, inspect and resume:
+
+```sh
+methodology-recovery write /private/task-17.json < updated-state.md
+methodology-recovery snapshot /private/task-17.json
+methodology-recovery recover /private/task-17.json
+```
+
+Keep `updated-state.md` private if you use an input file. A task state can
+also be sent directly on stdin. Git counts use the local index and worktree.
+Ahead and behind use the local upstream ref. If remote or resource facts
+are applicable, the profile accepts the following additional fields.
+
+- `github` takes a GitHub.com `repository` and the applicable positive
+  `issue`, `pr` and `run` numbers. Configure read-only `gh` access. Only
+  selected objects are queried. A PR identifies its recorded head, and a
+  CI result applies to the reported revision and attempt.
+- Each `resources` entry has a `type`, an `id` and an absolute `record`
+  path. The resource owner writes JSON with the same `task_id`, `type`,
+  `id`, its `state` (`active` or `released`) and optional UTC `expires_at`.
+  Active Linux processes also need `pid`, `boot_id` and `start_ticks`.
+
+Use the absolute installed executable and profile paths in a synchronous
+`SessionStart` command hook with matcher `compact`. The command is
+`methodology-recovery hook /private/task-17.json`. The host sends native
+JSON on stdin and receives the task packet as additional context. Test the
+actual client, worktree and hook configuration. If context is unavailable or
+truncated, run explicit recovery from the bound worktree before acting.
+
+Explicit commands exit 0 on success, 1 on rejected state or partial facts
+and 2 on invalid invocation or binding. A partial snapshot contains the
+known fields and names each gap. The hook exits 0 and supplies the manual
+recovery instruction when it cannot safely deliver the packet. The
+[public contract](https://github.com/kostysh/development-methodology/blob/7bbb60d714651e4549bcd264f608448dae4632b8/planning/v5/recovery-contract.md)
+defines the supported operations.

@@ -1,0 +1,35 @@
+name: Pilot protected baseline
+
+on:
+  push:
+    branches: [pilot/v5-baseline-manifest]
+    paths: [.github/workflows/pilot-baseline-check.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  verify-pr-head:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24.15.0'
+      - name: Build the verifier from the original workflow revision
+        run: |
+          npm --prefix tools ci --ignore-scripts
+          npm --prefix tools run build
+      - name: Verify the current head of pilot PR 2 as Git data
+        env:
+          TRUSTED_BASELINE: 537d54bfa1c1581ec27cc626b72a6f56514dfca5
+        run: |
+          git fetch --no-tags --no-recurse-submodules https://github.com/kostysh/development-methodology.git '+refs/pull/2/head:refs/pilot/candidate'
+          candidate=$(git rev-parse --verify 'refs/pilot/candidate^{commit}')
+          printf 'Verifier %s\nBaseline %s\nCandidate %s\n' "$GITHUB_SHA" "$TRUSTED_BASELINE" "$candidate"
+          node tools/dist/baseline.js verify --baseline "$TRUSTED_BASELINE" --manifest planning/v5/pilot-baseline.json --candidate "$candidate"

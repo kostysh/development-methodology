@@ -207,7 +207,7 @@ After activation, hold integration when a required control is unavailable.
 Restore it or use a separately approved route that preserves protection and
 mandatory checks.
 
-Before relying on the collector, verify queue wait, exclusions by cause,
+Before relying on the [collector's train observations](defaults/process-metrics.md#train-observations), verify queue wait, exclusions by cause,
 flaky tests, full-suite runs per train, train duration, and skipped starts
 against the train's recorded facts. Measure queue wait from admission to
 selection. Count a retry of an entire suite as a full run and record

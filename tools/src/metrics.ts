@@ -4,7 +4,9 @@ import { createReadStream, realpathSync, statSync } from "node:fs";
 import { parseArgs } from "node:util";
 import packageInfo from "../package.json" with { type: "json" };
 import { adaptRecord, indexCodexRollout, type AdapterContext } from "./metrics/adapters.js";
-import { isTrustedIdentity, mapIdentity, normalizeEvent, parseUtc, type MetricsEvent } from "./metrics/events.js";
+import {
+  isTrainSource, isTrustedIdentity, mapIdentity, normalizeEvent, parseUtc, recordObject, type MetricsEvent,
+} from "./metrics/events.js";
 import { adaptGithub } from "./metrics/github.js";
 import { appendJournal, coverageGap, readJournal, type CoverageGap } from "./metrics/journal.js";
 import { coverageFile, readProfile, type MetricsProfile, type MetricsSource } from "./metrics/profile.js";
@@ -69,7 +71,7 @@ function ingest(
   const events: MetricsEvent[] = [];
   const gaps: CoverageGap[] = [];
   const observedAt = new Date().toISOString();
-  const note = (code: string) => gaps.push(coverageGap(code, sourceId, observedAt));
+  const note = (code: string, gapSource = sourceId) => gaps.push(coverageGap(code, gapSource, observedAt));
   let raw: string;
   try {
     raw = new TextDecoder("utf-8", { fatal: true }).decode(rawInput);
@@ -107,7 +109,10 @@ function ingest(
             || (source?.task_id && event.task_id !== source.task_id)) throw new Error("invalid_event");
         events.push(event);
       } catch {
-        note("invalid_event");
+        const row = recordObject(payload);
+        const reportedSource = typeof row?.source_id === "string"
+          && Object.hasOwn(profile.sources, row.source_id) ? row.source_id : null;
+        note("invalid_event", sourceId ?? reportedSource);
       }
       continue;
     }
@@ -208,10 +213,13 @@ async function main(): Promise<number> {
         const sourceTask = sourceId === null ? undefined : profile.sources[sourceId].task_id;
         return sourceTask === undefined || sourceTask === target;
       };
-      const { events, gaps } = readJournal(profile, asOf);
-      const applicableGaps = gaps.filter(({ source_id }) => sourceApplies(source_id));
+      const journal = readJournal(profile, asOf);
+      const applicableGaps = journal.gaps.filter(({ source_id }) => sourceApplies(source_id));
       const applicableCoverage = profile.coverage?.filter(({ source_id }) => sourceApplies(source_id));
-      const report = summarize({ events, gaps: applicableGaps }, target, asOf!, applicableCoverage);
+      const trainSources = new Set(Object.entries(profile.sources)
+        .filter(([, source]) => isTrainSource(source) && source.task_id === target)
+        .map(([sourceId]) => sourceId));
+      const report = summarize({ ...journal, gaps: applicableGaps }, target, asOf!, applicableCoverage, trainSources);
       console.log(JSON.stringify(report, null, 2));
       return 0;
     }

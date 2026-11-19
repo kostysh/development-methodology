@@ -70,6 +70,7 @@ terminal event without its start.
 | Audits | `audit.started`, `audit.finished` — `audit_id`, `prior_audit_id`, `subject_id`, `subject_type`, `base_sha`, `head_sha`, related `rewrite_id` when known. Finish adds `outcome` (`completed`, `failed`, `cancelled`) and `verdict` when an audit produced one. | Read the audit procedure and its report. Count attempts, failed attempts, completed rounds, and distinct reviewed snapshots by subject and base/head. Distinguish a completed audit with a failing verdict from an audit that failed to produce a verdict. |
 | Findings | `audit.finding.recorded` — `audit_id`, `finding_occurrence_id`, `observation_id`, `cause_id`, `finding_type` (`a`, `b`, `c`, `d`). | Read finding types from the [finding closure rules](../method/06-verification.md). A repeated observation in another audit gets a new occurrence ID and keeps the same observation ID after reconciliation. Use a cause ID only when the evidence establishes a common cause. |
 | Tests and end-to-end runs | `test.started`, `test.finished` — `suite_id`, `attempt_id`, `checkout_sha`, `worktree_id`, `ci_job_id` when hosted by CI. Finish adds `duration_ms`, `outcome`, `exit_code`. | Use the actual runner. Record a cancelled or interrupted attempt as such, including when no exit code was captured. Count the runner attempt once, even when several tools launch, poll, or report it. |
+| Train attempts | `train.observed` — `train_mode`, `train_result` and the optional counts and durations in [train observations](#train-observations). | Normalize an approved terminal receipt or lock skip. Bind the source to the issued alias for the pilot. |
 | CI runs, jobs, and steps | `ci.run.started`, `ci.run.finished` — `repo_id`, `run_id`, `run_attempt`, `head_sha`. `ci.job.queued`, `ci.job.assigned`, `ci.job.started`, `ci.job.finished` — those run identifiers plus `job_id`. Run and job finishes add `outcome`. `ci.step.finished` — run and job identifiers, `step_number`, `started_at`, `outcome`, `failure_code`, `fixture_version`. | Read job and step times and terminal status from the provider. Use ordered step numbers within each job to identify its first failure. Get its allowlisted code and fixture version from structured runner output. Emit queue and assignment timestamps when the provider or runner supplies their actual meaning. A job start can bound assignment time without identifying it. |
 | Ref rewrites | `ref.rewritten` — `repo_id`, `ref_id`, `old_sha`, `new_sha`, `operation_type`. | Use an observed Git update. Leave `operation_type` missing when the before and after IDs establish a rewrite and the operation is unavailable. The resulting audit's `rewrite_id` refers to the rewrite's `event_id`. Check the audit's head against the updated snapshot. |
 | Compaction and recovery | `context.compacted` — `session_id`, `thread_id`, `turn_id`, `compaction_id`, `trigger` (`manual`, `auto`). `task.state_changed` — `operation_id`, `action_type`, `session_id`, `thread_id`, `turn_id`, `compaction_id` when part of recovery. | Emit one event per completed compaction. A plan step transition or actual task mutation can supply the first state change. Reading state or polling a runner alone leaves the task state unchanged. Calculate time and observed token use between these boundaries. Mark usage partial when a response straddles a boundary and its attribution is unresolved. |
@@ -126,6 +127,46 @@ terminal event without its start.
   the same basis when comparing windows. A window is open until its deadline.
   After that deadline, incomplete coverage or unresolved classifications
   still make the result partial.
+
+## Train observations
+
+Create a dedicated task alias for the pilot and bind a `normalized` source to
+that `task_id`. Record one `train.observed` per terminal train attempt or
+overlapping start skipped because the lock was held. Use a stable opaque
+`event_id` across all PRs in the attempt and all replays. Use a new ID for
+each new attempt or skip. Set the occurrence to the terminal result or lock skip.
+
+| Field in `data` | How to record it |
+| --- | --- |
+| `train_mode` | Required. Use `dry` or `enabled`. |
+| `train_result` | Required. Use `completed` when the train reached a terminal decision, including a hold. Use `interrupted` for a stopped train, including a timeout, and `skipped` for an overlapping start that did not acquire the lock. |
+| `queue_entries`, `queue_wait_ms` | Report the number of distinct entries with measured queue waits and the sum of those waits from admission to selection. Use the same sample for both fields. Record two zeros for a verified empty sample. |
+| `excluded_conflict`, `excluded_test`, `excluded_interaction`, `excluded_dependency`, `excluded_other`, `excluded_unknown` | Count distinct returned PRs by one primary cause each. A reproducible failure attributable to one PR counts as `excluded_test`. A failure reproduced only in combination counts as `excluded_interaction`. Use `excluded_unknown` when a verified exclusion has no established cause. |
+| `full_suite_runs` | Count full suite attempts that started, including infrastructure retries. |
+| `flaky_tests` | Count distinct tests classified as flaky by a verified same-candidate retry under the train's policy. |
+| `duration_ms` | Report verified elapsed time from start to terminal result. |
+
+Keep measurements as non-negative safe integers. Use zero for an established
+measurement, and omit or use null for unavailable measurements. Supply both queue
+values when measured and leave both unknown otherwise. A skipped start carries
+only mode and result. Keep raw receipts and PR and test identities outside the
+journal. A missed dispatch or empty queue supplies no evidence of a skipped start.
+
+Read the pilot task's `summary`. When it has observations in the task window or
+declared train coverage, `train.attempts` lists the reconciled rows by
+`event_id` with mode, result and available measurements. Compare the modes
+separately. When `queue_entries` is positive, divide `queue_wait_ms` by that
+count to get the mean wait for the measured entries.
+
+Declare complete `train.observed` coverage only for a verified pilot source
+window. `train.skipped_starts` reports a complete count, including zero, when
+that coverage spans the task window through acceptance or the report cutoff.
+If a recorded window endpoint is disputed or based on receipt time, the
+report withholds the attempts and the count until the window can be established.
+With incomplete coverage, exact known skips form a lower bound and a missing
+count stays null. An unresolved conflict excludes the disputed attempt and
+leaves a coverage gap when the occurrence can fall within the window. The collector reads
+observations supplied by the adopter.
 
 ## Source adapters and evidence
 

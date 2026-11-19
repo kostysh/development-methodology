@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { MetricsEvent } from "../src/metrics/events.ts";
-import { summarize, type ReportCoverage } from "../src/metrics/report.ts";
+import { summarize } from "../dist/metrics/report.js";
+import type { ReportCoverage } from "../src/metrics/report.ts";
 
 const minute = 60_000;
 const origin = Date.parse("2026-11-01T10:00:00Z");

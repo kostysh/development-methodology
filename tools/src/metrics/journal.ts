@@ -2,7 +2,9 @@ import { spawnSync } from "node:child_process";
 import {
   appendFileSync, closeSync, constants, fstatSync, fsyncSync, openSync, readFileSync,
 } from "node:fs";
-import { isTrustedIdentity, normalizeEvent, parseUtc, recordObject, type MetricsEvent } from "./events.js";
+import {
+  isTrustedIdentity, normalizeEvent, parseUtc, recordObject, timeKey, trainObservation, type MetricsEvent,
+} from "./events.js";
 import { coverageFile, type MetricsProfile } from "./profile.js";
 
 export type CoverageGap = {
@@ -11,7 +13,12 @@ export type CoverageGap = {
   observed_at: string;
 };
 type StoredGap = CoverageGap & { event_id?: string };
-export type JournalRead = { events: MetricsEvent[]; gaps: CoverageGap[] };
+type DisputedTaskReceipt = Pick<MetricsEvent, "event_type" | "task_id" | "occurred_at">;
+export type JournalRead = {
+  events: MetricsEvent[];
+  gaps: CoverageGap[];
+  disputedTaskReceipts?: DisputedTaskReceipt[];
+};
 const maxFileBytes = 32 * 1024 * 1024;
 
 const gapCodes = new Set([
@@ -73,11 +80,6 @@ function inspectLines<T>(contents: string, parse: (value: unknown) => T, invalid
     }
   }
   return result;
-}
-
-function timeKey(value: string): string {
-  const [seconds, fraction = ""] = value.slice(0, -1).split(".");
-  return seconds + fraction.padEnd(9, "0");
 }
 
 // Keep the first receipt and source, and fill facts they did not establish.
@@ -182,7 +184,7 @@ function reconcileReceipts(rows: readonly MetricsEvent[], legacyConflicts: Reado
       for (const source of participating) gaps.push(coverageGap("conflicting_event", source, observed_at));
     }
   }
-  return { events: [...events.values()], gaps };
+  return { events: [...events.values()], gaps, conflicted };
 }
 
 function projectionKey(event: MetricsEvent): string {
@@ -218,9 +220,15 @@ export function readJournal(profile: MetricsProfile, asOf?: string): JournalRead
     const knownGaps = gaps.filter(({ observed_at }) => cutoff === undefined || timeKey(observed_at) <= cutoff);
     const legacyConflicts = new Set(knownGaps.flatMap(({ event_id }) => event_id ? [event_id] : []));
     const reconciled = reconcileReceipts(rows, legacyConflicts, cutoff);
+    const disputedTaskReceipts = rows.filter(row =>
+      (row.event_type === trainObservation || row.event_type === "task.started" || row.event_type === "task.accepted") &&
+      (legacyConflicts.has(row.event_id) || reconciled.conflicted.has(row.event_id)) &&
+      (cutoff === undefined || timeKey(row.observed_at) <= cutoff))
+      .map(({ event_type, task_id, occurred_at }) => ({ event_type, task_id, occurred_at }));
     return {
       events: reconciled.events,
       gaps: [...knownGaps.map(({ source_id, code, observed_at }) => ({ source_id, code, observed_at })), ...reconciled.gaps],
+      disputedTaskReceipts,
     };
   }) ?? { events: [], gaps: [coverageGap("journal_missing")] };
 }

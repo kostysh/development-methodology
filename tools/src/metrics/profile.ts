@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { basename, dirname, isAbsolute, relative, resolve, sep } from "node:path";
-import { isEventType, issuedAlias, parseUtc, recordObject, sourceKey } from "./events.js";
+import { isEventType, isTrainSource, issuedAlias, parseUtc, recordObject, sourceKey, timeKey, trainObservation } from "./events.js";
 import type { ReportCoverage } from "./report.js";
 
 export type MetricsSource = { kind: string; path?: string; task_id?: string; content_sha256?: string };
@@ -60,13 +60,16 @@ function parseCoverage(value: unknown, sources: MetricsProfile["sources"]): Repo
     const row = recordObject(item);
     if (!row || typeof row.source_id !== "string" || !Object.hasOwn(sources, row.source_id)
         || !Array.isArray(row.event_types) || !row.event_types.length || !row.event_types.every(isEventType)
+        || (row.event_types.includes(trainObservation) && !isTrainSource(sources[row.source_id]))
         || (row.status !== "complete" && row.status !== "not_applicable")
         || Object.keys(row).some((key) => !["source_id", "event_types", "from", "through", "status"].includes(key))) {
       invalid();
     }
     const from = parseUtc(row.from);
     const through = parseUtc(row.through);
-    if (!from || !through || Date.parse(from) >= Date.parse(through)) invalid();
+    if (!from || !through) invalid();
+    const timeOrder = row.event_types.includes(trainObservation) ? timeKey : Date.parse;
+    if (timeOrder(from) >= timeOrder(through)) invalid();
     return { source_id: row.source_id, event_types: row.event_types, from, through, status: row.status };
   });
 }

@@ -1,4 +1,4 @@
-import type { MetricsEvent } from "./events.js";
+import { timeKey, trainObservation, type MetricsEvent } from "./events.js";
 import type { JournalRead } from "./journal.js";
 
 export type ReportCoverage = {
@@ -11,13 +11,13 @@ export type ReportCoverage = {
 
 type Coverage = "complete" | "partial" | "unavailable" | "not_applicable";
 type Measurement = { status: Coverage; value: number | null; lower_bound?: true; upper_bound?: true };
-type Time = { value: number; estimated: boolean };
+type Time = { value: number; utc: string; estimated: boolean };
 type Span = { start: number; end: number; estimated: boolean };
 type Window = { start: Time | null; end: Time | null; through: number; open: boolean };
 type Facts = { rows: MetricsEvent[]; issues: number };
 type Identify = (event: MetricsEvent) => string | null;
-type ReadCoverage = (
-  types: readonly string[], from: number | null, through: number, evidence: boolean, incomplete?: boolean,
+type ReadCoverage<T = number> = (
+  types: readonly string[], from: T | null, through: T, evidence: boolean, incomplete?: boolean,
 ) => Coverage;
 
 const hour = 60 * 60 * 1000;
@@ -40,7 +40,9 @@ function timestamp(value: string | null): number | null {
 function time(event: MetricsEvent | undefined): Time | null {
   if (!event) return null;
   const occurred = timestamp(event.occurred_at);
-  return { value: occurred ?? Date.parse(event.observed_at), estimated: occurred === null };
+  return occurred === null
+    ? { value: Date.parse(event.observed_at), utc: event.observed_at, estimated: true }
+    : { value: occurred, utc: event.occurred_at!, estimated: false };
 }
 
 function iso(value: number | null): string | null {
@@ -164,24 +166,26 @@ function paired(events: readonly MetricsEvent[], types: readonly string[], ident
   return { pairs: [...pairs.values()], issues: facts.reduce((sum, fact) => sum + fact.issues, 0) };
 }
 
-function covers(entries: readonly ReportCoverage[], start: number, end: number): boolean {
+function covers<T extends string | number>(
+  entries: readonly ReportCoverage[], start: T, end: T, order: (utc: string) => T,
+): boolean {
   const spans = entries.map(entry => ({
-    start: Date.parse(entry.from), end: Date.parse(entry.through),
+    start: order(entry.from), end: order(entry.through),
   })).filter(span => span.start <= span.end)
-    .sort((a, b) => a.start - b.start || a.end - b.end);
+    .sort((a, b) => a.start < b.start ? -1 : a.start > b.start ? 1 : 0);
   let through = start;
   for (const span of spans) {
     if (span.start > through) break;
     if (through === end && span.end >= end) return true;
-    through = Math.max(through, span.end);
+    if (span.end > through) through = span.end;
     if (through >= end) return true;
   }
   return false;
 }
 
-function readCoverage(
-  input: readonly ReportCoverage[], gaps: JournalRead["gaps"], conflicts: number,
-): ReadCoverage {
+function readCoverage<T extends string | number>(
+  input: readonly ReportCoverage[], gaps: JournalRead["gaps"], conflicts: number, order: (utc: string) => T,
+): ReadCoverage<T> {
   return (types, from, through, evidence, incomplete = false) => {
     const statuses = types.map(type => {
       const relevant = input.filter(entry => entry.event_types.includes(type));
@@ -190,8 +194,8 @@ function readCoverage(
       const bySource = sources.map(source => {
         if (gaps.some(gap => gap.source_id === null || gap.source_id === source)) return "unavailable";
         const entries = relevant.filter(entry => entry.source_id === source);
-        if (covers(entries.filter(entry => entry.status === "complete"), from, through)) return "complete";
-        if (covers(entries.filter(entry => entry.status === "not_applicable"), from, through)) return "not_applicable";
+        if (covers(entries.filter(entry => entry.status === "complete"), from, through, order)) return "complete";
+        if (covers(entries.filter(entry => entry.status === "not_applicable"), from, through, order)) return "not_applicable";
         return "unavailable";
       });
       if (bySource.includes("unavailable")) return "unavailable";
@@ -926,12 +930,87 @@ function reworkReport(
   return { observed_merge_windows: measurement(windows.length, mergeStatus), seven_day_rework: windows };
 }
 
+function taskEndpoints<T extends number | string>(
+  events: readonly MetricsEvent[], cutoff: T, order: (utc: string) => T,
+) {
+  const startCandidates = rowsOf(events, "task.started", "task.accepted").flatMap(row => {
+    const utc = str(row, "execution_started_at");
+    const knownStart = timestamp(utc);
+    const occurred = knownStart === null
+      ? row.event_type === "task.started" ? time(row) : null
+      : { value: knownStart, utc: utc!, estimated: false };
+    return occurred === null || order(occurred.utc) > cutoff ? [] : [occurred];
+  });
+  const exact = startCandidates.filter(point => !point.estimated);
+  const candidates = exact.length > 0 ? exact : startCandidates;
+  const startTimes = new Set(candidates.map(point => order(point.utc)));
+  const start = startTimes.size === 1 ? candidates[0] : null;
+  const acceptedTimes = rowsOf(events, "task.accepted").map(row => time(row)!);
+  const acceptanceTimes = new Set(acceptedTimes.map(point => order(point.utc)));
+  const accepted = acceptanceTimes.size === 1 ? acceptedTimes[0] : null;
+  const end = start !== null && accepted !== null && order(accepted.utc) >= order(start.utc) ? accepted : null;
+  const ambiguous = startTimes.size > 1 || acceptanceTimes.size > 1 || (start !== null && accepted !== null && end === null);
+  return { start, end, ambiguous };
+}
+
+function trainReport(
+  events: readonly MetricsEvent[], coverage: readonly ReportCoverage[], journal: JournalRead, taskId: string, asOf: string,
+  trainSources?: ReadonlySet<string>,
+) {
+  const trainCoverage = coverage.filter(entry => entry.event_types.includes(trainObservation));
+  if (!trainCoverage.length && !events.some(row => row.event_type === trainObservation)) return {};
+
+  // The train window uses receipt precision. The duration reports retain milliseconds.
+  const cutoff = timeKey(asOf);
+  const known = events.filter(row => timeKey(row.observed_at) <= cutoff && timeKey(time(row)!.utc) <= cutoff);
+  const { start, end, ambiguous } = taskEndpoints(known, cutoff, timeKey);
+  const disputed = journal.disputedTaskReceipts?.filter(receipt => receipt.task_id === taskId) ?? [];
+  const hasDisputedEndpoint = disputed.some(receipt => receipt.event_type !== trainObservation &&
+    (receipt.occurred_at === null || timeKey(receipt.occurred_at) <= cutoff));
+  const uncertainWindow = ambiguous || hasDisputedEndpoint || start?.estimated === true || end?.estimated === true;
+  const from = start === null || uncertainWindow ? null : timeKey(start.utc);
+  const through = end === null || uncertainWindow ? cutoff : timeKey(end.utc);
+  const inWindow = (utc: string) => {
+    const point = timeKey(utc);
+    return point <= through && (from === null || point >= from);
+  };
+  const rows = rowsOf(known, trainObservation).filter(row => inWindow(time(row)!.utc));
+  const declarations = trainCoverage.filter(entry => timeKey(entry.from) <= through &&
+    (from === null || timeKey(entry.through) >= from));
+  if (!rows.length && !declarations.length) return {};
+  if (uncertainWindow) return { train: { attempts: [], skipped_starts: measurement(0, "partial") } };
+
+  // Reconciliation keeps conflict diagnostics for all report families. For the train
+  // use the disputed occurrence, which may have been discovered after the task ended.
+  const gaps = journal.gaps.filter(gap => gap.code !== "conflicting_event" && timeKey(gap.observed_at) <= cutoff);
+  const hasConflict = disputed.some(receipt => receipt.event_type === trainObservation &&
+    (receipt.occurred_at === null || inWindow(receipt.occurred_at)));
+  const declaredSources = new Set(declarations.filter(entry => entry.status === "complete").map(entry => entry.source_id));
+  const hasCoverageGap = gaps.some(gap => gap.source_id === null ||
+    declaredSources.has(gap.source_id) || trainSources?.has(gap.source_id));
+  const incomplete = hasConflict || hasCoverageGap ||
+    rows.some(row => row.occurred_at === null || !declaredSources.has(row.source_id));
+  const status = readCoverage(declarations, gaps, 0, timeKey)(
+    [trainObservation], from, through, rows.length > 0, incomplete,
+  );
+  const skipped = rows.filter(row => row.data.train_result === "skipped");
+  const skipEstimate = skipped.some(row => row.occurred_at === null);
+  return {
+    train: {
+      attempts: rows.map(({ event_id, data }) => ({ event_id, ...data })),
+      skipped_starts: measurement(skipped.length, status, skipEstimate),
+    },
+  };
+}
+
 export function summarize(
   journal: JournalRead, taskId: string, asOf: string, coverage: readonly ReportCoverage[] = [],
+  trainSources?: ReadonlySet<string>,
 ) {
   const cutoff = timestamp(asOf);
   if (cutoff === null) throw new Error("invalid_report_time");
-  const eligible = journal.events.filter(row => Date.parse(row.observed_at) <= cutoff && time(row)!.value <= cutoff)
+  const eligible = journal.events.filter(row => (row.event_type !== trainObservation || row.task_id === taskId) &&
+    Date.parse(row.observed_at) <= cutoff && time(row)!.value <= cutoff)
     .sort((a, b) => time(a)!.value - time(b)!.value || Date.parse(a.observed_at) - Date.parse(b.observed_at) ||
       (a.event_id < b.event_id ? -1 : a.event_id === b.event_id ? 0 : 1));
   const unique = reconcile(eligible, row => row.event_id);
@@ -939,20 +1018,8 @@ export function summarize(
   const { assigned, unassigned } = attribute(unique.rows, thread);
   const events = assigned.filter(row => row.task_id === taskId);
   const gaps = journal.gaps.filter(gap => Date.parse(gap.observed_at) <= cutoff);
-  const read = readCoverage(coverage, gaps, unique.issues);
-  const startCandidates = rowsOf(events, "task.started", "task.accepted").flatMap(row => {
-    const knownStart = timestamp(str(row, "execution_started_at"));
-    const occurred = knownStart === null
-      ? row.event_type === "task.started" ? time(row) : null
-      : { value: knownStart, estimated: false };
-    return occurred === null || occurred.value > cutoff ? [] : [occurred];
-  });
-  const exact = startCandidates.filter(point => !point.estimated);
-  const candidates = exact.length > 0 ? exact : startCandidates;
-  const start = new Set(candidates.map(point => point.value)).size === 1 ? candidates[0] : null;
-  const acceptedTimes = rowsOf(events, "task.accepted").map(row => time(row)!);
-  const accepted = new Set(acceptedTimes.map(point => point.value)).size === 1 ? acceptedTimes[0] : null;
-  const leadEnd = start !== null && accepted !== null && accepted.value >= start.value ? accepted : null;
+  const read = readCoverage(coverage, gaps, unique.issues, Date.parse);
+  const { start, end: leadEnd } = taskEndpoints(events, cutoff, Date.parse);
   const pastAcceptance = leadEnd?.value ?? cutoff;
   const lead = { start, end: leadEnd, through: pastAcceptance, open: leadEnd === null };
   const opened = reconcile(rowsOf(events, "pull_request.opened"), byFields("repo_id", "delivery_id"));
@@ -1019,7 +1086,7 @@ export function summarize(
           (start === null || time(row)!.value >= start.value));
         const status = types.length === 0
           ? (seen ? "partial" : "unavailable")
-          : readCoverage(entries, gaps, unique.issues)(types, start?.value ?? null, lead.through, seen);
+          : readCoverage(entries, gaps, unique.issues, Date.parse)(types, start?.value ?? null, lead.through, seen);
         return { source_id: source, status };
       }),
       gaps: gaps.map(gap => ({ source_id: gap.source_id, code: gap.code })),
@@ -1035,6 +1102,7 @@ export function summarize(
     tests: testsReport(working, read, lead),
     ci: ciReport(working, read, lead),
     ref_rewrites: { count: measurement(rewriteRows.length, rewriteStatus), rows: rewriteRows },
+    ...trainReport(events, coverage, journal, taskId, asOf, trainSources),
     ...controlsReport(working, read, lead),
     ...contextReport(working, usage, unassigned, read, lead, thread),
     ...reworkReport(events, assigned, cutoff, read, lead),

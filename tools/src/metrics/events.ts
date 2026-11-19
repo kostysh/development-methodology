@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
-import type { MetricsProfile } from "./profile.js";
+import type { MetricsProfile, MetricsSource } from "./profile.js";
 
 export type MetricsEvent = {
   schema_version: 1;
@@ -16,6 +16,11 @@ export type MetricsEvent = {
 
 export const sourceKey = /^[a-z0-9][a-z0-9_-]{0,63}$/u;
 export const issuedAlias = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/u;
+export const trainObservation = "train.observed";
+
+export function isTrainSource(source: MetricsSource): boolean {
+  return source.kind === "normalized" && source.task_id !== undefined;
+}
 
 export function recordObject(value: unknown): Record<string, unknown> | undefined {
   if (value !== null && typeof value === "object" && !Array.isArray(value)) {
@@ -30,6 +35,11 @@ export function parseUtc(value: unknown): string | null {
   if (!Number.isFinite(instant)
       || new Date(instant).toISOString().slice(0, 19) !== value.slice(0, 19)) return null;
   return value;
+}
+
+export function timeKey(value: string): string {
+  const [seconds, fraction = ""] = value.slice(0, -1).split(".");
+  return seconds + fraction.padEnd(9, "0");
 }
 
 function digest(profile: MetricsProfile, ...parts: string[]): string {
@@ -65,6 +75,11 @@ const ciRun = "repo_id run_id run_attempt head_sha";
 const ciJob = `${ciRun} job_id`;
 const review = `review_id ${thread} turn_id`;
 const dispute = "dispute_id test_id criterion_id baseline_sha";
+const trainMeasurements = [
+  "queue_entries", "queue_wait_ms", "duration_ms", "full_suite_runs", "flaky_tests",
+  "excluded_conflict", "excluded_test", "excluded_interaction", "excluded_dependency",
+  "excluded_other", "excluded_unknown",
+];
 const fields: ReadonlyMap<string, string[]> = new Map(Object.entries({
   "task.started": `${task} ${thread}`,
   "task.accepted": task,
@@ -101,6 +116,7 @@ const fields: ReadonlyMap<string, string[]> = new Map(Object.entries({
   "guard.activated": "control_id attempt_id operation_id head_sha outcome",
   "test.dispute_raised": dispute,
   "test.dispute_resolved": `${dispute} outcome`,
+  [trainObservation]: `train_mode train_result ${trainMeasurements.join(" ")}`,
   "delivery.follow_up_classified": "delivery_id follow_up_id follow_up_at follow_up_basis change_type corrects_delivery",
 }).map(([event, names]) => [event, names.split(" ")]));
 
@@ -116,6 +132,8 @@ const fixedCategories = new Map<string, readonly string[]>([
   ["finding_type", ["a", "b", "c", "d"]],
   ["trigger", ["manual", "auto"]],
   ["follow_up_basis", ["verified_action", "pr_opened_proxy"]],
+  ["train_mode", ["dry", "enabled"]],
+  ["train_result", ["completed", "interrupted", "skipped"]],
 ]);
 
 function valueFor(field: string, value: unknown, event: string, profile: MetricsProfile) {
@@ -126,7 +144,8 @@ function valueFor(field: string, value: unknown, event: string, profile: Metrics
   if (field.endsWith("_at") && parseUtc(value)) return value as string;
   if ((field === "blocking" || field === "corrects_delivery") && typeof value === "boolean") return value;
   if (field === "exit_code" || field === "duration_ms" || field.endsWith("_tokens")
-      || field === "run_attempt" || field === "step_number") {
+      || field === "run_attempt" || field === "step_number"
+      || (event === trainObservation && trainMeasurements.includes(field))) {
     if (typeof value === "number" && Number.isSafeInteger(value) && (field === "exit_code" || value >= 0)) {
       return value;
     }
@@ -161,6 +180,7 @@ export function normalizeEvent(raw: unknown, profile: MetricsProfile): MetricsEv
       || typeof source_id !== "string" || !Object.hasOwn(profile.sources, source_id)
       || !isTrustedIdentity(event_id, profile) || (task_id !== null && !isTrustedIdentity(task_id, profile))
       || (profile.sources[source_id].task_id !== undefined && task_id !== profile.sources[source_id].task_id)
+      || (event_type === trainObservation && !isTrainSource(profile.sources[source_id]))
       || (!occurred_at && input.occurred_at !== null) || !observed_at
       || (actor_role !== "operator" && actor_role !== "agent" && actor_role !== "automation" && actor_role !== "unknown")
       || !keys || typeof event_type !== "string" || !dataInput
@@ -168,6 +188,13 @@ export function normalizeEvent(raw: unknown, profile: MetricsProfile): MetricsEv
   const data: MetricsEvent["data"] = {};
   for (const key of keys) {
     if (Object.hasOwn(dataInput, key)) data[key] = valueFor(key, dataInput[key], event_type, profile);
+  }
+  if (event_type === trainObservation) {
+    const { train_mode, train_result, queue_entries, queue_wait_ms } = data;
+    if (train_mode == null || train_result == null
+        || (train_result === "skipped" && trainMeasurements.some(field => Object.hasOwn(data, field)))
+        || ((queue_entries == null) !== (queue_wait_ms == null))
+        || (queue_entries === 0 && queue_wait_ms !== 0)) throw new Error("invalid_event");
   }
   return {
     schema_version: 1, project_id: profile.project_id, event_id, source_id, event_type,

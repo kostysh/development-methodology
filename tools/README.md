@@ -172,6 +172,38 @@ coverage.
 
 The passive `hook` command returns `0` for each outcome.
 
+### Record train observations
+
+Install an accepted archive that supports `train.observed` (version 0.5.0
+introduced it) using the [installation steps](#install-an-accepted-build).
+Confirm the version with `npm exec --offline -- methodology-metrics --version`.
+Use the same private profile, local journal and permissions as for task metrics.
+Add the pilot alias and each stable occurrence ID to `issued_ids`. Bind a
+normalized source to the pilot, for example
+`"train": {"kind":"normalized","task_id":"pilot_1"}` in `sources`.
+Record the pilot's `task.started` to establish the beginning of the window.
+
+Store one observation per line in a private input file. For example, a dry attempt
+that ran two full suites can supply the following single line.
+
+```json
+{"schema_version":1,"project_id":"example","event_id":"train_1","source_id":"train","event_type":"train.observed","occurred_at":"2026-11-19T10:00:00Z","observed_at":"2026-11-19T10:01:00Z","actor_role":"operator","task_id":"pilot_1","data":{"train_mode":"dry","train_result":"completed","full_suite_runs":2}}
+```
+
+```sh
+methodology-metrics record /path/to/profile.json < /path/to/train-observations.jsonl
+methodology-metrics summary /path/to/profile.json pilot_1 --as-of 2026-11-19T12:00:00Z
+```
+
+Verify the attempt in `train.attempts`, then replay the line and check that
+the attempt still appears once. Check rejection of an unapproved field with a
+synthetic input. The [train observations contract](https://github.com/kostysh/development-methodology/blob/231a21cc9595858ec391268b6763d18ff886be3b/planning/v5/train-metrics.md)
+defines the measurements, missing values and `train.skipped_starts` bounds.
+To verify a zero, use `coverage` on the pilot-bound source with
+`event_types: ["train.observed"]` across the confirmed interval. For a rollback,
+restore the previous archive and lockfile and use the saved prior profile and
+journal. Retain the train profile and journal with the 0.5.0 setup for later use.
+
 ## Protect a test baseline
 
 Install the verified package on case-sensitive Linux with Git and the

@@ -49,3 +49,36 @@ integrity result, green package checks and independent acceptance on the final
 candidate, and supply that head SHA as the merge precondition. GitHub's native
 run belongs to the original workflow revision. Server-side automatic merge
 protection on `v5` remains open.
+
+## Pilot results
+
+The independent reviewer accepted `cd2aa689` at 19:21:55 UTC.
+[PR 2](https://github.com/kostysh/development-methodology/pull/2) merged
+that head into `v5` at 19:22:27 UTC on November 19, 2026. The merge tree
+matches the accepted candidate. The [merge build](https://github.com/kostysh/development-methodology/actions/runs/44597637068)
+passed. The integration owner removed the temporary branch and worktree
+after checking ancestry and their contents. The private journal uses the
+stable repository as its project root with the same task-bound sources.
+The single-use [trusted workflow](https://github.com/kostysh/development-methodology/blob/eb975b39a70ac3229b59bd0e99210f1de1941f40/.github/workflows/pilot-baseline-check.yml)
+is retained at its tested revision.
+
+| Question | Observed result | Evidence boundary |
+| --- | --- | --- |
+| How long before a PR? | Manual chronology and collector both give 22 min 20 s from execution start to PR and 41 min 46 s to independent acceptance. | Calendar time for one task. Individual operator wait and complete activity attribution remain unavailable. |
+| Can the ordinary suite detect a weaker assertion? | Replacing a version-and-output assertion with an exit-status check left the [package CI green](https://github.com/kostysh/development-methodology/actions/runs/44596637507). The pinned verifier rejected that change and returned 0 after restoration. | The [failed attempt](https://github.com/kostysh/development-methodology/actions/runs/44595706387/attempts/2) inspected `3178c84e`, and the [passing attempt](https://github.com/kostysh/development-methodology/actions/runs/44595706387/attempts/3) inspected `cd2aa689`. The operator required that same head at merge. |
+| What did the clients enforce? | Claude Code 2.1.328 allowed a disposable write, blocked a protected edit and blocked a missing command with `onFailure: "block"`. Codex 0.170.0 applied a disposable patch and blocked a protected lockfile patch. Protected bytes stayed intact. | Claude used the extension-bundled terminal executable. The graphical panel remains untested. Codex used its native app-server, explicitly trusted hooks in a disposable runtime and synthetic model transport. A hook file placed only in the linked worktree yielded zero discovered hooks on this version. |
+| What was measurable? | Two real Claude API requests imported from local OpenTelemetry. Reimport counted both as repeats. The report counted at least 176 attributable model responses, 15 CI job attempts and 3 review attempts before acceptance. | Shared chats with ambiguous attribution were excluded. Two review findings had no recorded individual occurrence times. The delivery-window report leaves their count unknown. Complete compaction, permission and dispute counts remain unavailable. |
+| What did review change? | A valid Codex patch caused a false denial. The packed Claude instructions omitted the hook-failure setting. Both findings were corrected and independently rechecked. | The final package passed 81 tests, including 27 frozen cases also run through the installed binary. A documentation-only dispute was a controlled exercise. [Baseline evidence](baseline-test-evidence.md). |
+
+The tested and installed archive for `@kostysh/development-methodology-tools@0.3.0`
+had integrity
+`sha512-WMzM/ZcYy2Srt6G22zD7FAinhht39FVO6JgjmNc0hpKBki88zYcPH4KhCBjpSLLz+g6ALVvqmDJrzJ5Hp80c1Q==`.
+[Final package checks](https://github.com/kostysh/development-methodology/actions/runs/44596795932).
+
+The seven-day observation closes **November 26, 2026 at 19:22:27 UTC**.
+The [first retrospective](pilot-retrospective.md) records the causes and
+the controls to exercise on a comparable change.
+At the end of the window classify subsequent changes by their verified purpose,
+reconcile them with the manual chronology and ask the owner whether to
+retain collection. The current sample cannot establish a delivery-time
+or quality improvement.

@@ -58,6 +58,9 @@ commands. Record those commands and the tested host versions in the
   A `PreToolUse` hook can block supported local shell and edit calls, including
   `apply_patch`. Keep CI as the authoritative check of committed path changes
   because some tool paths do not invoke the hook.
+  On Codex 0.170.0 a linked worktree can inherit the hook layer from the
+  main checkout. Inspect the discovered hooks and trust the exact intended
+  definition in the selected host before relying on its protection.
   [Codex hooks](https://learn.chatgpt.com/docs/hooks#tool-coverage),
   [Codex configuration](https://learn.chatgpt.com/docs/config-file/config-reference).
 - **Claude Code.** Use the documented permission rules for the tool, a

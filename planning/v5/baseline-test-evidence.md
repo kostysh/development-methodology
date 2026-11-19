@@ -60,9 +60,8 @@ expected status, stdout and exact broken-link diagnostic in the old
 `assert.equal(check(root).status, 1)`.
 
 The local replay shows that the old workflow's shell steps accepted a
-weakened assertion. Hosted required-check behavior, live Claude Code and
-Codex dispatch, the new operator-owned CI gate and the post-implementation
-run remain pending. No test dispute was raised during authorship. For a
+weakened assertion. The [pilot results](pilot.md#pilot-results) cover the later
+host and CI observations. No test dispute was raised during authorship. For a
 change that displaces a selected descendant, a diagnostic may identify
 the changed ancestor or the displaced path.
 
@@ -78,3 +77,19 @@ The test creates its fixtures in disposable repositories. Its assertions,
 fixture data and skip controls are all in the test file. This package has no
 separate coverage threshold or exclusion file. Additional implementation tests
 can use separate files.
+
+## Accepted behavior and evidence limits
+
+The installed package passed all 27 frozen cases. The [pilot report](pilot.md#pilot-results)
+records native allowed and denied edits, the controlled failing hosted
+comparison, the restored candidate and the final integration decision.
+In a separate dispute exercise the specification owner rejected an assertion
+that a documentation-only edit outside the selection must fail. The independent
+test author committed that edit in a disposable repository and observed exit
+0 and empty output from the built verifier. The frozen suite already expressed
+that behavior. The pilot required no replacement baseline.
+
+The original absence of the executable prevented inspection of version
+output, manifest semantics and hook decisions before implementation.
+The later tests and hosted violation establish the new behavior. The original
+CI's acceptance of a weakened assertion documents the previous enforcement gap.

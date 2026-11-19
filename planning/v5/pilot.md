@@ -70,6 +70,23 @@ is retained at its tested revision.
 | What was measurable? | Two real Claude API requests imported from local OpenTelemetry. Reimport counted both as repeats. The report counted at least 176 attributable model responses, 15 CI job attempts and 3 review attempts before acceptance. | Shared chats with ambiguous attribution were excluded. Two review findings had no recorded individual occurrence times. The delivery-window report leaves their count unknown. Complete compaction, permission and dispute counts remain unavailable. |
 | What did review change? | A valid Codex patch caused a false denial. The packed Claude instructions omitted the hook-failure setting. Both findings were corrected and independently rechecked. | The final package passed 81 tests, including 27 frozen cases also run through the installed binary. A documentation-only dispute was a controlled exercise. [Baseline evidence](baseline-test-evidence.md). |
 
+The task-local report gives these bounds for wall-clock activity. The
+known column is the union of measured intervals. A missing activity record
+does not establish that its duration was zero.
+
+| Interval | Calendar | Operator activity and blocking | Agent activity | Machine occupancy | Known union | Unexplained |
+| --- | ---: | --- | ---: | ---: | ---: | ---: |
+| Execution to first PR | 22 min 20 s | Unavailable | Unavailable duration | ≥17 s | ≥17 s (1.3%) | ≤22 min 3 s |
+| Execution to acceptance | 41 min 46 s | Unavailable | ≥2.504 s | ≥202 s | ≥204.504 s (8.2%) | ≤38 min 21.496 s |
+
+I1 reported first-commit-to-PR time and missing attribution during shared
+conversations. It did not give a comparable execution-start window and
+known-interval denominator. This pilot establishes both calendar endpoints
+and a lower bound on the explained share. An improvement in that share or
+in time spent waiting for the operator remains unmeasured. The orchestrator
+accepted the [event schema](../../defaults/process-metrics.md) for the
+scoped pilot under the owner's delegated implementation authority.
+
 The tested and installed archive for `@kostysh/development-methodology-tools@0.3.0`
 had integrity
 `sha512-WMzM/ZcYy2Srt6G22zD7FAinhht39FVO6JgjmNc0hpKBki88zYcPH4KhCBjpSLLz+g6ALVvqmDJrzJ5Hp80c1Q==`.

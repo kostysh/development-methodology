@@ -93,3 +93,26 @@ The original absence of the executable prevented inspection of version
 output, manifest semantics and hook decisions before implementation.
 The later tests and hosted violation establish the new behavior. The original
 CI's acceptance of a weakened assertion documents the previous enforcement gap.
+
+## Correcting a disputed test
+
+In a later disposable Git fixture, a committed protected test mistakenly
+required the verifier to reject an unrelated documentation edit. The clear
+fixture specification required exit 0 and empty output. On that candidate
+the installed verifier returned 0 and the mistaken assertion returned 1.
+The implementer recorded the test, clause and conflict. The original
+manifest accepted an independent edit while dependent verification waited.
+
+The test author corrected the assertion. The original manifest rejected
+that protected edit with exit 1. The corrected test failed against a
+controlled verifier that rejected the permitted edit and passed against
+the installed command. The owner accepted the corrected source, replaced
+the manifest and verified the exact candidate with both independent edits
+preserved. The corrected test and verifier both exited 0. Dependent work
+could then resume.
+
+One executor played the three roles in this local exercise on November 19.
+Its original and replacement trust commits were `d7316bd7` and `e965debd`
+in the disposable fixture. It exercised a real change of test and manifest.
+The [earlier medium-risk pilot](pilot.md#pilot-results) supplies the separate
+evidence for actor independence, native hooks and hosted CI.

@@ -84,3 +84,32 @@ drills, real-task pilot, delivery-revision CI, and reinstall or rollback
 checks remain outside the independent baseline observation.
 
 The independent baseline observation and type pass ended at 2026-11-19T19:46:15Z.
+
+## Accepted implementation
+
+The first build at `28fc8deb` passed the eight frozen recovery cases and
+the existing 81 tests. The independent reviewer identified two snapshot
+errors. Git counts could differ when a worktree used an external ignore
+file. A configured GitHub repository had no branch-publication result
+before the first PR. Each [regression test](../../tools/test/recovery-implementation.test.ts)
+failed against the earlier installed archive and passed against the
+corrected archive at [c8aae8e0](https://github.com/kostysh/development-methodology/commit/c8aae8e0c546376132bee41d829a674637b5dfc7).
+
+- The canonical suite passed 91 tests. The package smoke test installed all
+  four commands outside the checkout and exercised the 27 protected-baseline
+  cases and eight frozen recovery cases through that installation. The
+  [recovery manifest](recovery-baseline.json) still matched its trusted tree.
+- A live read of the named GitHub repository matched the published branch
+  OID before a PR was selected. A historical PR and a run with no matching
+  PR association returned partial data and a named gap. The worktree
+  snapshot agreed with Git when its user configuration supplied the
+  ignore file.
+- A private consumer installed the corrected 0.4.0 archive, rolled back
+  to 0.3.0, verified baseline protection and reinstalled 0.4.0. The
+  0.4.0 archive integrity was
+  `sha512-V5uKJiPqOIpocWXcJBr4m+1JAbMQt4iN3L6ypZhMoDUg+/xHCQIwVxOWj5OOovVRGs5P5gc9khIfjVeGKzfs+Q==`.
+- The [three-job pilot and host drills](recovery-pilot.md#observations)
+  give the observed results for Codex and Claude Code. The independent
+  [skill re-audit](https://github.com/kostysh/skills/blob/53beaffbc97c65e0a33d26071353fb7f1fd674b4/docs/reviews/evidence/v5-task-recovery/review-0.2.11.md)
+  accepted the corrected long-run handoff that retains both output streams,
+  the terminal status and the launch revision.

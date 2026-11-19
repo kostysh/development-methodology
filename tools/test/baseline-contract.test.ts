@@ -155,7 +155,7 @@ function codex(cwd: string, patch: string) {
 
 test("BM1/BM5 installed command prints its package version", (t) => {
   const { root } = project(t);
-  assert.equal(cli(root, ["--version"]).status, 0);
+  assert.deepEqual(cli(root, ["--version"]), { status: 0, stdout: `${packageInfo.version}\n`, stderr: "" });
 });
 
 for (const format of ["sha1", "sha256"]) {

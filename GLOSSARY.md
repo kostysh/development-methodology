@@ -23,7 +23,7 @@ Terms the methodology uses without explanation in the chapter text.
 | Finding | A review remark: locator, violated contract, impact, evidence, required fix | [Verification](method/06-verification.md#self-check-and-independent-review) |
 | Future-owner | A dependency type: an obligation handed over to the next owner with acceptance conditions | [Tasks](method/04-task-management.md#typed-dependencies) |
 | Gate | A mandatory check or decision; without its positive result the dependent transition is forbidden | [Verification](method/06-verification.md#run-composition) |
-| Handoff | A record for passing work on: result, what is and is not accepted, decisions, evidence, next step | [Template](templates/handoff-and-recovery.md) |
+| Handoff | Passing the result, acceptance, decisions, evidence and next step to an owner | [Checkpoint report](templates/checkpoint-report.md) |
 | Hard stop | A checkpoint at which the executor stops until the owner decides | [Planning](method/03-planning.md#checkpoint-execution) |
 | Living documentation | Documentation of the system's current state: READMEs, runbooks, API reference, user documentation | [Documentation](method/13-artifacts-and-communication.md#living-documentation) |
 | Material delta | A change to behavior, contract, permissions, data, provider, release, or acceptance boundary | [Sources](method/01-authority-and-scope.md#materiality-and-rigor) |
@@ -42,6 +42,7 @@ Terms the methodology uses without explanation in the chapter text.
 | Slice (vertical slice) | A bounded useful result through all the necessary layers of the system | [Lifecycle](method/02-lifecycle.md#vertical-slice-and-specification) |
 | Stable ID | An unchanging identifier of an artifact or requirement used for references. Until merged into the integration branch, a new document's ID is provisional | [Documentation](method/13-artifacts-and-communication.md#identifiers) |
 | Supersession | Replacing an accepted document with a new one while keeping the `supersedes` / `superseded_by` link | [Documentation](method/13-artifacts-and-communication.md#statuses-and-acceptance) |
+| Task state file | One compact local record of a task's authority, live work and next permitted action. The agent reads it with a fresh snapshot after interruption | [Recovery](method/12-agents.md#context-recovery) |
 | Test baseline | The tests and inputs accepted for checking observable behavior during a change | [Verification](method/06-verification.md#protected-test-baseline) |
 | `unknown` | An unknown value; blocks only the actions that depend on it and is not equal to a safe `no` | [Profile](PROJECT-PROFILE.md) |
 | Verdict | The outcome of a review per subject: `PASS`, `FAIL`, or `BLOCKED`, with the version and coverage stated | [Planning](method/03-planning.md#independent-review-of-a-formal-plan) |

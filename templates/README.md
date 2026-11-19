@@ -15,7 +15,8 @@ Templates do not require separate registers, automation, or a file per form.
 | [Task and plan](work-item-and-plan.md) | Assignment, readiness, steps, and checkpoints |
 | [Decision and change](decision-and-change.md) | Authority, alternatives, consequences, affected surfaces |
 | [Acceptance and evidence](acceptance-and-evidence.md) | Scenario, access, negative cases, and results |
-| [Handoff and recovery](handoff-and-recovery.md) | Continuing work without losing authority and facts |
+| [Task state](task-state.md) | Recover one task and its authority after an interruption |
+| [Checkpoint and closure](checkpoint-report.md) | Give results and outstanding decisions to the operator or next owner |
 | [Review and retrospective](review-and-retrospective.md) | Review of a stable version, or an evidence-based analysis |
 | [Module index](module-index.md) | Navigation across the artifacts of one module |
 | [AGENTS for a documentation area](docs-area-AGENTS.md.template.md) | Local rules of one `docs/*` directory |

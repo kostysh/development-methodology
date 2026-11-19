@@ -124,18 +124,30 @@ agent, honestly record the observed terminal state and the limitations.
 
 ## Context recovery
 
-Before a handoff, a hard stop, or the end of a stage, save a compact
-[handoff](../templates/handoff-and-recovery.md): decisions, sources, exact
-refs, states, evidence, unfinished operations, and the next permitted step.
+### Steps
 
-After a crash/compaction, first re-read the last material assignments and the
-handoff, then check the listed mutable surfaces. A summary helps find facts
-but does not replace them. If the history or the necessary state is
-unavailable, name the specific gap; do not infer permission from an
-assumption.
-
-If the state matches, continue from the stated step without rediscovering all
-the accepted sources. A discrepancy makes the affected part stale, and it
-must be restored before any mutation. A new message usually refines the
-current goal; an accompanying question does not cancel the remaining
-permitted work.
+1. At a plan-step boundary, before a long run, handoff or hard stop, and at
+   stage end, replace the task's local [state file](../templates/task-state.md).
+   Record the source, current authority, last operator instruction, current
+   and next permitted steps, blockers and outstanding operations. Before
+   a long run, arrange to retain its identity, revision, output and exit
+   status across a session loss. Move completed checks to the development log
+   and accepted decisions to their [owning document](13-artifacts-and-communication.md).
+2. Keep one compact file per task outside task commits. Use the
+   [configured writer and line limit](../defaults/task-recovery.md). If the
+   write is too large, move closed items to their owners and retry. A session
+   normally follows one task. On a switch save the old state, load the new
+   task's state and record the switch using the project's metrics procedure.
+3. After compaction, interruption or a session change, **reconcile first**.
+   Read the task state and a fresh snapshot of the worktree, refs, publication,
+   CI and owned operations. Read operator instructions received since the
+   saved locator. If the hook fails, use the manual recovery procedure in
+   the [setup guide](../defaults/task-recovery.md#manual-recovery). If the
+   state is missing, oversized or stale, recover the affected facts from
+   their owners and hold only work that depends on them.
+4. Once the task and revision agree, inspect retained output and the exit
+   record of any finished operation. Resume at the first permitted step.
+   Keep a result tied to the revision it exercised. Report missing outcomes
+   and retain hard stops. A new operator message can refine the assignment.
+   Record checkpoint and closure results for the operator in the separate
+   [checkpoint report](../templates/checkpoint-report.md).

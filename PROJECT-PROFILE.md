@@ -118,6 +118,7 @@ script as proof of success.
 | Format, lint, types, build | Not set | Not set | Not set |
 | Unit and component | Not set | Not set | Not set |
 | Protected test baseline, when adopted | Tool release and commands, hook host and version, required CI check | Test author, test owner and CI owner. Scope, trusted settings and baseline location | Accepted commit and manifest source, activation evidence, fallback before adoption |
+| Task recovery for agents | [Writer, snapshot, recovery and hook](defaults/task-recovery.md). Release and host: not set | Task state path, ignore rule, writer and positive line limit: not set | Compaction, session interruption, long-run result and manual fallback: not verified |
 | Real integration and API | Not set | Not set | Not set |
 | UI: reproducible test and direct walkthrough | Not set | Not set | Not set |
 | Data: clean replay and upgrade | Not set | Not set | Not set |
@@ -141,6 +142,10 @@ cleanup, and recovery after loss of control.
 
 For checks that share mutable state, name the resource, the runners that
 reach it, the isolation or lock they use, and its owner.
+
+For recovery, identify each applicable resource type, its authoritative
+ownership and lease record, and where to retrieve retained run output and
+exit status. Connect only the task, PR and CI identities the project uses.
 
 Keep the secret/config inventory with the environment owner. The profile
 needs links and the names of secret classes, but not values and not user

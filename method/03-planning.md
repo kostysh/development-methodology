@@ -97,13 +97,12 @@ saving the work, and cleanup. If a local commit without push was agreed, make
 exactly that. Preparing a result does not authorize publishing it. Approval of
 one stage does not cancel later stops.
 
-The [checkpoint report](../templates/handoff-and-recovery.md) contains the
-result, `accepted now`, `not accepted`, `blocking decision`,
-`next autonomous action`, key decisions and consequences, evidence, and the
-state needed to continue. For a hard stop the next autonomous action is `none`
-until the named decision.
+Save the [checkpoint report](../templates/checkpoint-report.md) for the
+operator or next owner in the task or PR. Give the result, accepted and open
+work, evidence, key decisions, consequences and next permitted action. At a
+hard stop that action is `none` until the named decision.
 
-The recovery summary names the task/source, time, repository/worktree/branch,
-HEAD/base, dirty state, external IDs/statuses, the last accepted stage, and
-the next step. It is a snapshot: after an interruption, mutable values are
-re-read. The operator must not replace the author's own check of the result.
+Keep the [task state file](../templates/task-state.md) current for the agent.
+On interruption, use it with a fresh snapshot under
+[context recovery](12-agents.md#context-recovery). The executor remains
+responsible for checking the result.

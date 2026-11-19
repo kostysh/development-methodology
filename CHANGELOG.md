@@ -21,6 +21,11 @@ states what requires action in the adopting project.
   update the profile and plan entry point. Set up a trusted hook and required
   CI, then [pilot the route](ADOPTION.md#8-verify-on-one-task) on a medium-risk
   behavior change before adopting it.
+- Replace links to the former combined handoff form with the
+  [checkpoint report](templates/checkpoint-report.md) for people and the
+  [task state file](templates/task-state.md) for the agent. Set its line
+  limit, select a tested recovery command, and verify the host and manual
+  fallback using the [setup guide](defaults/task-recovery.md).
 
 ## 0.4 — 2026-11-12
 

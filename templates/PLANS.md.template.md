@@ -18,8 +18,9 @@ Accepted exceptions: `{{PLAN_EXCEPTIONS_OR_NONE}}`.
 Once accepted, a plan keeps its constraints during execution and across
 session changes. Each checkpoint explicitly sets continuation or a hard stop;
 by default it is informational. Permission for one checkpoint does not lift
-the others. The report and recovery ledger follow
-`{{METHOD_PATH}}/templates/handoff-and-recovery.md`.
+the others. Give the operator the report in
+`{{METHOD_PATH}}/templates/checkpoint-report.md`. Update the local task state
+using `{{METHOD_PATH}}/templates/task-state.md`.
 
 This entry point does not duplicate normative text and does not authorize a
 commit, push, merge, external mutation, or new dependency without an existing

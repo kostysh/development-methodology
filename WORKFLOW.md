@@ -20,8 +20,8 @@ risk triggers can move a task to a stricter route at any time.
    [06](method/06-verification.md#self-check-and-independent-review),
    [13](method/13-artifacts-and-communication.md#living-documentation)
 7. Commit and integrate according to the profile. [07](method/07-integration.md)
-8. Leave a handoff: result, checks, limitations.
-   [template](templates/handoff-and-recovery.md)
+8. Give the operator the [checkpoint report](templates/checkpoint-report.md).
+   Update the local [task state](templates/task-state.md) for agent recovery.
 
 No stage documents are created.
 
@@ -48,6 +48,8 @@ No stage documents are created.
    Define negative acceptance scenarios for high risk.
    [06](method/06-verification.md#end-to-end-and-negative-acceptance)
 8. **Implementation** in a task worktree, tests, living documentation.
+   At step boundaries update the task state. After an interruption
+   [reconcile before resuming](method/12-agents.md#context-recovery).
    [05](method/05-implementation.md), [07](method/07-integration.md#isolation-and-preparation)
 9. **Checks and review**: fast checks, self-check, review by risk subjects,
    [resolve findings](method/06-verification.md#closing-review-findings),

@@ -182,6 +182,11 @@ Record time to acceptance, dispute count, and verification outcomes for
 comparison with comparable earlier tasks. Record any missing baseline or
 inconclusive comparison.
 
+For agent tasks, configure [task recovery](defaults/task-recovery.md).
+Exercise a compaction, an interrupted session and a long run. Verify that
+the agent reconciles the current revision and reads the saved outcome.
+Keep the checkpoint report in the task or PR for its reader.
+
 ## Adoption is complete when
 
 - [ ] The profile is accepted by the owner; `unknown` fields are resolved or

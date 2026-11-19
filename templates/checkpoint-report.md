@@ -1,10 +1,9 @@
-# Handoff and recovery — fillable form
+# Checkpoint and closure report
 
 Rules: [checkpoints](../method/03-planning.md),
 [agents and recovery](../method/12-agents.md), [closure](../method/04-task-management.md),
 [documentation](../method/13-artifacts-and-communication.md).
-Do not turn the report into a log of every command; keep the facts needed for
-a decision and for continuing safely.
+Keep this report in the task or PR for the operator and next owner.
 
 ## Result
 
@@ -23,25 +22,6 @@ a decision and for continuing safely.
 If the result could be mistaken for a broader capability, explicitly separate
 the observed behavior, the supporting artifacts, and the impermissible
 conclusions.
-
-## Recovery snapshot
-
-| Field | Observed value |
-| --- | --- |
-| Time, task/source locator, and the last accepted checkpoint | `{{IDENTITY}}` |
-| Repository / workspace / worktree / branch | `{{WORKSPACE}}` |
-| Exact HEAD / base / upstream / ahead-behind | `{{REFS}}` |
-| Staged / unstaged / untracked and other people's preserved state | `{{GIT_STATE}}` |
-| PR/MR, issue, parent, tracker, run/attempt, deployment IDs | `{{EXTERNAL_IDS}}` |
-| Publication / CI / acceptance / dependency states | `{{STATES}}` |
-| Evidence locators and the limit of their currency | `{{EVIDENCE}}` |
-| Own active operations/resources and cleanup/readback | `{{RESOURCES}}` |
-| Record of the scenario, attempts, and budget, where applicable | `{{REPAIR_CHAIN}}` |
-| Next owner and the next permitted step | `{{NEXT_OWNER_ACTION}}` |
-
-After recovery, re-read the mutable fields. A match permits continuing the
-established step; a discrepancy requires local reconciliation. This snapshot
-is not a new permission.
 
 ## Final reconciliation — on closure
 

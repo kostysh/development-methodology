@@ -10,7 +10,7 @@ import packageInfo from "../package.json" with { type: "json" };
 const tools = fileURLToPath(new URL("../", import.meta.url));
 const stamp = "2026-11-19T10:00:00Z";
 
-test("packs once and invokes both installed commands with isolated local data", { timeout: 180_000 }, (t) => {
+test("packs once and invokes the installed commands with isolated local data", { timeout: 180_000 }, (t) => {
   const root = mkdtempSync(join(realpathSync(tmpdir()), "methodology-metrics-packed-"));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const install = join(root, "install");
@@ -100,4 +100,12 @@ test("packs once and invokes both installed commands with isolated local data", 
   assert.deepEqual(run(["record", path, "extra"]), {
     status: 2, stdout: "", stderr: "methodology-metrics: invalid_arguments\n",
   });
+  const contract = spawnSync(process.execPath, ["--test", join(tools, "test/baseline-contract.test.ts")], {
+    cwd: project,
+    env: { ...process.env, METHODOLOGY_BASELINE_BIN: installedBin("methodology-baseline") },
+    encoding: "utf8",
+    timeout: 90_000,
+  });
+  assert.ifError(contract.error);
+  assert.equal(contract.status, 0, contract.stdout + contract.stderr);
 });

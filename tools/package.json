@@ -1,6 +1,6 @@
 {
   "name": "@kostysh/development-methodology-tools",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "description": "Deterministic checks and local process metrics for the development methodology",
   "type": "module",
@@ -8,6 +8,7 @@
     "node": ">=24.12 <25"
   },
   "bin": {
+    "methodology-baseline": "./dist/baseline.js",
     "methodology-check-links": "./dist/check-links.js",
     "methodology-metrics": "./dist/metrics.js"
   },

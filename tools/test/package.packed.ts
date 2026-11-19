@@ -100,20 +100,33 @@ test("packs once and invokes the installed commands with isolated local data", {
   assert.deepEqual(run(["record", path, "extra"]), {
     status: 2, stdout: "", stderr: "methodology-metrics: invalid_arguments\n",
   });
-  const contract = spawnSync(process.execPath, [
-    "--test", join(tools, "test/baseline-contract.test.ts"), join(tools, "test/recovery-contract.test.ts"),
-    join(tools, "test/train-metrics-contract.test.ts"),
-  ], {
-    cwd: project,
-    env: {
-      ...process.env,
-      METHODOLOGY_BASELINE_BIN: installedBin("methodology-baseline"),
-      METHODOLOGY_RECOVERY_BIN: installedBin("methodology-recovery"),
-      METHODOLOGY_METRICS_BIN: metrics,
-    },
-    encoding: "utf8",
-    timeout: 90_000,
-  });
-  assert.ifError(contract.error);
-  assert.equal(contract.status, 0, contract.stdout + contract.stderr);
+  const contractEnv: NodeJS.ProcessEnv = {
+    ...process.env,
+    METHODOLOGY_BASELINE_BIN: installedBin("methodology-baseline"),
+    METHODOLOGY_RECOVERY_BIN: installedBin("methodology-recovery"),
+    METHODOLOGY_METRICS_BIN: metrics,
+  };
+  // A nested Node test runner skips its files if it inherits this marker.
+  delete contractEnv.NODE_TEST_CONTEXT;
+  const contracts = [
+    "baseline-contract.test.ts",
+    "recovery-contract.test.ts",
+    "train-metrics-contract.test.ts",
+  ];
+  for (const file of contracts) {
+    const contract = spawnSync(process.execPath, [
+      "--test", "--test-reporter=tap", join(tools, "test", file),
+    ], {
+      cwd: project,
+      env: contractEnv,
+      encoding: "utf8",
+      timeout: 90_000,
+    });
+    assert.ifError(contract.error);
+    const output = contract.stdout + contract.stderr;
+    assert.equal(contract.status, 0, output);
+    const counts = /^# pass ([1-9]\d*)$/mu.exec(contract.stdout);
+    assert.ok(counts, `No passing contract tests reported for ${file}.\n${output}`);
+    console.log(`Installed ${file} passed ${counts[1]} tests.`);
+  }
 });

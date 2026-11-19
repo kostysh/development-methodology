@@ -62,3 +62,25 @@ selected pilot and summary window.
 
 This path measures supplied observations. Stage 6 activation still requires the
 adopter's trigger, train, dry nights and operational acceptance.
+
+## Packed runner correction
+
+On Node.js 24.15.0 a nested `node --test` inherited
+`NODE_TEST_CONTEXT=child-v8`, skipped every selected file and returned 0.
+The original package check accepted that exit status. Its other installed
+command checks did execute. Earlier green hosted runs cannot establish how
+many nested contract cases ran.
+
+The corrected runner clears that inherited marker, selects the built-in TAP
+reporter, and requires a successful exit and a positive pass count for
+each suite. Restoring the marker in a controlled run again skipped the
+tests and the outer gate failed on the missing count. On the stock 0.4.0
+archive, 27 installed baseline tests and eight recovery tests passed. All
+four new train tests failed on the absent event or coverage declaration.
+The unchanged canonical suite also passed its 91 existing tests and failed
+the four new tests. Their deeper assertions became reachable on implementation.
+
+A separate top-level test process reinstalled each exact archived version
+and ran its frozen suites. The 0.3.0 pilot archive passed 27 of 27.
+The corrected 0.4.0 recovery archive passed 35 of 35. Both reported zero
+skips. These later runs establish the installed behavior of those archives.

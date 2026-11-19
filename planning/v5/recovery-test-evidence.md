@@ -57,8 +57,9 @@ version added types and preserved the test behavior.
 Run `npm run build` and `npm test` from `tools/`. To exercise the packed
 package, install its tarball into an isolated location and run the same
 test file with `METHODOLOGY_RECOVERY_BIN` set to the absolute executable path
-of the installed bin. The package smoke test invokes that child suite with
-the verified installed path.
+of the installed bin. Require a positive executed-test count for each
+installed suite. The [runner correction](train-metrics.md#packed-runner-correction)
+records why the original smoke result could not establish this.
 
 The eight cases cover binding and command errors, private UTF-8 state and
 line limits, index and ref preservation, unsafe destinations, competing
@@ -95,9 +96,11 @@ before the first PR. Each [regression test](../../tools/test/recovery-implementa
 failed against the earlier installed archive and passed against the
 corrected archive at [c8aae8e0](https://github.com/kostysh/development-methodology/commit/c8aae8e0c546376132bee41d829a674637b5dfc7).
 
-- The canonical suite passed 91 tests. The package smoke test installed all
-  four commands outside the checkout and exercised the 27 protected-baseline
-  cases and eight frozen recovery cases through that installation. The
+- The canonical suite passed 91 tests. The original package smoke installed
+  and invoked the public commands. A later check found that its nested test
+  runner had skipped the contract files. A fresh, direct installed run on
+  the exact 0.4.0 archive passed 27 protected-baseline and eight recovery
+  cases, with zero skips. The
   [recovery manifest](recovery-baseline.json) still matched its trusted tree.
 - A live read of the named GitHub repository matched the published branch
   OID before a PR was selected. A historical PR and a run with no matching

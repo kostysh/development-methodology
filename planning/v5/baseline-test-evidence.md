@@ -80,7 +80,10 @@ can use separate files.
 
 ## Accepted behavior and evidence limits
 
-The installed package passed all 27 frozen cases. The [pilot report](pilot.md#pilot-results)
+The original hosted package check invoked the built commands. Its nested
+runner could skip the contract files. During the [runner correction](train-metrics.md#packed-runner-correction),
+a fresh installation of the pilot's exact 0.3.0 archive passed all 27 frozen
+cases directly with zero skips. The [pilot report](pilot.md#pilot-results)
 records native allowed and denied edits, the controlled failing hosted
 comparison, the restored candidate and the final integration decision.
 In a separate dispute exercise the specification owner rejected an assertion

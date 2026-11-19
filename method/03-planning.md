@@ -34,6 +34,12 @@ The [task and plan template](../templates/work-item-and-plan.md) records:
 - local, CI, and post-release checks without substituting one for another;
 - an explicitly deferred obligation, its owner, and the return event.
 
+When the [test baseline applies](02-lifecycle.md#when-a-test-baseline-applies),
+make its preparation the first execution step after specification. Name the
+independent author and the [baseline evidence](06-verification.md#protected-test-baseline)
+that allows dependent implementation to start. Outside formal planning,
+record the step and dependency in the task.
+
 A separate local rerun after integration must establish a new fact: changed
 code/conditions, a new defect, or missing mandatory evidence. A new SHA by
 itself does not require repeating an unchanged local check. This does not

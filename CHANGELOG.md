@@ -17,6 +17,10 @@ states what requires action in the adopting project.
 - Select applicable [deterministic controls](defaults/controls.md). Verify
   the installed command against a known violation and a clean candidate
   before transferring a check out of manual review.
+- For the [protected test baseline](method/06-verification.md#protected-test-baseline),
+  update the profile and plan entry point. Set up a trusted hook and required
+  CI, then [pilot the route](ADOPTION.md#8-verify-on-one-task) on a medium-risk
+  behavior change before adopting it.
 
 ## 0.4 — 2026-11-12
 

@@ -117,6 +117,7 @@ script as proof of success.
 | --- | --- | --- | --- |
 | Format, lint, types, build | Not set | Not set | Not set |
 | Unit and component | Not set | Not set | Not set |
+| Protected test baseline, when adopted | Tool release and commands, hook host and version, required CI check | Test author, test owner and CI owner. Scope, trusted settings and baseline location | Accepted commit and manifest source, activation evidence, fallback before adoption |
 | Real integration and API | Not set | Not set | Not set |
 | UI: reproducible test and direct walkthrough | Not set | Not set | Not set |
 | Data: clean replay and upgrade | Not set | Not set | Not set |
@@ -193,6 +194,7 @@ to people, teams, or [skills](#skills). The rules for the modes are in
 | --- | --- |
 | Mode: `solo` or `team` | Not set |
 | Owner and deputy per role: product, architecture, delivery, specification, review, integration | Not set |
+| Independent test author, test owner, and owners of baseline replacements, where applicable | Not set |
 | Owner response time per class of decisions | Not set |
 | Safe default when there is no response in time, per class of decisions | None — the decision waits for the owner or deputy |
 | Who resolves disputes between author and reviewer | Not set |

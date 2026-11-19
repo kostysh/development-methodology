@@ -9,7 +9,8 @@ checks are defined by the profile and by the owners of the changed areas.
 
 1. Before code, for each acceptance criterion name the check, the environment,
    and the observation. For high-risk work, define the negative scenarios and
-   show the sensitivity of at least one test.
+   show the sensitivity of at least one test. Prepare the
+   [protected test baseline](#protected-test-baseline) when it applies.
 2. Run the fast checks of the affected parts: format, lint, types, build, tests.
 3. Do the self-check.
 4. Submit the stable version for review on the subjects the risk requires.
@@ -70,6 +71,41 @@ Use the existing test runtime. Do not add a separate harness just for the
 sake of the form of the check. If the existing means are insufficient, name
 the gap and obtain the required decision about the new boundary.
 
+## Protected test baseline
+
+Assign a separate agent to author the tests from the accepted specification
+alone. Provide the means to run the tests against the pre-change system and
+keep the implementation design and work out of the author's context. Trace
+each assertion to an acceptance criterion and its source or owner decision.
+Refer unsupported conditions to the specification owner before freezing them.
+
+Exercise the public API, data contract, or user path using the exact
+operation and transport in the criterion. Run each new baseline test before
+implementation and record its failure for the intended reason. If the entry
+is missing, record the observation at the required boundary as evidence of
+absence. Record assertions that the missing entry prevents as unevaluated.
+If the intended failure cannot be observed, take the gap to the specification
+owner before freezing the affected tests.
+
+The test owner freezes the tests and the inputs that determine what runs and
+what passes. Record them in a hash manifest at the accepted baseline commit.
+Use a local hook to reject direct edits to protected paths and required CI
+to verify the exact candidate against the trusted baseline. See the
+[default procedure](../defaults/controls.md#protect-a-test-baseline).
+
+Keep the protected inputs intact. Add implementation tests outside the
+protected paths and include them in the applicable canonical runs. If such a
+test supplies evidence of a race, retry, or change of rights, show that it
+distinguishes the outcomes on an earlier snapshot or under a controlled
+violation.
+
+If an assertion is disputed, record the test, specification clause, and
+conflict. Mark it disputed and continue work that does not depend on it.
+Resolve the open disputes together at the next checkpoint. The specification
+owner resolves contradictions in the specification. The test author corrects
+a faulty test against a clear specification. Update the trusted inputs only
+after the owners accept the replacement baseline with its pre-change evidence.
+
 ## Run composition
 
 A targeted run is useful for diagnosis. It does not replace the full affected
@@ -112,6 +148,11 @@ operations. In high-risk work, do not collapse independent mandatory subjects
 into one indistinguishable verdict. Low risk does not automatically require a
 formal audit; a change to authority or acceptance rules may require one
 regardless of size.
+
+After rollout, use the protected tests that ran and passed on the candidate
+to establish their verified coverage. Focus the specification-conformance
+audit on the behavior those tests leave uncovered. Keep the applicable domain
+reviews.
 
 A finding names the locator, the violated contract, the impact, the evidence,
 and the required fix or disposition. The first FAIL must contain the whole

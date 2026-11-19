@@ -14,7 +14,8 @@ duty to read the sources and verify the work.
 4. For a new dependency, first obtain a decision, then change the manifest.
 5. Change only what is related to the assignment; record neighboring defects
    separately.
-6. Update tests and living documentation.
+6. Update tests and living documentation. Follow the
+   [protected test baseline](06-verification.md#protected-test-baseline) where it applies.
 7. Hand the result over for verification according to [chapter 06](06-verification.md).
 
 ## Minimal sufficient complexity

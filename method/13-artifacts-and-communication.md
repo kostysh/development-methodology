@@ -19,6 +19,7 @@ structure of PRDs, SPECs, decisions, plans, and reports is set by
 2. Determine the [kind](#descriptions-and-records). Edit a description of the
    current state in place; create a record as a new one.
 3. Take the location and ID from the profile, add metadata and links to sources.
+   For a test baseline, follow the [persistence rules](#persistence-rules).
 4. Write the content following the stage's skill, in the language set by the profile.
 5. Leave the status as `draft` and pass the document to the owner of its class
    for acceptance.
@@ -210,6 +211,12 @@ Move transient evidence into a persistent document if it revealed:
 
 An ordinary PASS does not require a separate report if the scope, reviewer,
 and verdict are already saved in the handoff.
+
+Keep the [test baseline](06-verification.md#protected-test-baseline) and its
+manifest with the tests in the repository. Link the accepted baseline commit,
+specification revision, assertion traceability, pre-change run evidence, and
+any dispute dispositions from the existing task, plan, or PR. Preserve that
+record and link to the successor when the owners replace a baseline.
 
 ## Module index
 

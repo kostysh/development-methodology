@@ -42,6 +42,7 @@ Terms the methodology uses without explanation in the chapter text.
 | Slice (vertical slice) | A bounded useful result through all the necessary layers of the system | [Lifecycle](method/02-lifecycle.md#vertical-slice-and-specification) |
 | Stable ID | An unchanging identifier of an artifact or requirement used for references. Until merged into the integration branch, a new document's ID is provisional | [Documentation](method/13-artifacts-and-communication.md#identifiers) |
 | Supersession | Replacing an accepted document with a new one while keeping the `supersedes` / `superseded_by` link | [Documentation](method/13-artifacts-and-communication.md#statuses-and-acceptance) |
+| Test baseline | The tests and inputs accepted for checking observable behavior during a change | [Verification](method/06-verification.md#protected-test-baseline) |
 | `unknown` | An unknown value; blocks only the actions that depend on it and is not equal to a safe `no` | [Profile](PROJECT-PROFILE.md) |
 | Verdict | The outcome of a review per subject: `PASS`, `FAIL`, or `BLOCKED`, with the version and coverage stated | [Planning](method/03-planning.md#independent-review-of-a-formal-plan) |
 | Worktree | A separate Git working copy for one task | [Integration](method/07-integration.md#isolation-and-preparation) |

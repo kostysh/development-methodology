@@ -35,6 +35,15 @@ Record the trusted package version, command, owner and enforcing boundary in
 the profile. Verify the installed check on a clean input and a known
 violation before transferring its rule out of manual review.
 
+For the protected test baseline, name the independent test author, test
+owner, and hook and CI owners. Set up and exercise the
+[default procedure](defaults/controls.md#protect-a-test-baseline). Record
+the activated scope in the [profile](PROJECT-PROFILE.md#tools-and-checks).
+While a boundary is unverified or unavailable before adoption, keep the
+existing test and conformance review route in that scope. Once the integrity
+check is required, a failed or missing result holds integration. Diagnose
+the failure and restore the verified control before retrying.
+
 Decide the applicability of every section. A conditional section may be
 switched off only with an explanation, for example "no persistent storage,
 migrations do not apply". Do not switch off permission checks just because a
@@ -162,6 +171,16 @@ access, a wrong record in an end-to-end test, or a lost response from an
 external operation. The process must forbid false success and give a concrete
 way to continue. This is a check of how the rules are applied; it does not
 require deliberately damaging the system.
+
+To adopt the protected test baseline, also pilot it on a medium-risk
+behavior change. Trace each new baseline test from its criterion through
+the intended pre-change failure to the passing implementation. Walk a
+[dispute](method/06-verification.md#protected-test-baseline) and continue
+independent work while the owners resolve it. Verify the hook and required
+CI using the [control cases](defaults/controls.md#protect-a-test-baseline).
+Record time to acceptance, dispute count, and verification outcomes for
+comparison with comparable earlier tasks. Record any missing baseline or
+inconclusive comparison.
 
 ## Adoption is complete when
 

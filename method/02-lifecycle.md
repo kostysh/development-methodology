@@ -16,6 +16,7 @@ the skill for each stage is in the [defaults](../defaults/skills.md#stages-and-s
 | Architecture: technical owner | Product basis and existing boundaries | Decisions, qualities, risks, contracts, and handoff | An unknown material system boundary |
 | Delivery: planner | Accepted product/architecture basis | Vertical slices, tasks, dependencies, order, and evidence | An unachievable dependency or unclear responsibility |
 | Specification: behavior owner | Task and inherited decisions | Verifiable behavior, states, errors, acceptance, and verification map | The executor would have to invent material behavior |
+| Test baseline: independent test author, when applicable | Accepted specification | [Protected tests](06-verification.md#protected-test-baseline) and evidence of their pre-change failures | A missing or disputed assertion holds the work that depends on it |
 | Implementation: executor | A ready contract and an authorized stage | Implementation, the necessary tests, updated [living documentation](13-artifacts-and-communication.md#living-documentation), and a development log | A material gap, a failed gate, or going beyond scope |
 | Review: independent reviewer when required | A stable result and a self-check | Findings, or a verdict limited to the reviewed area | An unresolved mandatory finding or an unverified boundary |
 | Integration: integrator | Permission, candidate, gates, and review | A verified final state of the repository/release | Stale evidence, a conflict, a missing mandatory result |
@@ -61,6 +62,19 @@ invented for implementation convenience.
 For each criterion state the check, environment, observation, and evidence
 owner. If a criterion passes with a stub in place of the promised action, it
 is insufficient.
+
+### When a test baseline applies
+
+Once the project adopts the protected test baseline, prepare it after
+specification and before implementing changes to observable behavior. Use
+existing tests as the baseline for a refactor. Documentation-only work and
+[small low-risk corrections](01-authority-and-scope.md#materiality-and-rigor)
+skip the added step and keep their applicable checks.
+
+For baseline tests, identify the public operation and transport in the
+specification. Name the routes, fields, error codes, and accessible UI names
+that define the boundary, where applicable. Link each testable condition to
+its source or an accepted owner decision.
 
 ## Reachable end-to-end path
 

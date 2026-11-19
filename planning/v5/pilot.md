@@ -26,3 +26,26 @@ package-check duration, with task acceptance, operator activity and
 seven-day rework unavailable from the permitted earlier evidence. These
 observations serve different measures. The general package contains no
 project-specific pilot records.
+
+The independent author registered the [27 public tests](baseline-test-evidence.md)
+before implementation. The [manifest](pilot-baseline.json) binds them and five
+build or execution inputs to trusted baseline
+`537d54bfa1c1581ec27cc626b72a6f56514dfca5`. The collector's first import
+attributed 41 usage events to the two task-owned sessions for specification
+and tests. A second import counted 41 repeats. The journal had one additional
+event for the execution start. Coverage of other work in the task remained
+partial. [Draft PR 2](https://github.com/kostysh/development-methodology/pull/2)
+opened at 19:02:29 UTC, 22 minutes and 20 seconds after execution began.
+The [push](https://github.com/kostysh/development-methodology/actions/runs/44594072803)
+and [PR check](https://github.com/kostysh/development-methodology/actions/runs/44594142725)
+both failed at the missing built command on this pre-implementation revision.
+
+For this PR the owner chose an operator-held integration gate. The orchestrator
+re-runs one reviewed GitHub Actions workflow at its original revision.
+It builds the verifier from that revision and reads only the Git objects of
+the current PR head. Record the run attempt and the inspected candidate for
+the controlled change and the clean revision. Before merging, require a passing
+integrity result, green package checks and independent acceptance on the final
+candidate, and supply that head SHA as the merge precondition. GitHub's native
+run belongs to the original workflow revision. Server-side automatic merge
+protection on `v5` remains open.

@@ -10,7 +10,8 @@ risk triggers can move a task to a stricter route at any time.
 1. Name the assignment, result, scope, and non-goals.
    [01](method/01-authority-and-scope.md#outcome-and-authority)
 2. Make sure the low-risk criteria are met and the task qualifies for the
-   shortened route. [01](method/01-authority-and-scope.md#materiality-and-rigor)
+   shortened route. [01](method/01-authority-and-scope.md#materiality-and-rigor),
+   [02](method/02-lifecycle.md#when-a-test-baseline-applies)
 3. Create a task worktree. [07](method/07-integration.md#isolation-and-preparation)
 4. Make the change in the most direct way. [05](method/05-implementation.md#minimal-sufficient-complexity)
 5. Run the narrow check and the mandatory repository gates.
@@ -42,7 +43,9 @@ No stage documents are created.
    behavior; verification map. [02](method/02-lifecycle.md#vertical-slice-and-specification)
 6. **Execution plan** — if formal planning is switched on by the profile;
    independent review of the plan. [03](method/03-planning.md)
-7. **Negative acceptance before code** — for high risk.
+7. **Before code.** Prepare the [test baseline](method/06-verification.md#protected-test-baseline)
+   when [applicable](method/02-lifecycle.md#when-a-test-baseline-applies).
+   Define negative acceptance scenarios for high risk.
    [06](method/06-verification.md#end-to-end-and-negative-acceptance)
 8. **Implementation** in a task worktree, tests, living documentation.
    [05](method/05-implementation.md), [07](method/07-integration.md#isolation-and-preparation)
@@ -59,7 +62,8 @@ No stage documents are created.
     [13](method/13-artifacts-and-communication.md#statuses-and-acceptance)
 
 Steps 2–5 are performed only to the extent that the task changes their area.
-A change that stays within an accepted SPEC starts at step 6 or 8.
+For a change within an accepted SPEC, continue with the first applicable
+step from steps 6–8.
 
 ## Document or research
 

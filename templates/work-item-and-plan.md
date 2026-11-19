@@ -27,6 +27,10 @@ and the accepted route.
 
 ## Steps and checkpoints — for a plan
 
+Use the first applicable execution row for the
+[test baseline step](../method/03-planning.md#contents). Link its accepted
+record or give the basis for skipping the step in the task.
+
 | Step | Owner / competence | Verifiable output | Dependency | Check / evidence | Permitted transition |
 | --- | --- | --- | --- | --- | --- |
 | `{{STEP}}` | `{{OWNER}}` | `{{OUTPUT}}` | `{{EDGE}}` | `{{CHECK}}` | `{{NEXT_OR_HARD_STOP}}` |

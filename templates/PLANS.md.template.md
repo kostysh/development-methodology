@@ -10,6 +10,8 @@ the two subjects from the canonical section, and the stated checkpoints. For a
 small task outside formal mode, this file does not switch on an audit
 automatically.
 
+For the test baseline step, follow `{{METHOD_PATH}}/method/03-planning.md#contents`.
+
 Owners and available means of review: `{{PLAN_REVIEW_OWNERS}}`.
 Accepted exceptions: `{{PLAN_EXCEPTIONS_OR_NONE}}`.
 

@@ -6,6 +6,10 @@ properly configured package and covered by the tests it needs. The contract
 below defines observable acceptance for that requirement. It applies equally
 to executables shipped with a skill, invoked by a hook, or run in CI.
 
+The owner's November 20 [remediation decision](adoption-readiness.md)
+supersedes the pilot waits and the earlier deferral of train and solo delivery.
+The package and behavioural checks below apply to the release candidate.
+
 The [plan](plan.md) owns the eight stages, triggers, exceptions and pilot
 criteria. The [impact matrix](impact-matrix.md) contains estimates. The current
 package boundary and the rules for releasing an update come from the

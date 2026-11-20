@@ -1,5 +1,8 @@
 # Implementation and evidence
 
+This table preserves the November 19 results and decisions. The
+[November 20 remediation plan](adoption-readiness.md) owns the current work.
+
 | Stage | Verified on the development branches | Remaining acceptance |
 | --- | --- | --- |
 | 1. Measurement | The installed collector observed task-scoped Codex, Claude and GitHub data. Its pre-PR and acceptance intervals matched the manual chronology. Both sources record one verified corrective follow-up so far. [Real pilot](pilot.md#pilot-results) | Several event families have partial coverage. Seven-day follow-up on November 26 at 19:22:27 UTC, then the owner's retention decision. |

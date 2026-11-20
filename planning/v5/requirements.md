@@ -97,10 +97,12 @@ Separate owner decisions authorize the [three recovery jobs](recovery-pilot.md)
 and the [prospective solo observation](solo-observation.md). Each record
 defines its own eligible tasks, fields and observation period.
 
-For stage 6 the owner selected portable guidance, seven verification
-scenarios and observational metrics for this branch. Implementation of a
-write-capable train and its nightly pilot start only after an adopting
-project demonstrates the trigger.
+For stage 6 the November 20 decision requires a packaged, write-capable
+train. Use a standalone scheduled project task in Codex to start it without
+the operator. Use system cron only when the built-in scheduler is unavailable.
+Commission the chosen trigger on a disposable target and match the actual
+timed run to the train receipt, branch and deployment. The adopting project
+chooses its integration branch and night window.
 
 For a methodology release, record adoption actions in the changelog and bump
 the version in the README. For a tool release, associate the instructions with

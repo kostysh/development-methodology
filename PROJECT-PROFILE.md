@@ -58,9 +58,11 @@ Use the [GitHub default](defaults/merge-train.md) when it fits the project.
 | Immutable submission branch pattern, task keys and dependencies, ruleset and retention of closed refs | Not set |
 | Expected PR author ID if restricted, independent reviewer, App bot user ID or human review publisher | Not set |
 | Trusted check publisher, workflow revision and required jobs | Not set |
-| Trusted train package and version, scheduler, runner, lock and status sources | Not set |
+| Trusted train package and version, runner, lock and status sources | Not set |
 | Expensive suite, approved temporary resource types and test environment, if applicable | Not set |
-| Night window, time zone, observed scheduler start, maximum run duration and how the runner renews its access | Not set |
+| Codex scheduled project task or opt-in fallback, schedule owner and approved fixed trigger | Not set |
+| Night window and time zone, configured UTC slots and grace period, evidence of an actual scheduled start | Not set |
+| Maximum run duration and how the trusted runner renews its access | Not set |
 | PR limit `N`, migration PR limit, and full-suite run budget | Not set |
 | Recurrence window `M` in days | Not set |
 | Paths eligible for the documentation-only route | Not set |

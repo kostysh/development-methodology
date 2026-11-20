@@ -7,20 +7,19 @@ with the project's [package checks](controls.md#common-checks).
 
 ## GitHub setup
 
-1. Schedule the pinned train on a trusted runner with access to the
-   approved test environments. Choose the [runner's system cron](#schedule-on-a-linux-host)
-   or the supplied GitHub Actions dispatcher. One scheduler owns a branch.
+1. Run the pinned train on a trusted runner with access to the approved
+   test environments. Use a [Codex scheduled project task](#schedule-with-codex)
+   to start it. Use [system cron](#schedule-on-a-linux-host) only if the
+   built-in scheduler is unavailable. Use one active scheduler per branch.
    GitHub's native merge queue forms `merge_group` candidates when PRs enter
    the queue. Its merge limits group final merges and leave build dispatches
    separate. The documented settings offer neither timed admission nor one
    full check run for a scheduled batch. [GitHub merge queue][merge-queue]
 2. Schedule a start every two hours during the project's night window.
    Record the start, end and time zone. Set a maximum duration and choose
-   the interval with two full suites and diagnosis in mind. An overlap is
-   a normal skip. For GitHub Actions, the scheduled workflow must exist on the default branch.
-   GitHub can delay or drop schedules. Accept a timed dispatch only for
-   an identifiable open slot. Account for late or missing slots in the
-   morning report. [GitHub schedule][schedule]
+   the interval with two full suites and diagnosis in mind. The runner accepts
+   a scheduled dispatch only during an identifiable open UTC slot. Record
+   late or missing starts in the morning report. An overlap is a normal skip.
 3. Let each invocation reach the lock attempt while a prior train is
    running. GitHub Actions `concurrency` leaves pending work or can cancel
    the active run. Use a non-blocking lock shared by scheduled, urgent and
@@ -70,8 +69,9 @@ flaky-test recurrence window and timeout in the profile.
 Install the tools archive from the [adoption guide](../ADOPTION.md). Check
 `methodology-train --version` against its release. The archive includes
 `assets/train/methodology-train.cron` and `assets/train/dispatcher.yml`.
-When using GitHub Actions, copy the dispatcher into a trusted management
-repository's default branch. Set the target repository and writer App ID in
+For the remote trigger, copy the dispatch-only workflow into a trusted
+management repository's default branch as `.github/workflows/dispatcher.yml`.
+Set the target repository and writer App ID in
 the protected train profile. Mount the dedicated App key on this runner at
 `/etc/methodology/train-app.pem` (owner-only, mode 0600) and set
 `TRAIN_INSTALLATION_ID` in the protected `methodology-train` environment. Restrict that
@@ -86,7 +86,7 @@ Use Git 2.38 or newer with `merge-tree --write-tree`, GitHub CLI with
 `gh api`, util-linux `flock`, and Docker with the configured immutable suite
 image preloaded and read-only, non-recursive bind mounts. The GitHub adapter
 supports github.com and same-repository PRs. Pre-create the queue label.
-Both schedulers start the train with the host key path and installation ID.
+The trusted runner starts the train with the host key path and installation ID.
 On the host the train signs a short-lived App JWT and requests a token scoped
 to one repository, contents write, pull requests write (labels and comments)
 and checks read. Private Actions workflow readback also requests Actions read.
@@ -221,13 +221,70 @@ all applicable fast checks, affected tests, baseline and audit verdict.
   `methodology-train observations PROFILE` replays receipts after a
   journal interruption. Its stable event identities deduplicate replays.
 
+### Schedule with Codex
+
+1. Open **Scheduled** in the ChatGPT desktop app, or ask Codex to create a
+   standalone scheduled task for the trusted project. Select the project and
+   the local execution environment approved for the trigger. Each run starts
+   a new chat from the saved prompt. Keep the host powered on, the desktop
+   app running, and the selected project available on disk.
+   [OpenAI scheduled tasks](https://learn.chatgpt.com/docs/automations)
+2. Set the recurring times in the app to match the project's night window
+   and time zone. Compare the displayed next runs in UTC with the trusted
+   profile's `schedule.hoursUtc` and `schedule.graceMinutes`. Decide how the
+   schedule will handle daylight-saving changes and recheck the mapping when
+   the offset changes. The default UTC example uses 00:00, 02:00 and 04:00.
+3. Give the task access to one fixed trigger. For a remote runner, the trigger
+   submits only the scheduled dispatch to the reviewed workflow on the trusted
+   default branch. Scope authorization to that receiver and keep the writer
+   App key, target repository write credentials, and runner settings on the
+   trusted host. GitHub requires repository Actions write permission for
+   dispatch. Keep that credential behind the fixed trigger if it would grant
+   broader access to the chat. For a co-located runner, use an approved fixed
+   local entry point that passes the trusted profile and
+   `--scheduled --slot UTC_HOUR` to the installed train. Capture the UTC
+   hour when Codex submits the request. Keep privileged execution on the
+   runner. Test
+   the selected trigger with the scheduled task's actual permissions. Give
+   the task its command, target repository and branch, expected effects, and
+   a readable way to verify the receiver and find the run receipt. The
+   ordinary dispatch must complete without an interactive approval.
+   [GitHub CLI dispatch](https://cli.github.com/manual/gh_workflow_run)
+   · [GitHub dispatch permissions](https://docs.github.com/en/rest/actions/workflows#create-a-workflow-dispatch-event)
+4. Save the prompt below after substituting the actual UTC hours, grace period,
+   management repository and default ref. If the task uses an approved fixed
+   wrapper or local entry point, replace the command with that exact invocation.
+
+   ```text
+   This task starts the integration train for TARGET_REPOSITORY, branch TARGET_BRANCH.
+   The reviewed trigger TRIGGER_REFERENCE submits the request. The runner checks ready PRs, updates that branch and the configured test deployment, and records the result at RECEIPT_LOCATION.
+   Use UTC hours APPROVED_UTC_HOURS and a grace period of GRACE_MINUTES minutes.
+   If the current UTC time is outside an approved open slot, report the missed start and stop.
+   In an open slot run this exact approved command once:
+   gh workflow run dispatcher.yml --repo MANAGEMENT --ref TRUSTED_DEFAULT -f scheduled=true -f slot="$(date -u +%Y-%m-%dT%H:00:00Z)"
+   If the command is unavailable or denied, report the missed start and stop.
+   Report whether the trigger accepted the request and include the returned run URL if available. The runner reports integration separately.
+   Do not retry or backfill a slot, change permissions, or start an on-demand train.
+   ```
+
+The dispatch binds the request to the UTC hour when Codex submits it. The
+train checks that hour, the configured grace period and existing receipts
+when it starts. A request delivered in a later hour is rejected. A late
+desktop start can count only for the open slot it actually reaches. An
+earlier missed slot stays visible in the morning report.
+
+When moving from an older release, remove any previous GitHub Actions
+`schedule` trigger and disable any previous system cron entry for the branch
+before enabling Codex. Reconcile any start already in flight. Keep the
+reviewed `workflow_dispatch` entry if Codex uses that receiver.
+
 ### Schedule on a Linux host
 
-A project with one GitHub account can run the train from an always-on
-Linux host with system cron. Use a service account with access to the
-trusted installation, Git, Docker, the test environment and private state.
-Install Node and the release commands on the service's PATH. The service
-gets the protected App key. PR code runs in the isolated verifier.
+If the built-in Codex scheduler is unavailable, opt in to system cron on
+an always-on Linux host. Use a service account with access to the trusted
+installation, Git, Docker, the test environment and private state. Install
+Node and the release commands on the service's PATH. The service gets the
+protected App key. PR code runs in the isolated verifier.
 
 Copy `assets/train/methodology-train.cron` from the installed package to
 a staging file. Set the actual service account, installation ID and paths.
@@ -240,14 +297,18 @@ including the project's daylight-saving policy. Keep the daemon available
 when the operator logs out. Disable this one entry to stop new scheduled
 starts. The shared writer lock also covers urgent runs.
 
+### Verify the scheduled start
+
 Commission a disposable target with one near-term clock slot. Before the
-slot, prepare an independently reviewed ordinary PR and leave the operator
-offline. The scheduler must invoke the installed binary, the receipt must
-identify the slot, and GitHub and the configured test deployment must show
-the tested commit. Include a protected change without the owner's answer
-and a dependent PR when exercising the morning report. Confirm both stay
-open while independent work merges. Restore the chosen night hours before
-enabling the project's schedule.
+slot, prepare an independently reviewed ordinary PR. Let the scheduler
+start the run without operator interaction. Match that run to its receiver
+and the installed train's receipt for that UTC slot. GitHub and the configured
+test deployment must show the tested commit. Include a protected change
+without the owner's answer and a dependent PR. Confirm both stay open while
+independent work merges. Verify that a missing slot appears in the morning
+report. Leave it missed and let the next configured slot proceed. Restore
+the night hours, enable the chosen schedule, and confirm one active scheduler
+for the branch.
 
 ### Submit and correct a ready revision
 
@@ -540,7 +601,7 @@ need a prior decision. A dependant names its prerequisite PR. The run's
 `integrated` list and deployment readback identify completed work.
 Schedule ordinary integration without interactive chat or a required
 GitHub environment reviewer on each run. Obtain any protected decision
-before its own PR enters the train.
+before its own PR enters the train. Report missed slots without backfill.
 
 - Window, integration branch and run IDs —
 - Decisions awaiting the operator, with owner and required action —
@@ -552,7 +613,6 @@ before its own PR enters the train.
 - Remaining queue —
 
 [merge-queue]: https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/managing-a-merge-queue
-[schedule]: https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule
 [concurrency]: https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#concurrency
 [rules]: https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets
 [combined]: https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets

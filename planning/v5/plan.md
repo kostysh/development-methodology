@@ -268,8 +268,10 @@ metrics.
    change. Require the audit verdict as a status on the same head SHA and a
    conflict-free integration with the branch. A new PR commit removes the
    label.
-4. **Schedule runs.** The proposed default is every two hours during a night
-   window. Set both in the profile. Try a non-blocking lock first. When the
+4. **Schedule runs.** Use a standalone scheduled project task in Codex. Use
+   system cron only if the built-in scheduler is unavailable. The proposed
+   default is every two hours during a night window. Set both in the profile.
+   Try a non-blocking lock first. When the
    previous train is active, log a skip and exit immediately. A pending run
    starting later would violate this schedule, so check that property when
    selecting a concurrency facility. A process-owned lock such as `flock -n`

@@ -1,6 +1,8 @@
 # v5 delivery and evidence
 
 The [adoption-readiness plan](adoption-readiness.md) governs this release.
+The [release acceptance record](release-acceptance.md) identifies the published
+archives and the results observed in a clean adopting project.
 The November 26 and December 3 pilot checkpoints were cancelled. They
 impose no wait on adoption or enabling approved solo classes or the train.
 

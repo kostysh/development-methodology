@@ -3,9 +3,10 @@ import { basename, dirname, isAbsolute, relative, resolve, sep } from "node:path
 import { isEventType, isTrainSource, issuedAlias, parseUtc, recordObject, sourceKey, timeKey, trainObservation } from "./events.js";
 import type { ReportCoverage } from "./report.js";
 
-export type MetricsSource = { kind: string; path?: string; task_id?: string; content_sha256?: string };
+export type MetricsSource = { kind: string; path?: string; task_id?: string; content_sha256?: string; session_id?: string; offset?: number };
 export type MetricsProfile = {
   project_id: string;
+  projectRoot: string;
   journal: string;
   sources: Record<string, MetricsSource>;
   categories: Record<string, string[]>;
@@ -102,11 +103,16 @@ export function readProfile(file: string): MetricsProfile {
     for (const [name, value] of Object.entries(rawSources)) {
       const row = recordObject(value);
       if (!sourceKey.test(name) || !row || typeof row.kind !== "string" || !kinds.has(row.kind)
-          || Object.keys(row).some((key) => !["kind", "path", "task_id", "content_sha256"].includes(key))) invalid();
+          || Object.keys(row).some((key) => !["kind", "path", "task_id", "content_sha256", "session_id"].includes(key))) invalid();
       const source: MetricsSource = { kind: row.kind };
       if (row.task_id !== undefined) {
         if (typeof row.task_id !== "string" || !issuedIds.has(row.task_id)) invalid();
         source.task_id = row.task_id;
+      }
+      if (row.session_id !== undefined) {
+        if (!source.task_id || !/^(?:codex_|claude_)/u.test(source.kind)
+            || typeof row.session_id !== "string" || !/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,254}$/u.test(row.session_id)) invalid();
+        source.session_id = row.session_id;
       }
       if (row.path !== undefined) source.path = pathValue(row.path, base);
       if (row.content_sha256 !== undefined) {
@@ -115,6 +121,15 @@ export function readProfile(file: string): MetricsProfile {
       }
       if (source.path === journal || source.path === coverageFile(journal)) invalid();
       sources[name] = source;
+    }
+
+    const nativeBindings = new Set<string>();
+    for (const src of Object.values(sources)) {
+      if (src.session_id && src.kind.endsWith("_hook")) {
+        const binding = JSON.stringify([src.kind, src.session_id]);
+        if (nativeBindings.has(binding)) invalid();
+        nativeBindings.add(binding);
+      }
     }
 
     const rawCategories = recordObject(data.categories ?? {});
@@ -127,7 +142,7 @@ export function readProfile(file: string): MetricsProfile {
     }
 
     return {
-      project_id: data.project_id, journal, sources, categories,
+      project_id: data.project_id, projectRoot: project, journal, sources, categories,
       identityKey: data.identity_key, issuedIds, coverage: parseCoverage(data.coverage, sources),
     };
   } catch {

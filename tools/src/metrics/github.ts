@@ -2,6 +2,16 @@ import type { AdapterContext } from "./adapters.js";
 import { parseUtc, recordObject, type MetricsEvent } from "./events.js";
 
 // Numeric GitHub IDs can arrive as strings in a local export.
+function providerUtc(value: unknown): string | null {
+  const utc = parseUtc(value);
+  if (utc || typeof value !== "string") return utc;
+  const offset = /^(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,9})?)([+-]\d\d:\d\d)$/u.exec(value);
+  if (!offset || !parseUtc(offset[1] + "Z")) return null;
+  const ms = Date.parse(value);
+  if (!Number.isFinite(ms)) return null;
+  return new Date(ms).toISOString().slice(0, 19) + offset[1].slice(19) + "Z";
+}
+
 function githubId(value: unknown): string | undefined {
   if (typeof value === "number" && Number.isSafeInteger(value) && value > 0) return String(value);
   if (typeof value === "string" && /^[1-9]\d{0,19}$/u.test(value)) return value;
@@ -30,7 +40,7 @@ export function adaptGithub(kind: string, raw: unknown, ctx: AdapterContext): Me
     events.push({
       schema_version: 1, project_id: ctx.projectId, source_id: ctx.sourceId,
       event_id: ctx.alias(`event.${type}`, `${repo}:${key}`), event_type: type,
-      occurred_at: parseUtc(time), observed_at: ctx.observedAt, actor_role: "automation",
+      occurred_at: providerUtc(time), observed_at: ctx.observedAt, actor_role: "automation",
       task_id: ctx.taskId ?? null, data: { repo_id, ...data },
     });
   }
@@ -56,7 +66,7 @@ export function adaptGithub(kind: string, raw: unknown, ctx: AdapterContext): Me
     const data = { run_id: alias("run", runKey), run_attempt: attempt,
       job_id: alias("job", jobKey), head_sha: oid(job.head_sha) };
     if (action === "queued") emit("ci.job.queued", key, ctx.occurredAt, data);
-    if (parseUtc(job.started_at)) emit("ci.job.started", key, job.started_at, data);
+    if (providerUtc(job.started_at)) emit("ci.job.started", key, job.started_at, data);
     if (job.status === "completed" || action === "completed") {
       emit("ci.job.finished", key, job.completed_at, { ...data, outcome: outcome(job.conclusion) });
     }
@@ -71,7 +81,7 @@ export function adaptGithub(kind: string, raw: unknown, ctx: AdapterContext): Me
         continue;
       }
       emit("ci.step.finished", `${key}:${n}`, step.completed_at, {
-        ...data, step_number: n, started_at: parseUtc(step.started_at), outcome: outcome(step.conclusion),
+        ...data, step_number: n, started_at: providerUtc(step.started_at), outcome: outcome(step.conclusion),
       });
     }
   }

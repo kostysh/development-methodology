@@ -1,0 +1,175 @@
+{
+  "baseline-contract.test.ts": [
+    "BM1/BM5 installed command prints its package version",
+    "BM1/BM2/BM5 freeze reads and deterministically sorts sha1 Git paths from the source commit",
+    "BM1/BM2/BM5 freeze reads and deterministically sorts sha256 Git paths from the source commit",
+    "BM2/BM5 freeze rejects invalid and nonregular selections",
+    "BM1/BM5 rejects abbreviations, refs, expressions, noncommit objects and missing commit IDs",
+    "BM3/BM5 accepts a clean committed candidate and independent work",
+    "BM1/BM3 ignores the working file, index, branch and replacement refs in both directions",
+    "BM3/BM5 rejects candidate with changed runner settings",
+    "BM3/BM5 rejects candidate with changed fixture",
+    "BM3/BM5 rejects candidate with new nested selected test",
+    "BM3/BM5 rejects candidate with deleted test",
+    "BM3/BM5 rejects candidate with test renamed outside selection",
+    "BM3/BM5 rejects candidate with changed executable bit",
+    "BM3/BM5 rejects candidate with symlink at a selected test",
+    "BM3/BM5 rejects candidate with symlink at a selected directory root",
+    "BM3/BM5 rejects candidate with file replacing an ancestor of the selected directory",
+    "BM3/BM5 rejects candidate with replaced manifest",
+    "BM3/BM5 rejects candidate with absent manifest",
+    "BM3/BM5 rejects candidate with changed manifest mode",
+    "BM3/BM5 verifier result for a committed shell write with local hooks skipped",
+    "BM3/BM5 rejects malformed, missing, and tree-inconsistent trusted manifests",
+    "BM4/BM5 Claude Edit and Write deny selected files, new selected leaves, ancestors and manifest",
+    "BM4/BM5 allows a Claude request for a new independent test through resolved ancestors",
+    "BM4/BM5 Codex patch examines add, delete, update, and move destination paths",
+    "BM4/BM5 allows Codex patch content that mentions protected paths",
+    "BM4/BM5 both host adapters deny symlink aliases into the selected tree",
+    "BM4/BM5 rejects malformed, unsupported and out-of-worktree requests and an unavailable baseline"
+  ],
+  "baseline-implementation.test.ts": [
+    "A missing selected blob is a Git error even when every selected tree entry matches",
+    "Both path interpretations, the complete patch and unique JSON fields must support an allow",
+    "Codex outer whitespace preserves target decisions: trailing space on Begin",
+    "Codex outer whitespace preserves target decisions: leading space on End",
+    "Codex outer whitespace preserves target decisions: outer blank lines"
+  ],
+  "check-links.test.ts": [
+    "accepts Markdown references, rendered heading slugs, explicit anchors, and escaped paths",
+    "fails an inbound reference when only the target changes",
+    "normalizes raw HTML URLs while preserving meaningful spaces",
+    "reports duplicate explicit anchors and collisions with generated heading anchors",
+    "reports missing paths and Markdown fragments and identifies the source line",
+    "ignores excluded directories and links escaping the project",
+    "excludes a real nested Git worktree and keeps ordinary .worktree documentation",
+    "fails closed for a missing, empty, or invalid project root"
+  ],
+  "contract-results.test.ts": [
+    "the release gate rejects a skipped, missing or substituted required test"
+  ],
+  "controls.test.ts": [
+    "installed control command exposes help and version and rejects invalid invocations",
+    "artifact control reads the whole exact candidate and enforces identity and lifecycle",
+    "Git control checks canonical worktree, push target, staging and ignore rules",
+    "Git's exact force-with-lease rejects a stale writer without changing the remote ref",
+    "required results expire with the candidate and cannot be replaced by skips or weaker thresholds",
+    "trusted baseline rejects separate committed fixture, exclusion, threshold and skip changes",
+    "separate runner processes share the same resource lock and recover an interrupted holder",
+    "an unrecoverable owner death releases the file lock but holds mutation until reconciliation",
+    "runner preserves primary failure, cleans descendants, and exports approved evidence only"
+  ],
+  "metrics-adapters.test.ts": [
+    "Codex rollout emits one usage delta and discards cumulative snapshots and unobserved metadata",
+    "Codex response identity survives replay and timestamp order without collapsing another response in the turn",
+    "Codex joins configured model and parent through exact rollout identities",
+    "partial Codex counts and invalid occurrence times stay unknown, and missing IDs report safe gaps",
+    "Claude Code counts PostCompact with a verified occurrence and ignores SessionStart for counting",
+    "Codex PostCompact retains the reported turn and uses distinct occurrence receipts within it",
+    "Codex app-server completion uses a native item identity and time",
+    "Codex guardian matches start and finish by review ID even when a target item is absent",
+    "Claude usage retains measured request duration when token counts are unavailable",
+    "local Claude monitoring normalizes per-request usage and shares session identity with hooks",
+    "Claude monitoring keeps missing cache measures unknown and excludes unsupported event shapes",
+    "Claude monitoring counts successful compaction once and scopes a reused process sequence by time",
+    "adapted records satisfy the journal codec using real issued identity proofs"
+  ],
+  "metrics-github.test.ts": [
+    "REST and webhook identify the same job attempt and steps without inventing assignment",
+    "queue and run timestamps use the observed transition; a record update cannot prove finish time",
+    "delivery timestamps follow actual PR transitions and normal pushes do not count as ref rewrites"
+  ],
+  "metrics-native.test.ts": [
+    "codex installed hooks bind only the challenged session, project post-bind events, replay and uninstall",
+    "claude installed hooks bind only the challenged session, project post-bind events, replay and uninstall",
+    "actual runner returns the command status, captures checkout and refuses a repeated attempt",
+    "mark reuses the actual occurrence clock, summary scopes sources and the operator can compare evidence",
+    "compares two measured task histories with a complete zero and excludes missing historical evidence",
+    "Git post-rewrite records named branch tips on both amend and rebase",
+    "repeated GitHub sync across PR revisions and merge keeps the original opening time"
+  ],
+  "metrics-report.test.ts": [
+    "lead and first PR use elapsed time, per-type unions, and actual decision blocks",
+    "distinguish source coverage, inferred remainder, missing intervals and observed-time estimates",
+    "usage follows its turn across switches, forks and child work without charging copied history",
+    "audit observations and causes, CI reruns, stale HEAD tests and control attempts remain distinct",
+    "seven-day windows exclude the deadline, prefer verified first actions and keep proxies separate",
+    "conflicting occurrence IDs are withheld and reported without event payloads",
+    "native compaction with a thread and no session can join the first state mutation",
+    "job and step evidence identify CI attempts with a missing run lifecycle",
+    "runner and provider durations feed activity unions, while effort keeps its source totals",
+    "a cold receipt or conflicting runner endpoints cannot establish an occupied interval",
+    "a hosted runner supplies measured occupancy when its parent job is missing",
+    "uses the first strictly subsequent state change at native precision",
+    "deduplicates corrected deliveries and separates open and unclassified windows in the share"
+  ],
+  "metrics-store.test.ts": [
+    "hydrates configured normalized task sources and preserves a task switch after worktree deletion",
+    "rejects a changed source snapshot before appending events",
+    "rejects arbitrary IDs, private payload fields, malformed rows and unapproved categories",
+    "quarantines conflicting replays and preserves the original receipt time for exact retries",
+    "serializes concurrent delivery of one occurrence",
+    "continues after an incomplete append and makes the missing coverage visible",
+    "keeps a passive hook running and keeps a project journal outside the worktree",
+    "reports unavailable flock without suppressing a passive hook",
+    "reports one GitHub job after importing identical REST and webhook projections",
+    "scopes verified source windows and collection gaps to their configured task",
+    "reconciles compatible partial facts and honors the summary receipt cutoff",
+    "reconstructs the first conflicting receipt after split delivery",
+    "reconstructs the first conflicting receipt after batched delivery",
+    "reconstructs the first conflicting receipt after reversed delivery",
+    "retains an earlier observed receipt delivered after an exact later replay"
+  ],
+  "recovery-contract.test.ts": [
+    "the public recovery entry point reports its version and rejects invalid invocations",
+    "the writer preserves private UTF-8 bytes, exact LF and CRLF bounds, refs and index",
+    "binding and unsafe state destinations fail without writing another task's file",
+    "competing writers expose whole files and an interrupted input leaves the last state",
+    "snapshots distinguish live staged, unstaged, untracked and ref facts in a linked worktree",
+    "resource readback distinguishes owned live, expired, released and unavailable identities",
+    "recover and passive SessionStart reconcile saved state with a changed head and fail closed",
+    "GitHub readback binds a run to its revision, refreshes facts and preserves partial results"
+  ],
+  "recovery-implementation.test.ts": [
+    "the state byte limit applies before replacement and before delivery by the hook",
+    "recovery uses the same user exclude configuration as the worktree",
+    "a named remote branch has a publication result before a PR exists"
+  ],
+  "solo-contract.test.ts": [
+    "holds excluded, ambiguous, over-cap and unapproved merges and applies a batch to the exact decision"
+  ],
+  "train-metrics-contract.test.ts": [
+    "summarizes each train attempt once and retains mode, measured values and missing fields",
+    "reports zero only for a covered pilot interval and leaves ordinary tasks unchanged",
+    "rejects unapproved data and source attribution without exposing private input",
+    "removes a conflicting repeat from train counts and reports incomplete coverage"
+  ],
+  "train-metrics-scope.test.ts": [
+    "coverage outside an accepted task window does not add a train section",
+    "only disputed occurrences in the pilot window reduce train coverage",
+    "a disputed in-window attempt from a second pilot source prevents a verified zero",
+    "a rejected normalized row from a different configured task source leaves pilot coverage complete",
+    "train windows, source coverage and cutoff retain fractional-second precision",
+    "an estimated acceptance time cannot establish a complete count",
+    "a disputed acceptance cannot extend the train window through the report cutoff",
+    "a rejected train receipt from a second pilot source prevents a verified zero"
+  ],
+  "train-runtime-isolation.test.ts": [
+    "the actual OCI verifier sees the exact files without writer credentials, host Git data or writable candidate/authority"
+  ],
+  "train-runtime.test.ts": [
+    "the public train refuses to enable publication with mutable source heads",
+    "a passing batch integrates two exact heads, reads the tree and deployed revision; dry mode suppresses both writes",
+    "reproducible failing PR and dependant leave C1; a red C1 and exhausted retry budget both hold",
+    "two individually green PRs that fail together return the later PR after targeted reproduction",
+    "a flaky same-candidate rerun records its owner, recurrence on a later train blocks",
+    "merge conflicts exclude the PR and dependant; changed heads, lost checks and a racing ancestor base reject publication",
+    "infrastructure retry is bounded, empty queue allocates no environment",
+    "SIGKILL during verification and after push releases the lock, reaps owned state and catches up deployment without republishing",
+    "overlap immediately skips urgent and documentation trains; documentation uses fresh gates and the shared writer",
+    "a requested solo hold is checked again on the final admitted head",
+    "admission verifies check publisher, exact head and newest attempt; writer bypass must be the sole actor and immutable sources fully locked",
+    "receipts produce bounded train observations, operator report and idempotent journal replay",
+    "serializes owner batches and both PR gates with publication, ordinary Git updates and process death"
+  ]
+}

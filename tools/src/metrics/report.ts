@@ -45,6 +45,13 @@ function time(event: MetricsEvent | undefined): Time | null {
     : { value: occurred, utc: event.occurred_at!, estimated: false };
 }
 
+const point = (row: MetricsEvent) => timeKey(time(row)!.utc);
+const compare = (left: string, right: string) => left < right ? -1 : left > right ? 1 : 0;
+function epochNs(utc: string): bigint {
+  const sub = (utc.slice(19, -1).slice(1) + "000000000").slice(0, 9);
+  return BigInt(Date.parse(utc.slice(0, 19) + "Z")) * 1_000_000n + BigInt(sub);
+}
+
 function iso(value: number | null): string | null {
   return value === null ? null : new Date(value).toISOString();
 }
@@ -103,7 +110,7 @@ function reconcile(rows: readonly MetricsEvent[], identify: Identify): Facts {
     const conflicts = prior.event_type !== row.event_type || prior.project_id !== row.project_id ||
       (prior.task_id !== null && row.task_id !== null && prior.task_id !== row.task_id) ||
       (prior.occurred_at !== null && row.occurred_at !== null &&
-        timestamp(prior.occurred_at) !== timestamp(row.occurred_at)) ||
+        timeKey(prior.occurred_at) !== timeKey(row.occurred_at)) ||
       Object.entries(row.data).some(([name, value]) =>
         value !== null && prior.data[name] != null && prior.data[name] !== value);
     if (conflicts) {
@@ -554,6 +561,8 @@ function auditsReport(events: readonly MetricsEvent[], read: ReadCoverage, windo
   return {
     attempts: measurement(rows.length, auditStatus),
     failed_attempts: measurement(rows.filter(row => row.outcome === "failed").length, auditStatus),
+    negative_verdicts: measurement(rows.filter(row => row.outcome === "completed" && row.verdict === "FAIL").length, auditStatus),
+    blocked_verdicts: measurement(rows.filter(row => row.outcome === "completed" && row.verdict === "BLOCKED").length, auditStatus),
     cancelled_attempts: measurement(rows.filter(row => row.outcome === "cancelled").length, auditStatus),
     completed_rounds: measurement(rows.filter(row => row.outcome === "completed" && row.verdict !== null).length, auditStatus),
     reviewed_snapshots: measurement(snapshots.size, auditStatus),
@@ -761,12 +770,12 @@ function tokenTotals(rows: readonly MetricsEvent[], status: Coverage) {
   };
 }
 
-function fromTime(events: readonly MetricsEvent[], start: number): number {
+function fromTime(events: readonly MetricsEvent[], start: string): number {
   let low = 0;
   let high = events.length;
   while (low < high) {
     const middle = (low + high) >>> 1;
-    if (time(events[middle])!.value < start) low = middle + 1;
+    if (point(events[middle]) < start) low = middle + 1;
     else high = middle;
   }
   return low;
@@ -778,8 +787,10 @@ function modelUsage(all: readonly MetricsEvent[], unassigned: readonly MetricsEv
   // cannot charge the same response to two tasks.
   const assignedUsage = rowsOf(all, ...usageTypes);
   const unresolved = rowsOf(unassigned, ...usageTypes);
-  const responses = reconcile([...assignedUsage, ...unresolved], responseKey);
   const taskResponses = new Set(assignedUsage.filter(row => row.task_id === taskId).map(responseKey));
+  const participating = assignedUsage.filter(row => row.task_id === taskId ||
+    (responseKey(row) !== null && taskResponses.has(responseKey(row))));
+  const responses = reconcile([...participating, ...unresolved], responseKey);
   return {
     rows: responses.rows.filter(row => row.task_id === taskId && taskResponses.has(responseKey(row))),
     issues: responses.issues + unresolved.length,
@@ -788,9 +799,9 @@ function modelUsage(all: readonly MetricsEvent[], unassigned: readonly MetricsEv
 
 function contextReport(
   events: readonly MetricsEvent[], model: Facts, unassigned: readonly MetricsEvent[],
-  read: ReadCoverage, window: Window, thread: Identify,
+  read: ReadCoverage, window: Window, thread: Identify, asOf: string,
 ) {
-  const byTime = (left: MetricsEvent, right: MetricsEvent) => time(left)!.value - time(right)!.value;
+  const byTime = (left: MetricsEvent, right: MetricsEvent) => compare(point(left), point(right));
   const usage = model.rows.filter(row => time(row)!.value <= window.through &&
     (window.start === null || time(row)!.value >= window.start.value)).sort(byTime);
   const unresolvedUsage = model.issues > 0;
@@ -814,13 +825,15 @@ function contextReport(
     const context = thread(compaction);
     const next = nextCompactions.get(compaction);
     const limit = next ? time(next)!.value : window.through;
+    const preciseLimit = next ? point(next) : timeKey(window.end?.utc ?? asOf);
+    const beginKey = point(compaction);
     const actionsHere = context === null ? [] : actionsByThread.get(context) ?? [];
     let action: MetricsEvent | undefined;
-    for (let index = fromTime(actionsHere, begin.value); index < actionsHere.length; index++) {
+    for (let index = fromTime(actionsHere, beginKey); index < actionsHere.length; index++) {
       const candidate = actionsHere[index];
-      if (time(candidate)!.value > limit) break;
+      if (point(candidate) > preciseLimit) break;
       const explicit = str(candidate, "compaction_id");
-      if (explicit === id || (explicit === null && (!next || time(candidate)!.value < limit))) {
+      if (explicit === id || (explicit === null && point(candidate) > beginKey && (!next || point(candidate) < preciseLimit))) {
         action = candidate;
         break;
       }
@@ -828,9 +841,9 @@ function contextReport(
     const end = time(action);
     const usageHere = context === null ? [] : usageByThread.get(context) ?? [];
     const inside: MetricsEvent[] = [];
-    for (let index = fromTime(usageHere, begin.value); index < usageHere.length; index++) {
+    for (let index = fromTime(usageHere, beginKey); index < usageHere.length; index++) {
       const candidate = usageHere[index];
-      if (time(candidate)!.value > (end?.value ?? limit)) break;
+      if (point(candidate) > (end ? timeKey(end.utc) : preciseLimit)) break;
       inside.push(candidate);
     }
     const beginTurn = str(compaction, "turn_id");
@@ -840,15 +853,15 @@ function contextReport(
       const tokenTurn = str(row, "turn_id");
       return end !== null && !begin.estimated && !end.estimated && !tokenTime.estimated &&
         beginTurn !== null && endTurn !== null && tokenTurn !== null &&
-        tokenTurn !== beginTurn && tokenTurn !== endTurn && tokenTime.value > begin.value && tokenTime.value < end.value;
+        tokenTurn !== beginTurn && tokenTurn !== endTurn && point(row) > beginKey && point(row) < timeKey(end.utc);
     });
     const status = read(usageTypes, begin.value, end?.value ?? limit, known.length > 0,
       end === null || inside.length !== known.length || unresolvedUsage || actions.issues > 0);
     return {
       session_id: str(compaction, "session_id"), thread_id: str(compaction, "thread_id"),
       compaction_id: id, trigger: str(compaction, "trigger"),
-      completed_at: iso(begin.value), first_state_change_at: iso(end?.value ?? null),
-      elapsed_ms: end === null ? null : end.value - begin.value, estimated: begin.estimated || (end?.estimated ?? false),
+      completed_at: begin.utc, first_state_change_at: end?.utc ?? null,
+      elapsed_ms: end === null ? null : Number(epochNs(end.utc) - epochNs(begin.utc)) / 1e6, estimated: begin.estimated || (end?.estimated ?? false),
       usage: tokenTotals(known, status),
     };
   });
@@ -927,7 +940,39 @@ function reworkReport(
     };
   });
   const mergeStatus = read([mergeType], lead.start?.value ?? null, asOf, windows.length > 0, merges.issues > 0);
-  return { observed_merge_windows: measurement(windows.length, mergeStatus), seven_day_rework: windows };
+  const complete = windows.filter(w => !w.open && w.verified_actions.status === "complete");
+  const share = (includeProxy: boolean) => {
+    const eligible = includeProxy ? complete : complete.filter(w => w.rows.every(r => r.basis === "verified_action"));
+    const corrective = eligible.filter(w => w.rows.length > 0).length;
+    return { corrective_deliveries: corrective, comparable_deliveries: eligible.length,
+      share: eligible.length ? corrective / eligible.length : null };
+  };
+  return { observed_merge_windows: measurement(windows.length, mergeStatus), seven_day_rework: windows,
+    seven_day_rework_share: { verified_action: share(false), including_pr_opened_proxy: share(true),
+      open_windows: windows.filter(w => w.open).length, incomplete_closed_windows: windows.filter(w => !w.open).length - complete.length } };
+}
+
+function soloReport(events: readonly MetricsEvent[], asOf: string) {
+  const rows = rowsOf(events, "solo.decided", "solo.confirmed", "solo.changed");
+  const groups = indexBy(rows, byFields("decision_id"));
+  const decisions = [...groups].flatMap(([_, items]) => {
+    const applied = items.filter(row => row.event_type === "solo.decided");
+    const resolution = items.filter(row => row.event_type !== "solo.decided");
+    if (applied.length !== 1 || resolution.length > 1 || items.some(r => !r.occurred_at ||
+        str(r, "decision_class") !== str(applied[0], "decision_class")) ||
+        (resolution[0] && point(resolution[0]) < point(applied[0]))) return [];
+    const start = time(applied[0])!;
+    const end = time(resolution[0]);
+    return [{ decision_id: str(applied[0], "decision_id"), decision_class: str(applied[0], "decision_class"),
+      applied_at: start.utc, resolved_at: end?.utc ?? null,
+      status: resolution[0]?.event_type.split(".")[1] ?? "pending",
+      confirmation_wait_ms: end ? end.value - start.value : null,
+      pending_ms: end ? null : Date.parse(asOf) - start.value }];
+  });
+  const complete = decisions.length === groups.size && rows.every(r => str(r, "decision_id") !== null);
+  return { status: rows.length ? complete ? "observed" : "partial" : "unavailable", decisions,
+    counts: rows.length ? { applied: decisions.length, confirmed: decisions.filter(r => r.status === "confirmed").length,
+      changed: decisions.filter(r => r.status === "changed").length, pending: decisions.filter(r => r.status === "pending").length } : null };
 }
 
 function taskEndpoints<T extends number | string>(
@@ -1010,15 +1055,19 @@ export function summarize(
   const cutoff = timestamp(asOf);
   if (cutoff === null) throw new Error("invalid_report_time");
   const eligible = journal.events.filter(row => (row.event_type !== trainObservation || row.task_id === taskId) &&
-    Date.parse(row.observed_at) <= cutoff && time(row)!.value <= cutoff)
-    .sort((a, b) => time(a)!.value - time(b)!.value || Date.parse(a.observed_at) - Date.parse(b.observed_at) ||
+    timeKey(row.observed_at) <= timeKey(asOf) && point(row) <= timeKey(asOf))
+    .sort((a, b) => compare(point(a), point(b)) || compare(timeKey(a.observed_at), timeKey(b.observed_at)) ||
       (a.event_id < b.event_id ? -1 : a.event_id === b.event_id ? 0 : 1));
   const unique = reconcile(eligible, row => row.event_id);
   const thread = threads(unique.rows);
-  const { assigned, unassigned } = attribute(unique.rows, thread);
+  const { assigned, unassigned: unresolved } = attribute(unique.rows, thread);
   const events = assigned.filter(row => row.task_id === taskId);
-  const gaps = journal.gaps.filter(gap => Date.parse(gap.observed_at) <= cutoff);
-  const read = readCoverage(coverage, gaps, unique.issues, Date.parse);
+  const taskThreads = new Set(events.map(row => str(row, "thread_id")).filter(id => id !== null));
+  const unassigned = unresolved.filter(row => row.task_id === taskId || taskThreads.has(str(row, "thread_id") ?? ""));
+  const relevantIds = new Set(eligible.filter(row => row.task_id === taskId || taskThreads.has(str(row, "thread_id") ?? "")).map(row => row.event_id));
+  const conflicts = reconcile(eligible.filter(row => relevantIds.has(row.event_id)), row => row.event_id).issues;
+  const gaps = journal.gaps.filter(gap => timeKey(gap.observed_at) <= timeKey(asOf));
+  const read = readCoverage(coverage, gaps, conflicts, Date.parse);
   const { start, end: leadEnd } = taskEndpoints(events, cutoff, Date.parse);
   const pastAcceptance = leadEnd?.value ?? cutoff;
   const lead = { start, end: leadEnd, through: pastAcceptance, open: leadEnd === null };
@@ -1033,8 +1082,8 @@ export function summarize(
   const usage = modelUsage(assigned, unassigned, taskId);
   const leadActivity = activityReport(events, lead, read, usage);
   const prePrActivity = activityReport(events, prePr, read, usage);
-  const working = events.filter(row => time(row)!.value <= lead.through &&
-    (start === null || time(row)!.value >= start.value));
+  const working = events.filter(row => point(row) <= timeKey(lead.end?.utc ?? asOf) &&
+    (start === null || point(row) >= timeKey(start.utc)));
   const audits = auditsReport(working, read, lead);
   const rewrites = reconcile(rowsOf(working, "ref.rewritten"), row => row.event_id);
   const rewriteStatus = read(["ref.rewritten"], start?.value ?? null, lead.through, rewrites.rows.length > 0,
@@ -1071,7 +1120,7 @@ export function summarize(
   const firstPrStatus = read(["pull_request.opened"], start?.value ?? null, prePr.through, pr !== undefined,
     opened.issues > 0);
   const sourceIds = [...new Set([
-    ...coverage.map(item => item.source_id), ...eligible.map(row => row.source_id), ...gaps.map(gap => gap.source_id),
+    ...coverage.map(item => item.source_id), ...events.map(row => row.source_id), ...gaps.map(gap => gap.source_id),
   ])].sort();
   return {
     schema_version: 1,
@@ -1082,15 +1131,15 @@ export function summarize(
       sources: sourceIds.map(source => {
         const entries = coverage.filter(entry => entry.source_id === source);
         const types = [...new Set(entries.flatMap(entry => entry.event_types))];
-        const seen = eligible.some(row => row.source_id === source && time(row)!.value <= lead.through &&
+        const seen = events.some(row => row.source_id === source && time(row)!.value <= lead.through &&
           (start === null || time(row)!.value >= start.value));
         const status = types.length === 0
           ? (seen ? "partial" : "unavailable")
-          : readCoverage(entries, gaps, unique.issues, Date.parse)(types, start?.value ?? null, lead.through, seen);
+          : readCoverage(entries, gaps, conflicts, Date.parse)(types, start?.value ?? null, lead.through, seen);
         return { source_id: source, status };
       }),
       gaps: gaps.map(gap => ({ source_id: gap.source_id, code: gap.code })),
-      conflicting_occurrences: unique.issues,
+      conflicting_occurrences: conflicts,
     },
     pre_pr: {
       ...reportWindow(prePr, firstPrStatus), ...prePrActivity,
@@ -1104,7 +1153,8 @@ export function summarize(
     ref_rewrites: { count: measurement(rewriteRows.length, rewriteStatus), rows: rewriteRows },
     ...trainReport(events, coverage, journal, taskId, asOf, trainSources),
     ...controlsReport(working, read, lead),
-    ...contextReport(working, usage, unassigned, read, lead, thread),
+    solo: soloReport(events, asOf),
+    ...contextReport(working, usage, unassigned, read, lead, thread, asOf),
     ...reworkReport(events, assigned, cutoff, read, lead),
   };
 }

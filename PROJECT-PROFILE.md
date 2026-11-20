@@ -52,7 +52,7 @@ Use the [GitHub default](defaults/merge-train.md) when it fits the project.
 
 | Setting | Project value |
 | --- | --- |
-| Activation decision, owner, and measured trigger evidence | Not set |
+| Activation decision, owner and reason, including measured demand where available | Not set |
 | Protected branch, sole writer identity, and protection evidence | Not set |
 | Trusted train package and version, scheduler, runner, lock and status sources | Not set |
 | Expensive suite, approved temporary resource types and test environment, if applicable | Not set |
@@ -103,7 +103,7 @@ install commands are in [defaults/skills.md](defaults/skills.md).
 | Setting | Value |
 | --- | --- |
 | Source | `https://github.com/kostysh/skills` |
-| Installation method: CLI `@kostysh/skills` or clone | Not set |
+| Installation method and catalog | Named v5 release archives, selection not set |
 | Location: project directory (`.claude/skills`, `.agents/skills`) or global | Not set |
 | Release tag or commit | Not set |
 | Who authorizes installation and updates | Not set |
@@ -135,7 +135,7 @@ script as proof of success.
 | Format, lint, types, build | Not set | Not set | Not set |
 | Unit and component | Not set | Not set | Not set |
 | Protected test baseline, when adopted | Tool release and commands, hook host and version, required CI check | Test author, test owner and CI owner. Scope, trusted settings and baseline location | Accepted commit and manifest source, activation evidence, fallback before adoption |
-| Task recovery for agents | [Writer, snapshot, recovery and hook](defaults/task-recovery.md). Release and host: not set | Task state path, ignore rule, writer and positive line limit: not set | Compaction, session interruption, long-run result and manual fallback: not verified |
+| Task recovery for agents | [Writer, snapshot, recovery and hook](defaults/task-recovery.md). Release and host: not set | Task state path, ignore rule, writer, positive line and byte limits: not set | Compaction, session interruption, long-run result and manual fallback: not verified |
 | Real integration and API | Not set | Not set | Not set |
 | UI: reproducible test and direct walkthrough | Not set | Not set | Not set |
 | Data: clean replay and upgrade | Not set | Not set | Not set |
@@ -219,6 +219,9 @@ to people, teams, or [skills](#skills). The rules for the modes are in
 | Independent test author, test owner, and owners of baseline replacements, where applicable | Not set |
 | Owner response time per class of decisions | Not set |
 | Safe default when there is no response in time, per class of decisions | None — the decision waits for the owner or deputy |
+| Solo class for an unspecified UI detail matching an established screen, authoritative example, permitted choice, merge before confirmation | Unselected |
+| Solo class for generic error wording, authoritative example, permitted choice, merge before confirmation | Unselected |
+| Additional exclusions, cap, decision owner, private register, approvals and morning report | Not set. See [setup](defaults/solo-decisions.md) |
 | Who resolves disputes between author and reviewer | Not set |
 
 For AI, state the actually supported models/reasoning levels, permitted

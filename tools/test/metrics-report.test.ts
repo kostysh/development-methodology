@@ -388,3 +388,37 @@ test("a hosted runner supplies measured occupancy when its parent job is missing
   const result = summarize({ events, gaps: [] }, "T1", at(100));
   assert.equal(result.pre_pr.activity.machine.duration_ms.value, 5 * minute);
 });
+
+test("uses the first strictly subsequent state change at native precision", () => {
+  const { event, start, accept } = clock();
+  const ids = { session_id: "S1", thread_id: "main" };
+  const stamp = (suffix: string) => "2026-11-01T10:01:00." + suffix + "Z";
+  const timed = (type: string, suffix: string, data: MetricsEvent["data"]) => ({
+    ...event(type, 1, { ...ids, ...data }), occurred_at: stamp(suffix), observed_at: stamp(suffix),
+  });
+  const compact = timed("context.compacted", "000900", { compaction_id: "C" });
+  const before = timed("task.state_changed", "000100", { operation_id: "before" });
+  const after = timed("task.state_changed", "000901200", { operation_id: "after" });
+  const report = (rows: MetricsEvent[]) => summarize({ events: [start(), accept(), ...rows], gaps: [] }, "T1", at(100));
+  assert.equal(report([compact, before]).compactions.recoveries[0].first_state_change_at, null);
+  const recovered = report([after, before, compact]).compactions.recoveries[0];
+  assert.equal(recovered.first_state_change_at, stamp("000901200"));
+  assert.equal(recovered.elapsed_ms, 0.0012);
+});
+
+test("deduplicates corrected deliveries and separates open and unclassified windows in the share", () => {
+  const { event, start, accept } = clock();
+  const merged = (id: string, when: number) => event("pull_request.merged", when, { repo_id: "repo", delivery_id: id });
+  const correction = (id: string) => event("delivery.follow_up_classified", 50, {
+    delivery_id: "fixed", follow_up_id: id, follow_up_at: at(40), corrects_delivery: true,
+    follow_up_basis: "verified_action", change_type: "correction",
+  });
+  const deadline = 7 * 24 * 60;
+  const events = [start(), accept(), merged("fixed", 0), merged("clean", 50), merged("open", deadline),
+    correction("f1"), correction("f2")];
+  const proof = [coverage(["pull_request.merged", "delivery.follow_up_classified"], -1, 2 * deadline + 1)];
+  const share = summarize({ events, gaps: [] }, "T1", at(deadline + 100), proof).seven_day_rework_share;
+  assert.deepEqual(share.verified_action, { corrective_deliveries: 1, comparable_deliveries: 2, share: 0.5 });
+  assert.equal(share.open_windows, 1);
+  assert.equal(summarize({ events, gaps: [] }, "T1", at(deadline + 100)).seven_day_rework_share.incomplete_closed_windows, 2);
+});

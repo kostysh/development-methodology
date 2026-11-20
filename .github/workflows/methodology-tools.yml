@@ -10,7 +10,7 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: tools
@@ -25,4 +25,25 @@ jobs:
       - run: npm run build
       - run: npm test
       - run: npm run test:packed
+        env:
+          METHODOLOGY_RELEASE_DIR: ${{ runner.temp }}/methodology-release
       - run: npm run check:links -- ..
+      - name: Verify the portable guide and record its source
+        working-directory: .
+        shell: bash
+        run: |
+          set -euo pipefail
+          release="$RUNNER_TEMP/methodology-release"
+          git archive --format=tar.gz --output="$release/methodology-guide-5.0.0.tar.gz" "$GITHUB_SHA" -- README.md ADOPTION.md AGENTS.md CHANGELOG.md GLOSSARY.md PROJECT-PROFILE.md WORKFLOW.md method defaults templates
+          mkdir "$RUNNER_TEMP/adopted-guide"
+          tar -xzf "$release/methodology-guide-5.0.0.tar.gz" -C "$RUNNER_TEMP/adopted-guide"
+          node tools/dist/check-links.js "$RUNNER_TEMP/adopted-guide"
+          cd "$release"
+          printf '%s\n' "$GITHUB_SHA" > source-commit.txt
+          sha256sum --check kostysh-development-methodology-tools-5.0.0.tgz.sha256
+          sha256sum methodology-guide-5.0.0.tar.gz kostysh-development-methodology-tools-5.0.0.tgz source-commit.txt > SHA256SUMS
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: methodology-v5-${{ github.sha }}
+          path: ${{ runner.temp }}/methodology-release/
+          if-no-files-found: error

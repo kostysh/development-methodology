@@ -1,14 +1,17 @@
 import { randomUUID } from "node:crypto";
 import {
   closeSync, constants, fstatSync, fsyncSync, lstatSync, mkdirSync, openSync,
-  readFileSync, realpathSync, renameSync, rmSync, writeFileSync,
+  readFileSync, readSync, realpathSync, renameSync, rmSync, writeFileSync,
 } from "node:fs";
 import { isAbsolute, join, relative, sep } from "node:path";
 import { recordObject } from "../metrics/events.js";
 import { readGit } from "./git.js";
 import type { SnapshotProfile } from "./snapshot.js";
 
-type Profile = SnapshotProfile & { line_limit: number };
+type Profile = SnapshotProfile & { line_limit: number; byte_limit: number };
+// Existing profiles accepted whole 384 KiB atomic writes. New profiles set
+// their own smaller budget for material injected into the agent context.
+const maximumByteLimit = 512 * 1024;
 const alias = /^[A-Za-z0-9][A-Za-z0-9._-]*$/u;
 const privateRead = constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK;
 
@@ -43,7 +46,10 @@ export function readProfile(path: string): Profile {
       || !Number.isSafeInteger(data.line_limit) || Number(data.line_limit) < 1) invalidProfile();
   const worktree = realpathSync.native(data.worktree);
   if (gitRoot(worktree) !== worktree || within(worktree, fullPath) || within(worktree, path)) invalidProfile();
-  const profile: Profile = { task_id: data.task_id, worktree, line_limit: Number(data.line_limit) };
+  const byteLimit = data.byte_limit === undefined ? maximumByteLimit : data.byte_limit;
+  if (typeof byteLimit !== "number" || !Number.isSafeInteger(byteLimit)
+      || byteLimit < 1 || byteLimit > maximumByteLimit) invalidProfile();
+  const profile: Profile = { task_id: data.task_id, worktree, line_limit: Number(data.line_limit), byte_limit: byteLimit };
   if (data.base_ref !== undefined) {
     if (typeof data.base_ref !== "string" || !data.base_ref || /[\x00-\x1f\x7f]/u.test(data.base_ref)) invalidProfile();
     profile.base_ref = data.base_ref;
@@ -71,6 +77,18 @@ export function readProfile(path: string): Profile {
     });
   }
   return profile;
+}
+
+/** Read one extra byte to detect excess input without allocating the whole file or stream. */
+export function readBoundedState(fd: number, limit: number): Buffer {
+  const bytes = Buffer.alloc(limit + 1);
+  let length = 0;
+  while (length <= limit) {
+    const count = readSync(fd, bytes, length, bytes.length - length, null);
+    if (!count) return bytes.subarray(0, length);
+    length += count;
+  }
+  throw new StateError("state_exceeds_byte_limit");
 }
 
 function decode(bytes: Buffer, limit: number): string {
@@ -125,6 +143,7 @@ function withState<T>(profile: Profile, writing: boolean, use: (dir: string, fil
 }
 
 export function writeState(profile: Profile, bytes: Buffer): void {
+  if (bytes.length > profile.byte_limit) throw new StateError("state_exceeds_byte_limit");
   decode(bytes, profile.line_limit);
   withState(profile, true, (dir, file) => {
     const prior = lstatSync(file, { throwIfNoEntry: false });
@@ -147,7 +166,7 @@ export function readState(profile: Profile): string {
     try {
       const info = fstatSync(fd);
       if (!info.isFile() || info.nlink !== 1 || (info.mode & 0o077) !== 0) throw new StateError("unsafe_state_file");
-      return decode(readFileSync(fd), profile.line_limit);
+      return decode(readBoundedState(fd, profile.byte_limit), profile.line_limit);
     } finally {
       closeSync(fd);
     }

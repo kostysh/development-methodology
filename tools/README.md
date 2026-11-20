@@ -62,16 +62,12 @@ owns the version, public command path, and distribution files.
 
 ## Install an accepted build
 
-From the chosen repository revision, run `npm ci --ignore-scripts` and
-`npm pack --json` inside `tools/`. Keep the tarball with its reported
-integrity value. In the adopting project's tools package, install that saved
-tarball using `npm install --save-dev /path/to/package.tgz` and retain the
-lockfile. Run `npm exec --offline -- methodology-check-links --version` there
-and verify a clean input and a known broken link with the installed command.
-Record the version, integrity value and actual CI check in the project profile.
-For an update, keep the previous verified archive until the new checks pass.
-To recover, restore that archive and its lockfile, run `npm ci`, and repeat
-the installed-command checks before relying on enforcement.
+Download the named release, verify its SHA-256, and install the tested tarball
+offline using the [adoption guide](../ADOPTION.md#2-place-and-configure).
+CI can set `METHODOLOGY_RELEASE_DIR` during `npm run test:packed` to retain
+the exact archive installed by the tests. The release includes the runtime
+dependencies and the train dispatcher. Preserve the previous installation
+until its replacement passes the project's selected acceptance checks.
 
 ## Collect local process metrics
 
@@ -108,45 +104,13 @@ Store approved aliases and categorical vocabularies in the following shape.
 }
 ```
 
-Resolve paths relative to the profile. Configure just the sources available to
-the project. The `task`, `audit`, `development`, and `normalized` kinds read
-schema v1 event records. Raw adapter kinds accept the corresponding source
-records. Where every record in a raw source belongs to one task, an operator
-may configure that source's `task_id` with an issued task alias. Without
-verified attribution, adapters leave the task unassigned. For an immutable
-JSONL input, `content_sha256` pins the bytes and enables stable line identities.
-A changed snapshot produces a coverage gap and requires a new source decision.
-
-| Raw source kind | Local input accepted by the package |
-| --- | --- |
-| `codex_rollout` | The selected session's JSON Lines. Per-response usage is counted once. Its exact turn can supply the configured model. |
-| `codex_app_server` | One notification per line. A completed `contextCompaction` item provides the compaction identity. Guardian start and completion notifications provide the review identity. |
-| `claude_monitoring` | One local OpenTelemetry LogRecord per line, with scalar `attributes` or OTLP JSON key/value attributes. The `api_request` and successful `compaction` records supply usage, measured request time and compaction identity. Use the same adapter for supported terminal and editor sources. |
-| `claude_hook`, `codex_hook` | One native hook object. A bare `PostCompact` lacks a replayable occurrence ID. Use the monitoring or App Server source above for counts, or import a pinned hook capture. `SessionStart` also serves recovery. |
-| `github_jobs` | One object per line containing `repository.id`, `jobs` and `total_count` from the selected run attempt. Retain the provider's job IDs, attempt, head, step numbers and times. Supply all pages or report partial coverage. |
-| `github_webhook` | A local pull request, workflow run, workflow job or forced-push payload with its repository ID. For a forced push, supply the verified delivery UUID alongside the payload as `{"delivery_id":"…","payload":{…}}`, or use a pinned capture. A job start does not supply an assignment timestamp. |
-
-For example, configure an approved task-only Claude export as
-`"session": {"kind":"claude_monitoring","path":"session.jsonl","task_id":"task_17"}`
-and import it with `methodology-metrics collect /path/to/profile.json session`.
-Use a local source selected by the data owner. Raw telemetry can contain
-personal information. The adapter allowlists fields before journal storage.
-
-Run the installed commands below. From the source checkout, the corresponding
-built entry is `node tools/dist/metrics.js`.
-
-```sh
-methodology-metrics record /path/to/profile.json < normalized-events.jsonl
-methodology-metrics collect /path/to/profile.json tasks
-methodology-metrics hook /path/to/profile.json source-name < hook-payload.json
-methodology-metrics summary /path/to/profile.json task_17 --as-of 2026-11-19T12:00:00Z
-```
-
-`record` reads normalized JSON Lines from standard input. `collect` reads a
-profile-selected local JSON Lines file. `hook` reads one payload and returns
-control on failure with a sanitized standard-error diagnostic. It leaves
-standard output empty. `summary` is an explicit read for the operator.
-No hook installation or remote transfer is part of these commands.
+The [native setup](../defaults/process-metrics.md#connect-a-native-client)
+owns the project-local installation, session binding, positive test, replay,
+foreign-session check and rollback for Codex and Claude Code. A scoped file
+import supplies the approved session identity as required by its adapter.
+The [operation commands](../defaults/process-metrics.md#record-at-the-operation)
+capture task and audit transitions, run a test with its real exit status,
+record Git rewrites and synchronize the selected GitHub PR and CI history.
 
 The collector stores schema v1 events and a separate `.coverage.jsonl`
 sidecar. Both are private and append-only. File locks serialize participating
@@ -300,3 +264,13 @@ known fields and names each gap. The hook exits 0 and supplies the manual
 recovery instruction when it cannot safely deliver the packet. The
 [public contract](https://github.com/kostysh/development-methodology/blob/7bbb60d714651e4549bcd264f608448dae4632b8/planning/v5/recovery-contract.md)
 defines the supported operations.
+
+
+## Coordinate solo decisions and integration
+
+Use [solo decisions](../defaults/solo-decisions.md) for the pending limit,
+owner receipts and the revision-bound merge gate. Use the
+[executable train](../defaults/merge-train.md) for the restricted writer,
+isolated suite, deployment readback and repeatable recovery. The
+[control register](../defaults/controls.md) specifies how to exercise
+the installed controls at each selected boundary.

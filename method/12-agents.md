@@ -41,8 +41,13 @@ The working mode is set in the [profile](../PROJECT-PROFILE.md#roles-and-indepen
 owner. Review independence is ensured by a separate executor or agent context
 without the author's history. The owner may accept a document prepared by an
 agent on the owner's instruction; the acceptance is recorded in the usual way.
-If the owner is unavailable, work that requires the owner's decision waits;
-the rest of the permitted work continues.
+The owner may delegate explicit, reversible decision classes in the profile.
+The coordinator checks the class, its exclusions and pending limit, records
+the choice, and applies the permitted next action. An uncertain or excluded
+choice waits for the owner. Each affected PR follows its class's pending
+merge rule. Other permitted work continues. The owner confirms exact choices
+in a batch or opens rework for a reversal. The reviewer traces each material
+choice to its source. [Decision register and examples](../defaults/solo-decisions.md).
 
 **`team`** — several people. For each role the profile names an owner, a
 deputy, and a response time. Rules:
@@ -140,7 +145,7 @@ agent, honestly record the observed terminal state and the limitations.
    status across a session loss. Move completed checks to the development log
    and accepted decisions to their [owning document](13-artifacts-and-communication.md).
 2. Keep one compact file per task outside task commits. Use the
-   [configured writer and line limit](../defaults/task-recovery.md). If the
+   [configured writer, line and byte limits](../defaults/task-recovery.md). If the
    write is too large, move closed items to their owners and retry. A session
    normally follows one task. On a switch save the old state, load the new
    task's state and record the switch using the project's metrics procedure.

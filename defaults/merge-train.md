@@ -1,8 +1,8 @@
 # GitHub default for the merge train
 
-Use this design when the project meets the [trigger](../method/07-integration.md#merge-train)
-and opts in. The project supplies a built train, its runner and the settings
-in the [profile](../PROJECT-PROFILE.md#merge-train). Verify the built train
+Use this design when the project selects the [train](../method/07-integration.md#merge-train).
+Install the versioned companion. The project supplies a trusted
+runner, suite image, admission authorities and the settings in the [profile](../PROJECT-PROFILE.md#merge-train). Verify the built train
 with the project's [package checks](controls.md#common-checks).
 
 ## GitHub setup
@@ -54,6 +54,158 @@ with the project's [package checks](controls.md#common-checks).
 The default migration limit is one PR per train. Record the PR limit,
 [full-suite budget](../method/06-verification.md#verification-for-a-merge-train),
 flaky-test recurrence window and timeout in the profile.
+
+## Installed train
+
+Install the tools archive from the [adoption guide](../ADOPTION.md). Check
+`methodology-train --version` against its release. The archive includes
+`assets/train/dispatcher.yml`. Copy the dispatcher into a trusted management
+repository's default branch. Configure its target owner, repository, App ID
+and App key in the protected `methodology-train` environment. Restrict that
+environment and runner group to the reviewed dispatcher/ref. Use at least two
+runner slots on the same Linux host and one private state directory for every
+dispatch to the target. Other workflows and contributors must have no access
+to that runner, Docker daemon, configuration, executable search path or state.
+The dispatcher invokes the installed binary at an absolute path. It performs
+no checkout. Adjust the binary and configuration paths to the installation.
+
+Use Git 2.38 or newer with `merge-tree --write-tree`, GitHub CLI with
+`gh api`, util-linux `flock`, and Docker with the configured immutable suite
+image preloaded and read-only, non-recursive bind mounts. The GitHub adapter
+supports github.com and same-repository PRs. Pre-create the queue label.
+The host supplies a short-lived installation token in `GH_TOKEN`. Grant
+repository contents write, checks read, pull requests/issues write as needed
+for labels and comments, and visibility into the active rulesets' bypass actors.
+Keep the train timeout inside the installation token's remaining lifetime.
+The train reads protections and fails closed if it cannot verify them.
+[GitHub branch rules and rulesets](https://docs.github.com/en/rest/repos/rules)
+
+Store the profile outside all candidate worktrees, on paths controlled by
+the runner owner. Create an empty, private state directory (mode 0700) that
+survives service restarts. A minimal profile has this shape. Replace every
+example project value. Keep the aggregate check authority responsible for
+all applicable fast checks, affected tests, baseline and audit verdict.
+
+```json
+{
+  "repository": "example/disposable",
+  "branch": "integration",
+  "writerAppId": 12345,
+  "stateDir": "/var/lib/methodology/train/integration",
+  "mode": "dry",
+  "checks": [{"name": "reviewed admission", "appId": 67890}],
+  "queueLabel": "train-ready",
+  "suiteImage": "sha256:<64 lowercase hexadecimal digits>",
+  "timeoutSeconds": 2700,
+  "maxPrs": 5,
+  "fullBudget": 2,
+  "flakeDays": 7,
+  "flakeOwner": "suite owner",
+  "immutableSources": true,
+  "schedule": {"hoursUtc": [0, 2, 4], "graceMinutes": 20}
+}
+```
+
+- List each required exact GitHub Check Run name and dedicated publisher's
+  App ID under `checks`. The train reads the latest attempt by that publisher
+  on the PR head. For GitHub Actions (App ID 15368), also supply
+  `"workflow":{"id":123,"path":".github/workflows/admission.yml","blob":"<accepted Git blob OID>"}`.
+  It verifies the immutable workflow bytes and successful push run on the
+  same branch, head, workflow and check suite. Pin the workflow's external
+  actions and keep its verdict independent of candidate-controlled code.
+  This gate needs Actions read. A public repository can explicitly select
+  `"publicRead":true` in the workflow object to read public run metadata
+  through HTTPS with curl and no credential. An adopter can publish a
+  single aggregate if its trusted publisher verifies every required gate,
+  approval and audit for that head.
+  [GitHub Check Runs](https://docs.github.com/en/rest/checks/runs)
+- Record migration prefixes under `migrationPaths`, their required gates
+  under `migrationChecks`, and the positive `maxMigrations` (default 1).
+  Provide `docsPaths` for the documentation fast route. Select literal paths
+  or directory prefixes ending in `/`. Both sides of a rename count.
+  `dependencies` maps PR numbers to arrays of prerequisite PR numbers. The
+  owner maintains the mapping in the trusted profile. Eligible prerequisites
+  enter first. A prerequisite already merged into the target can satisfy the
+  dependency. A repeated exclusion of the same kind for the same failing
+  tests requires an operator decision. After that decision, add the PR
+  number and last reviewed run UUID to `disposition`.
+- Enabled publication requires `immutableSources: true`. Use source branches covered by active
+  repository update/deletion restrictions with empty bypass lists. Have
+  the owner establish that protection before publication. The train verifies
+  it before the final head read. This keeps the PR head stable across the
+  target update. A dry run may use mutable sources. The enabled writer
+  also applies an exact-OID lease to the target branch.
+- GitHub can omit `bypass_actors` from an installation's read, including
+  with Administration read. In that case the owner exports the complete
+  `GET /repos/OWNER/REPO/rulesets/ID` responses using a separate authorized
+  account. Put them in a protected JSON file outside candidate worktrees
+  and select its absolute path in `ruleEvidence`. Use the shape
+  `{"repository":"OWNER/REPO","repositoryId":123,"byBranch":{"main":[...],"ready/one":[...]}}`,
+  with the applicable rule objects for each exact branch. The writer compares
+  the live repository ID, effective rule ID, source, target, enforcement,
+  conditions, rules and exact fractional-seconds `updated_at` before using
+  the owner's actor list. The least-privilege installation cannot read
+  GitHub's ruleset history version in this case. This fallback relies on
+  GitHub changing that timestamp on edits. Refresh the owner export after
+  a rule changes. Never give the writer the owner's credential.
+- For solo merge authority, set `mergeGate` to an argument vector such as
+  `["/opt/methodology/bin/methodology-solo", "gate", "/etc/methodology/solo.json"]`.
+  The train uses this stable profile inode as the shared publication lock.
+  A custom gate adapter must supply its trusted absolute `mergeGateLock`
+  and serialize every authority change on that inode with an exclusive lock.
+  The train appends the repository, target branch, PR number and head OID.
+  Exit 0 permits this PR and exit 1 holds it. Any other failure stops the
+  run. Keep the policy and decision records outside the candidate. The
+  train checks at admission, then holds the shared authority lock across
+  all final PR checks, the Git push and readback. A busy authority returns
+  exit 75 for a later retry. The [solo procedure](solo-decisions.md)
+  covers installing an owner batch and ordinary publication.
+- Set `deployment` to the absolute path of a trusted installed adapter for
+  the authorized **test** environment. The train calls `read REPO BRANCH`
+  for a revision (or `none` for an empty environment), then
+  `deploy REPO BRANCH SHA` when needed, then reads independently. Require
+  idempotent deployment by revision and a terminal synchronous result.
+  The adapter receives no writer token. Execute project code only inside
+  the isolated test environment.
+- Set `metrics` to `{"profile":"/etc/methodology/metrics.json","source":"train","task":"pilot_1"}`
+  after binding the normalized source to the issued task alias. Each
+  terminal receipt produces one `train.observed` row, including lock skips.
+  `methodology-train observations PROFILE` replays receipts after a
+  journal interruption. Its stable event identities deduplicate replays.
+
+Prepare a trusted verifier image. Set `suiteImage` to its local
+`sha256:...` image ID or immutable `name@sha256:...` digest. The image
+entrypoint receives `full|targeted|docs COMMIT_OID [TEST_ID ...]`. The
+candidate files are mounted read-only at `/candidate`, without Git metadata.
+The process runs as UID/GID 65534 without capabilities, external network,
+host sockets or credentials, with a writable bounded `/tmp`. The verifier
+owns the test oracle, derives verdicts independently, isolates any candidate
+subprocess from its verdict channel, and emits one JSON object on stdout.
+Use `{"result":"pass"}` or `{"result":"fail","tests":["test_id"]}` and exit 0.
+A malformed receipt or a failed verifier is an infrastructure failure.
+Supply offline dependencies in the trusted image. This runner supports local
+container test resources. Suites requiring submodules, external networking
+or a mutable shared service need a compatible isolated runner before adoption.
+
+```sh
+methodology-train run /etc/methodology/train.json
+methodology-train run /etc/methodology/train.json --scheduled
+methodology-train run /etc/methodology/train.json --pr 17
+methodology-train run /etc/methodology/train.json --pr 22 --docs
+methodology-train report /etc/methodology/train.json FROM_UTC THROUGH_UTC
+```
+
+Each run writes a private JSON receipt under `stateDir/runs/`. It records the
+candidate OIDs, suite attempts, exclusions, decisions, queue, and observed
+readbacks. A held run with an incident or a pending operator decision exits
+1. An invalid invocation or configuration exits 2. An overlapping start
+records a skip and exits 0. Keep receipts and the pending write record
+together. After a crash, invoke the same profile again. It removes only
+run-owned resources, reads the actual target and completes any outstanding
+test deployment. If a target has an unexpected third OID, investigate it
+before authorizing another write. After a tool update fails, restore the
+previous verified archive, dispatcher, configuration and compatible private
+state, and exercise the dry cases before the next enabled publication.
 
 ## Dry-run cases
 

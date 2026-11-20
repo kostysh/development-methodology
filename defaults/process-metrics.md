@@ -67,6 +67,7 @@ terminal event without its start.
 | PR timing | `pull_request.opened`, `pull_request.merged` — `repo_id`, `delivery_id`, `head_sha`. For merge also `merge_sha`. | Read from GitHub or the integration provider. Bind each delivery to the task. Attribute the pre-PR interval to the first linked PR opening after execution starts. Record a PR that was already open as such. |
 | Activity and occupancy | `activity.started`, `activity.finished` — `operation_id`, `activity_type` (`operator`, `agent`, `machine`), `resource_id`, `action_type`. Finish adds `outcome`. | Use explicit operator actions or intervals, harness request or tool intervals, and runner or resource intervals. Report timestamps without a measured duration as point events. |
 | Decisions and interventions | `decision.requested`, `decision.blocked`, `decision.resolved` — `decision_id`, `operation_id` of the dependent work. Request adds `blocking`. Resolution adds `outcome`. `operator.intervened` — `intervention_id`, `intervention_type` (`decision_request`, `correction`, `assignment`, `status_question`), `blocking`, `decision_id` when related. | Link an intervention to its request when both describe the same occurrence. Mark the start of a verified block, which can occur after the request. Resolve it when dependent work can proceed, even if a human reply arrives later. Independent activity can overlap the block. |
+| Solo decisions | `solo.decided`, `solo.confirmed`, `solo.changed` — `decision_id`, `decision_class` (`established_ui`, `generic_error`). | Emit on applying the permitted default and on the operator's confirmed or changed choice. The report shows the pending count and wait at the cutoff. Record an actual blocking interval separately. |
 | Audits | `audit.started`, `audit.finished` — `audit_id`, `prior_audit_id`, `subject_id`, `subject_type`, `base_sha`, `head_sha`, related `rewrite_id` when known. Finish adds `outcome` (`completed`, `failed`, `cancelled`) and `verdict` when an audit produced one. | Read the audit procedure and its report. Count attempts, failed attempts, completed rounds, and distinct reviewed snapshots by subject and base/head. Distinguish a completed audit with a failing verdict from an audit that failed to produce a verdict. |
 | Findings | `audit.finding.recorded` — `audit_id`, `finding_occurrence_id`, `observation_id`, `cause_id`, `finding_type` (`a`, `b`, `c`, `d`). | Read finding types from the [finding closure rules](../method/06-verification.md). A repeated observation in another audit gets a new occurrence ID and keeps the same observation ID after reconciliation. Use a cause ID only when the evidence establishes a common cause. |
 | Tests and end-to-end runs | `test.started`, `test.finished` — `suite_id`, `attempt_id`, `checkout_sha`, `worktree_id`, `ci_job_id` when hosted by CI. Finish adds `duration_ms`, `outcome`, `exit_code`. | Use the actual runner. Record a cancelled or interrupted attempt as such, including when no exit code was captured. Count the runner attempt once, even when several tools launch, poll, or report it. |
@@ -182,7 +183,7 @@ itself to confirm a live invocation and record known gaps alongside successes.
 | Codex hooks and App Server | For compaction counts, import `codex_app_server` `item/completed` notifications with a `contextCompaction` item and its stable ID. The version-specific `item/autoApprovalReview/*` notifications supply review ID and timings. `thread/fork` gives lineage when available. The `PostCompact` hook supplies a turn and trigger, but needs a separate occurrence receipt for reliable counting. A synchronous `SessionStart` matching `compact` can inject recovery context before the next request. It has no hook-input turn ID. [Codex hooks][codex-hooks] · [App Server][codex-server] · [Review notification schema][codex-review] |
 | Codex local rollout | The pinned source writes `session_meta`, `turn_context`, per-response `token_usage_record`, and `token_count` snapshots. Usage records carry response, thread, session, root turn, and turn IDs plus separate cache counters. Rolling snapshots have no response ID. This release persists `compacted` markers and treats guardian review events as transient. Pin the parser to the actual rollout producer and check these fields on a task-owned source sample. The transcript format is internal and the PATH CLI can differ from the producer. [Release usage writer][codex-writer] · [Persistence policy][codex-rollout] |
 | Claude Code hooks and monitoring | For compaction counts, import the documented `claude_code.compaction` monitoring record. Count successful events using session, native timestamp and process sequence together. A resumed session can reuse sequence numbers. Use `api_request` for usage and request duration. The `PostCompact` hook supplies session and trigger, but needs a separate occurrence receipt. Choose one primary compaction source. `SessionStart` with `source: "compact"` adds recovery context. A fork needs an explicit source relationship. A permission denial or tool decision alone cannot establish a complete automated-review lifecycle. [Claude Code hooks][claude-hooks] · [Monitoring][claude-monitoring] · [Compaction events](https://code.claude.com/docs/en/monitoring-usage#compaction-event) |
-| Claude Code CLI and VS Code panel | The panel bundles its own CLI. The panel and standalone CLI share local conversation history and project settings in the same project and profile. Use one Claude Code adapter for the shared sources. Record the engine version for each client the project uses, and verify IDE-only interactions when a metric relies on them. Check the allowlisted shape and live event path on the selected surfaces. [VS Code client and CLI][claude-vscode] |
+| Claude Code CLI and VS Code panel | The panel bundles its own CLI. The Linux extension command `Claude Code: Open in Terminal` launches `claude` from the integrated terminal PATH. Verify that command resolves to the selected CLI, then test in that terminal. The panel and standalone CLI share local conversation history and project settings in the same project and profile. Use one Claude Code adapter for the shared sources. Record the engine version for each client the project uses, and verify IDE-only interactions when a metric relies on them. Check the allowlisted shape and live event path on the selected surfaces. [VS Code client and CLI][claude-vscode] |
 | CI and GitHub | Use workflow jobs for job and step status and timestamps, and the provider's run attempt for reruns. Use verified queue transitions and runner assignment events where exposed. A completed job payload alone leaves queue and assignment transitions unverified. Use the PR and push records for PR timing and observed ref changes. Use the existing task or audit record for acceptance and the structured runner for suite and failure facts. [Workflow jobs][github-jobs] · [GitHub webhooks][github-webhooks] |
 
 Use a local allowlist filter before retaining or exporting telemetry. Keep
@@ -203,17 +204,150 @@ the measured adoption pilot are separate milestones.
    [companion instructions](https://github.com/kostysh/development-methodology/tree/v5/tools)
    explain the profile, supported inputs, installation and recovery. Record
    the chosen commit, package version and integrity value with the project.
-3. Record `task.started` and any subsequent `task.switched` through the
-   installed `methodology-metrics record PROFILE` command. Use
-   `methodology-metrics collect PROFILE SOURCE` to import an approved local
-   input. A project-scoped hook may call `methodology-metrics hook PROFILE SOURCE`
-   with the documented payload. Verify an allowed event, a replay and a
-   malformed or missing source. A passive hook reports a gap and returns
-   control to the task. Check the journal for approved fields before use.
-4. At acceptance, record `task.accepted`. An operator reads
-   `methodology-metrics summary PROFILE TASK --as-of UTC` and compares the
-   timing, counts and gaps to the manual chronology. Recheck corrective work
-   seven days after merge. Remove the local hook if the owner ends the pilot.
+3. Connect the selected [native client](#connect-a-native-client) and
+   [operation sources](#record-at-the-operation). For each source, verify
+   one allowed event, a replay and an unrelated session or task.
+4. At acceptance, record `task.accepted`. Read
+   `methodology-metrics summary PROFILE TASK --as-of UTC`. Check the first
+   PR and acceptance against the manual chronology. Recheck corrective work
+   seven days after merge. Remove owned hooks when collection for that source ends.
+
+### Connect a native client
+
+Create the local JSON profile outside all worktrees. Give the profile mode
+0600 and keep the storage directory private. Replace the example paths and
+secret below. Generate a fresh 32-byte random key encoded as 64 hexadecimal
+characters. Supply stable project-issued IDs for the task, runner attempt,
+suite and decision used in your trial.
+
+```json
+{
+  "project_id": "trial",
+  "project_root": "/absolute/path/to/selected/worktree",
+  "journal": "events.jsonl",
+  "identity_key": "<64 random hexadecimal characters>",
+  "issued_ids": ["T1", "D1", "S1", "A1"],
+  "sources": {
+    "codex": { "kind": "codex_hook", "task_id": "T1" },
+    "claude": { "kind": "claude_hook", "task_id": "T1" },
+    "ops": { "kind": "normalized", "task_id": "T1" },
+    "ci": { "kind": "github_jobs", "task_id": "T1" }
+  },
+  "categories": {
+    "action_type": ["shell", "read", "edit", "other"],
+    "outcome": ["success", "failure", "cancelled", "skipped", "blocked"],
+    "operation_type": ["rebase", "amend"],
+    "change_type": ["correction"]
+  }
+}
+```
+
+1. Install the selected source with `methodology-metrics install-hooks PROFILE SOURCE`.
+   The command merges the installed executable's absolute path into the
+   project's `.codex/hooks.json` or worktree's `.claude/settings.local.json`.
+   In a linked Git worktree Codex discovers the local `.codex/` directory
+   and loads the corresponding main-checkout hooks file. The installer sets
+   up both locations. The private binding still selects the intended task. It keeps
+   existing handlers and permissions. Restart or reload the client settings.
+   Open Codex's `/hooks` and review the exact installed commands where the
+   client requires trust. Select the local settings source in Claude Code.
+2. Run `methodology-metrics arm-session PROFILE SOURCE`. Submit the printed
+   line once, as the whole prompt, in the intended project session within ten
+   minutes. This binds the native session and its transcript location at the
+   current end of file. Another session in the same directory cannot claim the
+   binding without the challenge. For a new task in the same session, use a
+   separate task-bound source and repeat the challenge. Keep a distinct source
+   for each simultaneously monitored session. Rearming a source retires its
+   previous binding.
+3. Run a small tool action, compact the conversation, and run another tool
+   action. At the end of the turn, check the task summary. The hooks record
+   the tool lifecycle by native call ID. The tool result for a supported
+   explicit edit can establish a state change. Shell arguments never establish
+   that a command changed state. For a plan transition or another mutation,
+   use its actual operation receipt. Hook observation time is an estimate
+   when the provider supplies no execution timestamp.
+4. At `PostCompact`, `Stop` and `SessionEnd`, the collector projects only the bound
+   transcript suffix into allowed metadata. A Codex persisted `compacted`
+   marker or a Claude `compact_boundary` UUID identifies the occurrence.
+   The callback schedules a bounded follow-up read because clients can flush
+   the transcript after returning from the hook. Compactions in one turn can
+   have distinct receipts. Provider response IDs
+   identify token deltas. Fields absent in the producer stay unknown.
+   An absent file, invalid projection, or suffix above 64 MiB leaves a visible
+   coverage gap. Choose the provider notification or monitoring adapter for
+   unavailable host boundaries. Avoid counting overlapping primary streams.
+5. For a dedicated session with an independently verified identity, an operator
+   can set the source's native `session_id` and approved exact transcript
+   `path` before installation. This selects the entire file. Use the challenge
+   route for an existing conversation with earlier activity outside the task.
+6. To roll back, run `methodology-metrics uninstall-hooks PROFILE SOURCE`
+   from the same package installation that added the hooks. Repeat for each
+   enabled source. Restore the previously verified distribution and install
+   its selected handlers. Review trust again and repeat the tool and compaction
+   checks. The operator controls the separate private journal and binding state.
+
+### Record at the operation
+
+Run the installed command from each owning task, decision, review, guard or
+runner transition. A mark reads its event-specific data object from stdin.
+It sets the source, task, stable event ID, observation time and actual local
+occurrence clock. Reuse an occurrence key to replay the same transition.
+Give another attempt a fresh key. For an imported verified timestamp add
+`--at UTC`; for an agent or service add `--actor agent` or `--actor automation`.
+Use the fields in the [event families](#event-types-and-fields).
+
+```sh
+printf '%s\n' '{}' | methodology-metrics mark "$profile" ops task.started start
+printf '%s\n' '{"decision_id":"D1","blocking":true}' |
+  methodology-metrics mark "$profile" ops decision.requested request-1
+printf '%s\n' '{"decision_id":"D1","operation_id":"A1"}' |
+  methodology-metrics mark "$profile" ops decision.blocked block-1
+printf '%s\n' '{"decision_id":"D1","operation_id":"A1"}' |
+  methodology-metrics mark "$profile" ops decision.resolved resolution-1
+methodology-metrics run-test "$profile" ops S1 A1 -- npm test
+methodology-metrics github-sync "$profile" ci OWNER/REPO PULL_NUMBER
+printf '%s\n' '{}' | methodology-metrics mark "$profile" ops task.accepted accept
+```
+
+- Record `audit.started` and `audit.finished` around the actual reviewer
+  operation, then mark the typed findings, observation IDs and cause IDs.
+  Report a completed negative verdict separately from a failed audit run.
+  Record permission reviews, guard blocks and disputes at their owning
+  boundary. A missing event source leaves its count unavailable.
+- The runner wrapper uses the process exit and elapsed time and the actual
+  Git checkout. An interrupted attempt can retain a start without a finish.
+  Git's local `post-rewrite` hook can forward its reason and stdin unchanged
+  to `methodology-metrics git-rewrite PROFILE SOURCE "$1"` at the worktree
+  root. The command checks the named branch's reflog against the supplied pairs.
+  Preserve the adopting project's other hook handlers.
+- `github-sync` reads the named GitHub.com PR and paginated jobs for associated
+  runs and attempts on its current head. The PR opening time survives later
+  head changes. Only a lifecycle webhook supplies the head observed at that
+  transition. Existing candidate journals retain their raw REST rows and the
+  reader disregards their unverified historical head field. It accepts a read-only `GH_TOKEN`
+  for non-public resources. A repeated sync deduplicates existing facts.
+  Import task-owned webhook/job receipts with `collect` for earlier heads,
+  queue, assignment and push transitions when those timestamps exist.
+  Record structured runner failure codes, fixture versions and deployment
+  evidence from their respective producers.
+- Use `methodology-metrics collect PROFILE SOURCE` for approved stored
+  inputs. Use `record PROFILE` for already normalized JSONL receipts.
+  Verify the native session ID on task-bound provider inputs. Supply issued
+  IDs for organization-owned identities and configure permitted categories
+  locally. Private fields and unrecognized values cannot enter the journal.
+- For comparable deliveries in the selected task, the report divides distinct
+  corrected deliveries by deliveries with complete closed 168-hour windows.
+  Multiple corrective changes to a delivery contribute one numerator unit.
+  It reports verified-action and proxy-inclusive samples, open windows and
+  incomplete closed windows separately. Zero eligible deliveries gives a null
+  ratio. Each adopter selects comparable tasks and records the basis.
+- Compare two selected histories with
+  `methodology-metrics compare PROFILE BEFORE_TASK AFTER_TASK --as-of UTC`.
+  It returns both task measurements, quality samples and differences in
+  acceptance time and test disputes. Missing execution start, acceptance or
+  dispute coverage gives `insufficient_data` for the affected difference.
+  Solo summaries report applied classes, pending and changed decisions,
+  confirmations and elapsed waits at the selected cutoff.
 
 [codex-hooks]: https://learn.chatgpt.com/docs/hooks
 [codex-server]: https://learn.chatgpt.com/docs/app-server

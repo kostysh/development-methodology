@@ -19,11 +19,23 @@ conflicts. Keep its current owners. Do not replace the existing `AGENTS.md`,
 
 ## 2. Place and configure
 
-Copy the root Markdown files listed in the [contents](README.md#contents) and
-the `method/`, `defaults/`, and `templates/` directories into the chosen
-methodology folder. The recommended path is
-`docs/development-methodology/`; another path is acceptable if navigation is
-updated. Record the package version from the [README](README.md) in the profile.
+Install the guide and companion from the named [v5 release](https://github.com/kostysh/development-methodology/releases/tag/methodology-v5.0.0). Run the following in a clean project directory on Linux with Node.js 24.12–24.x, npm, Git, the GitHub CLI and GNU coreutils. For an update, stage these paths next to the existing installation and keep its hooks and profile until the replacement passes. Select a project-owned path for persistent executables outside disposable task worktrees.
+
+```sh
+release_dir="$PWD/.methodology/releases/5.0.0"
+tools_dir="$PWD/.methodology/tools/5.0.0"
+guide_dir="$PWD/docs/development-methodology"
+mkdir -p "$release_dir" "$tools_dir" "$guide_dir"
+gh release download methodology-v5.0.0 --repo kostysh/development-methodology --dir "$release_dir"
+(cd "$release_dir" && sha256sum --check SHA256SUMS)
+tar -xzf "$release_dir/methodology-guide-5.0.0.tar.gz" -C "$guide_dir"
+npm install --prefix "$tools_dir" --offline --ignore-scripts --omit=dev --no-audit --no-fund "$release_dir/kostysh-development-methodology-tools-5.0.0.tgz"
+export PATH="$tools_dir/node_modules/.bin:$PATH"
+methodology-metrics --version
+methodology-check-links "$guide_dir"
+```
+
+Stop on a failed command. Record the verified SHA-256, source commit and installed version in the profile. Keep the download directory and the preceding release for rollback. Add the executable directory to the verified runner configuration. Native hooks record an absolute installed command path.
 
 Fill in the [profile](PROJECT-PROFILE.md). Every material choice must have an
 owner and a basis. Use real, existing commands and verify their semantics,
@@ -56,7 +68,7 @@ the conditional sets the profile needs and the stack skills. Obtain the
 owner's permission to install and choose the location: the project directory
 (recommended) or the agent's global directory.
 
-Install [via the CLI or by cloning](defaults/skills.md#installation-via-cli)
+Install the approved [versioned v5 skill archives](defaults/skills.md#install-the-v5-release)
 following the [rules of chapter 15](method/15-skills.md#installation).
 Verify in a new session that the agent sees and loads the skills. Record the
 method, location, release tag, and set in the [profile](PROJECT-PROFILE.md#skills).
@@ -127,20 +139,24 @@ union of overlapping intervals within each activity and report uncovered time
 as unexplained. Record missing history as unknown. A project starting without
 comparable history can use its first trial as the first observation.
 
-For a collector trial, authorize the named task and its sources, choose a
-private destination outside the task worktree, and verify the
-[selected adapters](defaults/process-metrics.md#source-adapters-and-evidence).
-Run the [setup and checks](defaults/process-metrics.md#collect-one-task)
-before relying on the journal. After the seven-day follow-up, compare its
-results to the manual chronology and let the project owner decide whether to
-keep collection enabled.
+For each agent client selected in the profile, authorize the named task and
+sources and [install its native hooks](defaults/process-metrics.md#connect-a-native-client).
+Bind the session, perform an actual tool action and compact context. Verify the
+task journal gained both observations. Repeat delivery and check that the
+counts stay unchanged. A different session must leave the journal unchanged.
+Connect the [operation sources](defaults/process-metrics.md#record-at-the-operation),
+including Git, GitHub, CI, audit and task events where selected. Reconcile
+the first report with the actual chronology. Mature seven-day histories
+supply the quality rate. Missing history affects that measure only.
 
-Record any measured [merge train trigger](method/07-integration.md#merge-train)
-in the [profile](PROJECT-PROFILE.md#merge-train). Use the ordinary queue
-until the owner accepts the [pilot](#pilot-the-merge-train).
+Record the owner's [integration route](method/07-integration.md#merge-train)
+in the [profile](PROJECT-PROFILE.md#merge-train). When the train is selected,
+[commission the installed command](#commission-the-merge-train) on the target.
 
 Choose the `solo` or `team` mode and name the role owners
 ([team composition](method/12-agents.md#team-composition)).
+For a solo project, select each delegated class and its pending merge rule,
+set the cap and exercise [a confirmation and a reversal](defaults/solo-decisions.md).
 The project owner confirms the chosen route, mandatory checks, authority,
 exceptions, document scheme, skill set, and stop conditions. The acceptance
 record may live in the profile or in an existing decision. If the current
@@ -191,16 +207,17 @@ Exercise a compaction, an interrupted session and a long run. Verify that
 the agent reconciles the current revision and reads the saved outcome.
 Keep the checkpoint report in the task or PR for its reader.
 
-### Pilot the merge train
+<a id="pilot-the-merge-train"></a>
 
-When the trigger is met, the owner selects a built, tested train and
+### Commission the merge train
+
+When the owner selects the train, install the released command and
 verifies the [branch and runner controls](defaults/merge-train.md#github-setup),
 the [audit closure](method/06-verification.md#closing-review-findings), and
 the [protected test baseline](method/06-verification.md#protected-test-baseline)
 where applicable. Run the [seven cases](defaults/merge-train.md#dry-run-cases)
-in a disposable setup and run in dry mode for several nights with the real
-integration update and test deployment suppressed. Compare each report with
-the operator's decisions. Enable live integration only after the operator
+in a disposable setup. Run the target configuration in dry mode and compare
+the report with the expected admissions and exclusions. Enable live integration after the operator
 accepts the evidence, verifies the sole writer in the target repository,
 and approves the switch. Until then use the ordinary integration queue.
 After activation, hold integration when a required control is unavailable.
@@ -260,3 +277,20 @@ automatically.
 4. Update the skills if the new version relies on them.
 5. The methodology owner accepts the update; the new version is recorded in
    the profile. For tasks in progress, state which new rules apply to them.
+
+### Roll back a release
+
+1. Pause the train dispatcher and reconcile its last write and deployment.
+   Keep the target protected. Retain the current task journal and decision
+   ledger with their profile and owning data permissions.
+2. With the new executable still installed, run
+   `methodology-metrics uninstall-hooks PROFILE SOURCE` for each changed
+   native source. Compare the resulting settings to the saved working copy.
+   Restore only project-owned entries, including the former recovery command.
+3. Switch executable paths, trusted CI configuration and versioned skill
+   directories back to the recorded release. Restore its local lockfile and
+   the prior profile. Verify the previous skill is discoverable in a new
+   session, a clean check succeeds and the same known violation is blocked.
+4. If collection was enabled previously, verify a positive record using the
+   earlier hook. Read back protection, writer and deployed revision before
+   resuming integration. Record the observed results.

@@ -11,6 +11,9 @@ Place the record in the current owner if a new artifact is not needed.
 - Simplest sufficient option: `{{SIMPLE_OPTION}}`.
 - Material alternatives and the reasons for the choice: `{{ALTERNATIVES}}`.
 - Accepted decision and evidence of its acceptance: `{{DECISION}}`.
+- For a delegated solo choice, class, source, digest, pending status and merge permission: `{{SOLO_DECISION}}`.
+- Reversal cost, dependent work, user/data impact and permitted next action: `{{PENDING_IMPACT}}`.
+- Owner's confirmation or reversal, owning document and rework: `{{BATCH_OUTCOME}}`.
 - Consequences for behavior, data, security, operations: `{{IMPACT}}`.
 - Verification of the decision, rollback/removal, and revisit trigger: `{{VALIDATION_REVISIT}}`.
 

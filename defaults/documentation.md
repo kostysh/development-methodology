@@ -13,6 +13,9 @@ real document.
 
 For GitHub-style Markdown, use `methodology-check-links <project-root>`
 on the whole candidate. Use the site's own checker for generated routes.
+Run it with the candidate worktree as its root. The checker excludes nested
+Git linked worktrees and links into those checkouts. It still reads ordinary
+documentation alongside them, including within a `.worktree/` directory.
 Record the version and required check in the [profile](../PROJECT-PROFILE.md#tools-and-checks).
 If its result for this revision covers the link, the reviewer can use that
 result and focus on whether the destination serves the reader.

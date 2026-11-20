@@ -5,6 +5,11 @@ describes its conditions and constraints. The risk level is chosen according
 to [chapter 01](method/01-authority-and-scope.md#materiality-and-rigor);
 risk triggers can move a task to a stricter route at any time.
 
+In solo mode, consult the [delegated decision classes](method/12-agents.md#team-composition)
+when a material choice arises. Record a permitted default, check the exact
+PR's merge permission, and return pending items to the owner in the morning
+report. Continue independent work while a dependent action is held.
+
 ## Small change — low risk
 
 1. Name the assignment, result, scope, and non-goals.

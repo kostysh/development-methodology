@@ -8,9 +8,8 @@ profile records the set actually installed.
 ## Source
 
 Repository: [`kostysh/skills`](https://github.com/kostysh/skills).
-Installer: the npm package `@kostysh/skills`; requires Node.js 24 or later.
-Releases are tagged `skills-YYYYMMDD[-n]`. The current skill catalog is in
-the repository README.
+For methodology 5.0.0, use the [skills-v5.0.0 assets](https://github.com/kostysh/skills/releases/tag/skills-v5.0.0).
+The catalog lists each skill's version, filename in its URL, and SHA-256.
 
 ## Stages and skills
 
@@ -63,6 +62,37 @@ The PRD statuses in `prd-engineer` (`draft`, `review`, `baselined`, `updated`,
 `archived`) are mapped to the project's statuses in the profile. A typical
 mapping: `review` → `draft` under review, `baselined` → `accepted`, `updated`
 → `accepted` with a change note.
+
+## Install the v5 release
+
+Download the exact catalog and the selected built archives into an empty
+staging directory. This example installs one selected skill for Codex.
+Repeat for the set in the project profile. Use `.claude/skills` for Claude
+Code or `.agents/skills` for Codex. The example uses GitHub CLI, jq and GNU
+coreutils. Run each step only after the previous one succeeds.
+
+```sh
+skill_name=code-reviewer
+stage_dir="$PWD/.methodology/releases/skills-v5.0.0"
+target_dir="$PWD/.agents/skills"
+mkdir -p "$stage_dir" "$target_dir"
+gh release download skills-v5.0.0 --repo kostysh/skills --dir "$stage_dir" --pattern catalog.json --skip-existing
+skill_asset=$(jq -er --arg name "$skill_name" '.skills[] | select(.name==$name) | .url | split("/") | last' "$stage_dir/catalog.json")
+skill_digest=$(jq -er --arg name "$skill_name" '.skills[] | select(.name==$name) | .sha256' "$stage_dir/catalog.json")
+gh release download skills-v5.0.0 --repo kostysh/skills --dir "$stage_dir" --pattern "$skill_asset" --skip-existing
+(cd "$stage_dir" && printf '%s  %s\n' "$skill_digest" "$skill_asset" | sha256sum --check)
+skill_stage=$(mktemp -d "$target_dir/.new-XXXXXXXX")
+tar -xzf "$stage_dir/$skill_asset" -C "$skill_stage"
+test -s "$skill_stage/SKILL.md" && test ! -e "$target_dir/$skill_name" && mv -T "$skill_stage" "$target_dir/$skill_name"
+```
+
+For an update, compare an existing skill with its recorded archive. Keep
+local edits and resolve differences with the owner. Move the previous
+verified directory into a private backup before switching. Verify the skill
+in a fresh agent session. To roll back, restore that directory, restart the
+agent and verify the earlier skill version. An unqualified stable-catalog
+installation selects the conventional stable release. Pin the v5 tag above
+for this methodology.
 
 ## Installation via CLI
 

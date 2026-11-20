@@ -22,7 +22,7 @@ export type JournalRead = {
 const maxFileBytes = 32 * 1024 * 1024;
 
 const gapCodes = new Set([
-  "adapter_gap", "conflicting_event", "invalid_event", "invalid_input",
+  "git_rewrite_unverified", "github_sync_failed", "session_binding_required", "tool_occurrence_identity_missing", "adapter_gap", "conflicting_event", "invalid_event", "invalid_input",
   "journal_invalid", "coverage_invalid", "journal_missing", "line_limit",
   "source_missing", "source_unreadable", "source_unconfigured", "source_changed",
   "usage_response_identity_missing", "usage_counts_partial", "compaction_occurrence_identity_missing",
@@ -233,9 +233,12 @@ export function readJournal(profile: MetricsProfile, asOf?: string): JournalRead
   }) ?? { events: [], gaps: [coverageGap("journal_missing")] };
 }
 
-export function appendJournal(profile: MetricsProfile, entries: readonly MetricsEvent[], gaps: readonly CoverageGap[]) {
+export function appendJournal(profile: MetricsProfile, entries: readonly MetricsEvent[], gaps: readonly CoverageGap[], operationClock = false) {
   return withJournal(profile, true, (state) => {
-    const validated = entries.map((entry) => normalizeEvent(entry, profile));
+    // A replay of an actual operation reuses its first local occurrence clock while holding the journal lock.
+    const clockById = new Map(operationClock ? state.rows.map(row => [row.event_id, row.occurred_at] as const) : []);
+    const validated = entries.map(entry => normalizeEvent({ ...entry,
+      occurred_at: clockById.get(entry.event_id) ?? entry.occurred_at }, profile));
     const affected = new Set(validated.map(({ event_id }) => event_id));
     const priorRows = state.rows.filter(({ event_id }) => affected.has(event_id));
     const earliest = new Map<string, string>();

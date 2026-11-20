@@ -12,19 +12,29 @@ function isMarkdown(path: string) {
   return /\.(md|markdown)$/iu.test(path);
 }
 
-function isInScope(root: string, path: string) {
+function isInScope(root: string, path: string, nestedWorktrees: Set<string>) {
   const local = relative(root, path);
   const segments = local.split(sep);
-  return !isAbsolute(local) && segments[0] !== ".."
-    && !segments.some((part) => excluded.has(part));
+  if (isAbsolute(local) || segments[0] === "..") return false;
+  let directory = root;
+  for (const part of segments) {
+    directory = resolve(directory, part);
+    if (excluded.has(part) || nestedWorktrees.has(directory)) return false;
+  }
+  return true;
 }
 
-function* markdownFiles(directory: string): Generator<string> {
+function* markdownFiles(directory: string, root: string, nestedWorktrees: Set<string>): Generator<string> {
   const entries = readdirSync(directory, { withFileTypes: true });
+  if (directory !== root && entries.some((entry) => entry.name === ".git" && entry.isFile())
+      && isLinkedWorktree(directory)) {
+    nestedWorktrees.add(directory);
+    return;
+  }
   for (const entry of entries) {
     if (excluded.has(entry.name)) continue;
     const path = resolve(directory, entry.name);
-    if (entry.isDirectory()) yield* markdownFiles(path);
+    if (entry.isDirectory()) yield* markdownFiles(path, root, nestedWorktrees);
     if (entry.isFile() && isMarkdown(path)) yield path;
   }
 }
@@ -37,6 +47,32 @@ function resolveExisting(path: string): string | undefined {
         && (error.code === "ENOENT" || error.code === "ENOTDIR")) return;
     throw error;
   }
+}
+
+function readGitPointer(path: string): string | undefined {
+  const target = resolveExisting(path);
+  if (!target) return;
+  const info = statSync(target);
+  if (!info.isFile() || info.size > 65536) return;
+  return readFileSync(target, "utf8").replace(/\r?\n$/u, "");
+}
+
+function isLinkedWorktree(directory: string) {
+  const marker = resolve(directory, ".git");
+  const pointer = readGitPointer(marker);
+  if (!pointer?.startsWith("gitdir: ")) return false;
+  const location = pointer.slice("gitdir: ".length);
+  if (!location || location.includes("\0")) return false;
+  const administrative = resolve(directory, location);
+  const backlink = readGitPointer(resolve(administrative, "gitdir"));
+  if (!backlink || backlink.includes("\0") || resolveExisting(resolve(administrative, backlink)) !== marker) {
+    return false;
+  }
+  const common = readGitPointer(resolve(administrative, "commondir"));
+  if (!common || common.includes("\0")) return false;
+  const commonDirectory = resolveExisting(resolve(administrative, common));
+  return Boolean(commonDirectory && statSync(commonDirectory).isDirectory()
+    && readGitPointer(resolve(administrative, "HEAD")));
 }
 
 function localDestination(url: string) {
@@ -61,7 +97,8 @@ const describe = (value: string) => JSON.stringify(value);
 
 export function checkLinks(projectRoot: string) {
   const root = realpathSync(projectRoot);
-  const files = [...markdownFiles(root)].sort();
+  const nestedWorktrees = new Set<string>();
+  const files = [...markdownFiles(root, root, nestedWorktrees)].sort();
   if (!files.length) throw new Error("project root has no Markdown files");
   const documents = new Map(files.map((path) => [
     path, parseMarkdown(readFileSync(path, "utf8")),
@@ -98,9 +135,9 @@ export function checkLinks(projectRoot: string) {
       const { path, fragment } = destination;
       const candidate = !path ? source : path.startsWith("/")
         ? resolve(root, `.${path}`) : resolve(dirname(source), path);
-      if (!isInScope(root, candidate)) continue;
+      if (!isInScope(root, candidate, nestedWorktrees)) continue;
       const target = resolveExisting(candidate);
-      if (target && !isInScope(root, target)) continue;
+      if (target && !isInScope(root, target, nestedWorktrees)) continue;
 
       const info = target ? statSync(target) : undefined;
       if (!target || !info || (path.endsWith("/") ? !info.isDirectory()

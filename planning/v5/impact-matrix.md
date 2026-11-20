@@ -5,8 +5,10 @@ the most. Stages 1 and 6 carry the greatest tooling and maintenance cost.**
 Stage 8 also needs substantial implementation. Stage 7 moves the most
 decision authority, even though it involves relatively little code.
 
-The [implementation and evidence matrix](status.md) records what shipped to
-the development branches, what the owner deferred and which pilots are open.
+The [current delivery matrix](status.md) records the executable capabilities
+and their acceptance evidence. The estimates and pilot options below describe
+the original plan. The owner selected executable train and solo support for
+v5, without a calendar gate.
 
 This assessment compares the [eight-stage plan](plan.md) with
 [version 0.4](../../README.md) at `d923b29`. That revision contains 35

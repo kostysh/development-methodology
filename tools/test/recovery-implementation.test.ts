@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test, type TestContext } from "node:test";
@@ -39,6 +39,28 @@ function setup(t: TestContext) {
   }
   return { root, repo, config, bin, head, git, configure, cli };
 }
+
+test("the state byte limit applies before replacement and before delivery by the hook", (t) => {
+  const f = setup(t);
+  writeFileSync(join(f.repo, ".git/info/exclude"), "/.methodology/task-state/\n");
+  f.configure({ line_limit: 1, byte_limit: 8 });
+  const file = join(f.repo, ".methodology/task-state/fixture.md");
+  assert.equal(f.cli("write", "é".repeat(4)).status, 0);
+  const tooLarge = f.cli("write", "é".repeat(4) + "x");
+  assert.equal(tooLarge.status, 1, tooLarge.stderr);
+  assert.match(tooLarge.stderr, /state_exceeds_byte_limit/);
+  assert.equal(readFileSync(file, "utf8"), "é".repeat(4));
+  writeFileSync(file, "OVERSIZE-DO-NOT-INJECT".repeat(1024));
+  const event = JSON.stringify({ hook_event_name: "SessionStart", source: "compact", cwd: f.repo });
+  const answer = f.cli("hook", event);
+  assert.equal(answer.status, 0);
+  assert.match(answer.stdout, /state_exceeds_byte_limit/);
+  assert.doesNotMatch(answer.stdout, /OVERSIZE-DO-NOT-INJECT/);
+  f.configure();
+  assert.equal(f.cli("write", "x".repeat(512 * 1024 + 1)).status, 1);
+  f.configure({ byte_limit: 0 });
+  assert.equal(f.cli("write", "x").status, 2);
+});
 
 test("recovery uses the same user exclude configuration as the worktree", (t) => {
   const f = setup(t);

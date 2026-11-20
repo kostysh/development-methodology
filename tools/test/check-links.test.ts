@@ -6,7 +6,8 @@ import { dirname, join } from "node:path";
 import { test, type TestContext } from "node:test";
 import { fileURLToPath } from "node:url";
 
-const command = fileURLToPath(new URL("../dist/check-links.js", import.meta.url));
+const command = process.env.METHODOLOGY_CHECK_LINKS_BIN ?? process.execPath;
+const prefix = process.env.METHODOLOGY_CHECK_LINKS_BIN ? [] : [fileURLToPath(new URL("../dist/check-links.js", import.meta.url))];
 
 function fixture(t: TestContext) {
   const root = mkdtempSync(join(tmpdir(), "methodology-links-"));
@@ -21,7 +22,7 @@ function write(root: string, name: string, content: string) {
 }
 
 function check(root: string, ...args: string[]) {
-  const result = spawnSync(process.execPath, [command, ...args], {
+  const result = spawnSync(command, [...prefix, ...args], {
     cwd: root, encoding: "utf8", timeout: 5000,
   });
   assert.ifError(result.error);
@@ -165,6 +166,35 @@ test("ignores excluded directories and links escaping the project", { skip: proc
     write(root, `${directory}/README.md`, "[Ignored](absent.md)");
   }
   assert.deepEqual(check(root), { status: 0, stdout: "Checked 1 Markdown files.\n", stderr: "" });
+});
+
+test("excludes a real nested Git worktree and keeps ordinary .worktree documentation", (t) => {
+  const root = fixture(t);
+  const git = (...args: string[]) => {
+    const result = spawnSync("git", args, {
+      cwd: root, encoding: "utf8", timeout: 5000,
+      env: { ...process.env, GIT_CONFIG_NOSYSTEM: "1", GIT_CONFIG_GLOBAL: "/dev/null" },
+    });
+    assert.ifError(result.error);
+    assert.equal(result.status, 0, result.stderr);
+  };
+  git("init", "-q");
+  write(root, "README.md", "# Main\n\n[Local guide](.worktree/reference.md#guide)\n\n[Other checkout](.worktree/task/README.md#main)");
+  write(root, ".worktree/reference.md", "# Guide");
+  git("add", "README.md");
+  git("-c", "user.name=Test", "-c", "user.email=test@example.test", "commit", "-qm", "base");
+  git("worktree", "add", "--detach", ".worktree/task", "HEAD");
+  write(root, ".worktree/task/README.md", "# Task\n\n[Other candidate](absent.md)");
+  write(root, "docs/.git", "gitdir: absent");
+  write(root, "docs/guide.md", "# Documentation");
+  assert.deepEqual(check(root), { status: 0, stdout: "Checked 3 Markdown files.\n", stderr: "" });
+  assert.deepEqual(check(root, ".worktree/task"), {
+    status: 1, stdout: "", stderr: 'README.md:3: unresolved local path "absent.md"\n',
+  });
+  write(root, ".worktree/reference.md", "# Changed");
+  assert.deepEqual(check(root), {
+    status: 1, stdout: "", stderr: 'README.md:3: unresolved fragment "guide" in ".worktree/reference.md#guide"\n',
+  });
 });
 
 test("fails closed for a missing, empty, or invalid project root", (t) => {

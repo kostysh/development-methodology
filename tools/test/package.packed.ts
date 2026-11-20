@@ -1,16 +1,18 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { copyFileSync, mkdtempSync, mkdirSync, readdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import packageInfo from "../package.json" with { type: "json" };
+import { checkCases } from "./contract-results.ts";
 
 const tools = fileURLToPath(new URL("../", import.meta.url));
 const stamp = "2026-11-19T10:00:00Z";
 
-test("packs once and invokes the installed commands with isolated local data", { timeout: 180_000 }, (t) => {
+test("packs once and invokes the installed commands with isolated local data", { timeout: 480_000 }, (t) => {
   const root = mkdtempSync(join(realpathSync(tmpdir()), "methodology-metrics-packed-"));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const install = join(root, "install");
@@ -21,7 +23,7 @@ test("packs once and invokes the installed commands with isolated local data", {
   const npm = process.env.npm_execpath;
   assert.ok(npm, "Run the distribution smoke through npm run test:packed.");
 
-  const pack = spawnSync(process.execPath, [npm, "pack", "--json", "--pack-destination", root], {
+  const pack = spawnSync(process.execPath, [npm, "pack", "--cache", join(root,"pack-cache"), "--json", "--pack-destination", root], {
     cwd: tools, encoding: "utf8", timeout: 90_000,
   });
   assert.ifError(pack.error);
@@ -31,10 +33,12 @@ test("packs once and invokes the installed commands with isolated local data", {
   assert.ok(artifact?.filename);
   const files: string[] = artifact.files.map(({ path }: { path: string }) => path);
   for (const entry of Object.values(packageInfo.bin)) assert.ok(files.includes(entry.slice(2)));
-  assert.ok(files.every((path) => path.startsWith("dist/") || path === "package.json" || path === "README.md"));
+  assert.ok(files.includes("assets/train/dispatcher.yml"));
+  assert.ok(files.every((path) => /^(dist|assets|node_modules)\//u.test(path) || path === "package.json" || path === "README.md"));
   console.log(`Packed ${artifact.filename} (${artifact.integrity})`);
   const installed = spawnSync(process.execPath, [
-    npm, "install", "--ignore-scripts", "--omit=dev", "--no-audit", "--no-fund", join(root, artifact.filename),
+    npm, "install", "--offline", "--cache", join(root,"empty-npm-cache"), "--ignore-scripts", "--omit=dev",
+    "--no-audit", "--no-fund", join(root, artifact.filename),
   ], { cwd: install, encoding: "utf8", timeout: 90_000 });
   assert.ifError(installed.error);
   assert.equal(installed.status, 0, installed.stderr);
@@ -77,7 +81,10 @@ test("packs once and invokes the installed commands with isolated local data", {
   const path = join(root, "private-profile.json");
   writeFileSync(path, JSON.stringify({
     project_id: "fixture", project_root: project, journal: "events.jsonl", identity_key: "34".repeat(32),
-    issued_ids: ["task_1", "start_1"], sources: { manual: { kind: "normalized" } },
+    issued_ids: ["task_1", "start_1", "end_1"], sources: {
+      manual: { kind: "normalized" },
+      taskfile: {kind:"task",task_id:"task_1",path:"task-input.jsonl"},
+    },
   }), { mode: 0o600 });
   const event = {
     schema_version: 1, project_id: "fixture", event_id: "start_1", source_id: "manual",
@@ -88,6 +95,14 @@ test("packs once and invokes the installed commands with isolated local data", {
     status: 0, stdout: "Recorded 1 events, 0 repeats, 0 gaps.\n", stderr: "",
   });
   assert.equal(JSON.parse(readFileSync(join(root, "events.jsonl"), "utf8")).event_id, "start_1");
+  writeFileSync(join(root,"task-input.jsonl"),JSON.stringify({...event,event_type:"task.accepted",event_id:"end_1",
+    source_id:"taskfile"})+"\n");
+  const imported=run(["collect",path,"taskfile"]);
+  assert.equal(imported.status,0,imported.stderr);
+  const saved=readFileSync(join(root,"events.jsonl"),"utf8");
+  assert.deepEqual(saved.trim().split("\n").map(line=>JSON.parse(line).event_id),["start_1","end_1"]);
+  assert.equal(run(["collect",path,"taskfile"]).status,0);
+  assert.equal(readFileSync(join(root,"events.jsonl"),"utf8"),saved);
   const report = run(["summary", path, "task_1", "--as-of", stamp]);
   assert.equal(report.status, 0, report.stderr);
   assert.equal(JSON.parse(report.stdout).task_id, "task_1");
@@ -105,15 +120,25 @@ test("packs once and invokes the installed commands with isolated local data", {
     METHODOLOGY_BASELINE_BIN: installedBin("methodology-baseline"),
     METHODOLOGY_RECOVERY_BIN: installedBin("methodology-recovery"),
     METHODOLOGY_METRICS_BIN: metrics,
+    METHODOLOGY_CONTROLS_BIN: installedBin("methodology-controls"),
+    METHODOLOGY_TRAIN_BIN: installedBin("methodology-train"),
+    METHODOLOGY_SOLO_BIN: installedBin("methodology-solo"),
   };
   // A nested Node test runner skips its files if it inherits this marker.
   delete contractEnv.NODE_TEST_CONTEXT;
-  const contracts = [
-    "baseline-contract.test.ts",
-    "recovery-contract.test.ts",
-    "train-metrics-contract.test.ts",
-  ];
-  for (const file of contracts) {
+  const inventory: Record<string,string[]> = JSON.parse(readFileSync(join(tools,"test","required-cases.json"),"utf8"));
+  const suites = readdirSync(join(tools,"test")).filter(name=>name.endsWith(".test.ts")).sort();
+  assert.deepEqual(Object.keys(inventory).sort(),suites,"Every mandatory suite must have a reviewed inventory");
+  const frozen: Record<string,string> = {
+    "baseline-contract.test.ts":"580897630e83456561accbcfd083ffff1361a832299e263639a769e064aaf3ae",
+    "recovery-contract.test.ts":"1ecf6bfecfb6b88cfb15489a763a7aa9645150149ad923b36198e4ccf5a1ed9b",
+    "train-metrics-contract.test.ts":"258996ef297efc022a91dc391afc72ebce35ebb7e00146a91a46e86e45625b1f",
+  };
+  for (const [file,digest] of Object.entries(frozen)) {
+    assert.ok(Object.hasOwn(inventory,file), "Missing frozen suite " + file);
+    assert.equal(createHash("sha256").update(readFileSync(join(tools,"test",file))).digest("hex"),digest,file);
+  }
+  for (const [file,required] of Object.entries(inventory)) {
     const contract = spawnSync(process.execPath, [
       "--test", "--test-reporter=tap", join(tools, "test", file),
     ], {
@@ -125,8 +150,15 @@ test("packs once and invokes the installed commands with isolated local data", {
     assert.ifError(contract.error);
     const output = contract.stdout + contract.stderr;
     assert.equal(contract.status, 0, output);
-    const counts = /^# pass ([1-9]\d*)$/mu.exec(contract.stdout);
-    assert.ok(counts, `No passing contract tests reported for ${file}.\n${output}`);
-    console.log(`Installed ${file} passed ${counts[1]} tests.`);
+    checkCases(contract.stdout,required);
+    console.log(`${file} passed all ${required.length} required tests.`);
+  }
+  const releaseDir=process.env.METHODOLOGY_RELEASE_DIR;
+  if (releaseDir) {
+    mkdirSync(releaseDir,{recursive:true});
+    const archive=join(root,artifact.filename);
+    copyFileSync(archive,join(releaseDir,artifact.filename));
+    const hash=createHash("sha256").update(readFileSync(archive)).digest("hex");
+    writeFileSync(join(releaseDir,artifact.filename+".sha256"),hash+"  "+artifact.filename+"\n");
   }
 });

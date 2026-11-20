@@ -1,7 +1,24 @@
-# Implementation and evidence
+# v5 delivery and evidence
 
-This table preserves the November 19 results and decisions. The
-[November 20 remediation plan](adoption-readiness.md) owns the current work.
+The [adoption-readiness plan](adoption-readiness.md) governs this release.
+The November 26 and December 3 pilot checkpoints were cancelled. They
+impose no wait on adoption or enabling approved solo classes or the train.
+
+| Stage | What an adopter receives | What to verify in the project |
+| --- | --- | --- |
+| 1. Measurement | Installed Codex and Claude hooks, task binding, Git/GitHub/CI and operation inputs, and a report. [Real client results](native-acceptance.md) | Observe an actual tool and compaction in each selected client. Check the first PR and acceptance against timestamps. |
+| 2. Retrospectives | Separate verdict, observation, cause and correction counts. [Worked retrospective](pilot-retrospective.md) | Trace a repeated finding to its actual cause and retain missing evidence. |
+| 3. Controls | Installed link, artifact, Git, required-check and shared runner controls. [Control evidence](control-acceptance.md) | Verify a clean and a failing case at each enforcing boundary selected in the profile. |
+| 4. Audit | Four finding types, response and re-audit rules and independently scoped reviewers. [Closure rules](../../method/06-verification.md#closing-review-findings) | Trace a real finding to a failed check, correction, and applicable independent decision. |
+| 5. Baseline tests | Specification-derived tests protected by an installed manifest verifier, native edits guard and trusted CI. [Frozen 27-case evidence](control-acceptance.md) | Verify a changed committed test is rejected and the clean SHA passes. Missing time/dispute history produces insufficient data. |
+| 6. Merge train | An installed GitHub writer, queue, isolated suites, bounded retries, deployment readback and six operational measures. [Two actual GitHub merges](train-runtime-acceptance.md) | Commission the chosen target branch, writer, trusted checks, frozen PR heads and test environment. |
+| 7. Solo decisions | Two optional, explicitly selectable classes, a pending limit, owner receipts, a morning report and a merge gate. [Setup](../../defaults/solo-decisions.md) | Exercise a permitted choice, an exclusion, overflow, confirmation, and a reversal on a new head. |
+| 8. Recovery | Bounded local task state and a fresh snapshot after compaction, with saved operation results. [Native recovery evidence](native-acceptance.md) | Trigger compaction and recover the original revision, saved output and exit status. |
+
+## November 19 historical snapshot
+
+The following table describes the earlier candidate. Dates, deferrals and
+open gates in this snapshot were superseded by the November 20 plan.
 
 | Stage | Verified on the development branches | Remaining acceptance |
 | --- | --- | --- |

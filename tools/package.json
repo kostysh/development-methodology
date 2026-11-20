@@ -1,8 +1,8 @@
 {
   "name": "@kostysh/development-methodology-tools",
-  "version": "0.5.0",
+  "version": "5.0.0",
   "private": true,
-  "description": "Deterministic checks and local process metrics for the development methodology",
+  "description": "Project-local process metrics, decision gates, verification and integration tools",
   "type": "module",
   "engines": {
     "node": ">=24.12 <25"
@@ -10,11 +10,15 @@
   "bin": {
     "methodology-baseline": "./dist/baseline.js",
     "methodology-check-links": "./dist/check-links.js",
+    "methodology-controls": "./dist/controls.js",
     "methodology-metrics": "./dist/metrics.js",
-    "methodology-recovery": "./dist/recovery.js"
+    "methodology-recovery": "./dist/recovery.js",
+    "methodology-solo": "./dist/solo.js",
+    "methodology-train": "./dist/train.js"
   },
   "files": [
-    "dist/"
+    "dist/",
+    "assets/"
   ],
   "scripts": {
     "prebuild": "node --input-type=module -e \"import { rmSync } from 'node:fs'; rmSync('dist', { recursive: true, force: true });\"",
@@ -32,5 +36,10 @@
   "devDependencies": {
     "@types/node": "24.19.2",
     "typescript": "6.0.3"
-  }
+  },
+  "bundledDependencies": [
+    "github-slugger",
+    "markdown-it",
+    "parse5"
+  ]
 }

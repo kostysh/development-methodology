@@ -4,16 +4,19 @@ These entries are for a project that updates its copy of the package
 ([update procedure](ADOPTION.md#updating-the-methodology)). Each version
 states what requires action in the adopting project.
 
-## Unreleased — v5
+## 5.0.0 — 2026-11-20
 
 - Reviewers classify each finding using the [closure rules](method/06-verification.md#closing-review-findings).
   Adopt the updated review form and choose the matching review skills. A
   deterministic fix needs a failing-before and passing-after check through
   the required operation and transport. Preserve the applicable domain review.
-- Record available historical metrics and their limits before enabling a
-  task-scoped [collector trial](defaults/process-metrics.md#collect-one-task).
-  Update the profile and retrospective form. The project owner decides
-  whether to keep the collector after the pilot.
+- Install the versioned guide, tools and project-local skill archives using
+  the [release procedure](ADOPTION.md#2-place-and-configure). Save the old
+  version for rollback. Connect the selected clients' native hooks, bind an
+  authorized task and verify a tool action and compaction in the journal.
+  Apply the [event and reporting procedure](defaults/process-metrics.md).
+- Configure the optional [solo decision register](defaults/solo-decisions.md)
+  and its merge gate, then exercise a batch confirmation and a reversal.
 - Select applicable [deterministic controls](defaults/controls.md). Verify
   the installed command against a known violation and a clean candidate
   before transferring a check out of manual review.
@@ -24,13 +27,13 @@ states what requires action in the adopting project.
   update the profile and plan entry point. Set up a trusted hook and required
   CI, then [pilot the route](ADOPTION.md#8-verify-on-one-task) on a medium-risk
   behavior change before adopting it.
-- Assess the [merge train trigger](method/07-integration.md#merge-train)
-  using process metrics. Fill in the train profile and
-  [pilot the route](ADOPTION.md#pilot-the-merge-train) before enabling it.
+- When selecting the [merge train](method/07-integration.md#merge-train),
+  install the command, protect its target and [commission it](ADOPTION.md#commission-the-merge-train)
+  using an exact-commit check and independent provider readback.
 - Replace links to the former combined handoff form with the
   [checkpoint report](templates/checkpoint-report.md) for people and the
   [task state file](templates/task-state.md) for the agent. Set its line
-  limit, select a tested recovery command, and verify the host and manual
+  and byte limits, select a tested recovery command, and verify the host and manual
   fallback using the [setup guide](defaults/task-recovery.md).
 
 ## 0.4 — 2026-11-12

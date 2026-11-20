@@ -89,6 +89,9 @@ const fields: ReadonlyMap<string, string[]> = new Map(Object.entries({
   "pull_request.merged": `${delivery} merge_sha`,
   "activity.started": activity,
   "activity.finished": `${activity} outcome`,
+  "solo.decided": "decision_id decision_class",
+  "solo.confirmed": "decision_id decision_class",
+  "solo.changed": "decision_id decision_class",
   "decision.requested": `${decision} blocking`,
   "decision.blocked": decision,
   "decision.resolved": `${decision} outcome`,
@@ -125,6 +128,7 @@ export function isEventType(value: unknown): value is string {
 }
 
 const fixedCategories = new Map<string, readonly string[]>([
+  ["decision_class", ["established_ui", "generic_error"]],
   ["activity_type", ["operator", "agent", "machine"]],
   ["intervention_type", ["decision_request", "correction", "assignment", "status_question"]],
   ["audit.finished.outcome", ["completed", "failed", "cancelled"]],
@@ -189,6 +193,11 @@ export function normalizeEvent(raw: unknown, profile: MetricsProfile): MetricsEv
   for (const key of keys) {
     if (Object.hasOwn(dataInput, key)) data[key] = valueFor(key, dataInput[key], event_type, profile);
   }
+  // Earlier REST sync receipts projected the PR's current head into historical
+  // lifecycle events. Reconcile their stable facts on read, preserving the raw
+  // append-only journal and allowing an actual webhook to establish the head.
+  if (profile.sources[source_id].kind === "github_jobs" &&
+      (event_type === "pull_request.opened" || event_type === "pull_request.merged")) data.head_sha = null;
   if (event_type === trainObservation) {
     const { train_mode, train_result, queue_entries, queue_wait_ms } = data;
     if (train_mode == null || train_result == null

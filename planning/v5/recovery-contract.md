@@ -17,7 +17,10 @@ methodology-recovery hook PROFILE
 
 `--version` prints the package version and a newline. Each operation uses a
 trusted JSON profile outside the worktree, with `task_id` (one filename-safe
-alias), absolute `worktree`, and positive integer `line_limit`. It may also
+alias), absolute `worktree`, and positive integer `line_limit`. A new profile
+sets `byte_limit` between 1 and 524288 inclusive, normally 8192. Older
+profiles default to 524288. Enforce both limits before replacement and on
+every read that can reach the agent. The profile may also
 contain `base_ref`, `github`, and `resources` as described below. Validate the
 actual Git worktree root. Commands can run from a different current directory.
 A hook input can never select another profile or worktree. Omit unconfigured

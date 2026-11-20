@@ -4,7 +4,7 @@ import { isAbsolute } from "node:path";
 import packageInfo from "../package.json" with { type: "json" };
 import { recordObject } from "./metrics/events.js";
 import { snapshot } from "./recovery/snapshot.js";
-import { gitRoot, readProfile, readState, StateError, within, writeState } from "./recovery/state.js";
+import { gitRoot, readBoundedState, readProfile, readState, StateError, within, writeState } from "./recovery/state.js";
 
 const usage = "Usage: methodology-recovery --version | {write|snapshot|recover|hook} PROFILE";
 const manual = "Use manual task recovery. Reconcile the assigned task, its authority and current facts before polling or resuming work.";
@@ -62,7 +62,7 @@ function run(args: string[]): number {
   if (command === "hook") return hook(path);
   const profile = readProfile(path);
   if (command === "write") {
-    writeState(profile, readFileSync(0));
+    writeState(profile, readBoundedState(0, profile.byte_limit));
     return 0;
   }
   if (command === "snapshot") {

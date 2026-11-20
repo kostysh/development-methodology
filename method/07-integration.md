@@ -86,11 +86,10 @@ incompatible migrations do not go into one batch.
 
 ## Merge train
 
-Consider a merge train when comparable tasks show both a material difference
-between expensive and fast check times and repeated delays between ready PRs.
-Use measured queue waits, rebases, and CI reruns after base updates. Use the
-[integration queue](#integration-queue) until the trigger is established and
-the owner completes [adoption](../ADOPTION.md#pilot-the-merge-train).
+The integration owner may select a train at adoption. A growing queue,
+repeated rebases and expensive checks are reasons to select it. Record the
+owner's basis in the profile. Follow the [commissioning checks](../ADOPTION.md#commission-the-merge-train)
+before enabling the writer. Other projects use the [integration queue](#integration-queue).
 
 Protect the integration branch so only the train's service account can
 update it. Agents submit PRs and cannot merge. The same account handles a

@@ -20,7 +20,7 @@ export interface AdapterContext {
 }
 
 type JsonObject = Record<string, unknown>;
-type EventType = "model.usage" | "context.compacted" | "permission.review_started" | "permission.review_finished";
+type EventType = "activity.started" | "activity.finished" | "task.state_changed" | "model.usage" | "context.compacted" | "permission.review_started" | "permission.review_finished";
 
 function identity(value: unknown): string | null {
   if (typeof value === "string" && /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,254}$/.test(value)) {
@@ -132,7 +132,7 @@ function codexRollout(record: JsonObject, context: AdapterContext): MetricsEvent
   })];
 }
 
-function compaction(
+export function compaction(
   context: AdapterContext,
   harness: "claude" | "codex",
   threadId: string,
@@ -165,6 +165,36 @@ function compactionHook(harness: "claude" | "codex", record: JsonObject, context
   // Code has a conversation session ID but no turn ID on this hook input.
   return [compaction(context, harness, threadId, [occurrenceId], null,
     harness === "codex" ? record.turn_id : null, record.trigger)];
+}
+
+export function toolHook(harness: "claude" | "codex", record: JsonObject, context: AdapterContext): MetricsEvent[] {
+  const phase = record.hook_event_name;
+  if (!["PreToolUse", "PostToolUse", "PostToolUseFailure"].includes(String(phase))) return [];
+  const thread = identity(record.session_id);
+  const call = identity(record.tool_use_id);
+  if (!thread || !call) { context.reportGap?.("tool_occurrence_identity_missing"); return []; }
+  const action = record.tool_name === "Bash" ? "shell"
+    : ["apply_patch", "Edit", "Write", "MultiEdit", "NotebookEdit"].includes(String(record.tool_name)) ? "edit"
+    : ["Read", "Grep", "Glob"].includes(String(record.tool_name)) ? "read" : "other";
+  const operation_id = context.alias(harness + ".operation", JSON.stringify([thread, call]));
+  const thread_id = context.alias(harness + ".thread", thread);
+  const action_type = context.category?.("action_type", action) ?? null;
+  const started = phase === "PreToolUse";
+  const data = { activity_type: "agent", resource_id: thread_id, operation_id, action_type };
+  const key = [harness, thread, call];
+  const events = [event(context, started ? "activity.started" : "activity.finished", key, null, data)];
+  // A shell completion alone does not establish a mutation. Codex may deliver failed calls
+  // on PostToolUse. Only a positive tool result is eligible for a state change.
+  const response = recordObject(record.tool_response);
+  const success = harness === "claude" || response?.success === true ||
+    (typeof record.tool_response === "string" && record.tool_response.startsWith("Success. Updated the following files:"));
+  if (phase === "PostToolUse" && action === "edit" && success) {
+    events.push(event(context, "task.state_changed", key, null, {
+      operation_id, action_type, thread_id, turn_id: alias(context, harness + ".turn", record.turn_id),
+      session_id: harness === "claude" ? context.alias("claude.session", thread) : null,
+    }));
+  }
+  return events;
 }
 
 function epochMilliseconds(value: unknown): string | null {
@@ -221,7 +251,7 @@ const monitoringFields = new Set([
   "trigger", "success", "duration_ms",
 ]);
 
-function monitoringAttributes(value: unknown): JsonObject | undefined {
+export function monitoringAttributes(value: unknown): JsonObject | undefined {
   if (!Array.isArray(value)) return recordObject(value);
 
   // An OTLP JSON LogRecord uses key/value entries and encodes int64 as strings.

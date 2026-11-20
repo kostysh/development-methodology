@@ -8,8 +8,10 @@ The [chapter 12 steps](../method/12-agents.md#context-recovery) govern its use.
 
 1. Bind a trusted local JSON profile outside the worktree to one task.
    Set `task_id` to its filename-safe alias, `worktree` to the absolute Git
-   worktree root and `line_limit` to the positive line limit the project
-   accepts. Add an ignore rule for `.methodology/task-state/` before writing
+   worktree root, and set both limits, for example `"line_limit": 150,
+   "byte_limit": 8192`. The byte limit counts UTF-8 bytes on write and
+   recovery. Older profiles that omit it have a 524288-byte ceiling.
+   Add an ignore rule for `.methodology/task-state/` before writing
    the first file. Keep the profile, task state and retained outputs private.
 2. Send the updated Markdown on stdin to `methodology-recovery write PROFILE`.
    The writer replaces `.methodology/task-state/<task_id>.md` atomically.

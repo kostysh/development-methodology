@@ -4,7 +4,7 @@ import packageInfo from "../package.json" with { type: "json" };
 import { checkArtifacts } from "./controls/artifacts.js";
 import { checkResults } from "./controls/checks.js";
 import { checkGit } from "./controls/git.js";
-import { config, Rejection } from "./controls/input.js";
+import { config, Rejection, ResourceBusy } from "./controls/input.js";
 import { runControl, supervise } from "./controls/run.js";
 
 const usage = "Usage: methodology-controls artifacts|git|run|reconcile <policy.json>\n"
@@ -58,5 +58,5 @@ try {
   process.exitCode = await run(process.argv.slice(2));
 } catch (error) {
   console.error(`methodology-controls: ${error instanceof Error ? error.message : "Control failed"}`);
-  process.exitCode = error instanceof Rejection ? 1 : 2;
+  process.exitCode = error instanceof ResourceBusy ? 75 : error instanceof Rejection ? 1 : 2;
 }

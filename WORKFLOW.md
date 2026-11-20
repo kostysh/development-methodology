@@ -5,10 +5,7 @@ describes its conditions and constraints. The risk level is chosen according
 to [chapter 01](method/01-authority-and-scope.md#materiality-and-rigor);
 risk triggers can move a task to a stricter route at any time.
 
-In solo mode, consult the [delegated decision classes](method/12-agents.md#team-composition)
-when a material choice arises. Record a permitted default, check the exact
-PR's merge permission, and return pending items to the owner in the morning
-report. Continue independent work while a dependent action is held.
+In solo mode, act on the [choices already delegated](method/12-agents.md#team-composition). For choices outside that authority, present the alternatives and consequences and record the owner's reply from the project conversation. Apply the project's existing approval for publication where required. Correct a returned train submission on the editable branch and submit its new revision under the [integration procedure](method/07-integration.md#merge-train).
 
 ## Small change — low risk
 

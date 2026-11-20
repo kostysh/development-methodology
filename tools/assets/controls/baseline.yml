@@ -1,0 +1,31 @@
+name: Methodology protected baseline
+on: push
+permissions:
+  contents: read
+jobs:
+  baseline:
+    name: Methodology baseline integrity
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24.15.0'
+          package-manager-cache: false
+      - name: Verify the committed candidate against the accepted baseline
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUTS_COMMIT: REPLACE_WITH_ACCEPTED_40_HEX_COMMIT
+          BASELINE_COMMIT: REPLACE_WITH_ACCEPTED_40_HEX_COMMIT
+          MANIFEST: methodology-ci/baseline.json
+        run: |
+          set -euo pipefail
+          [[ "$INPUTS_COMMIT" =~ ^[0-9a-f]{40}$ && "$BASELINE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+          cd "$(mktemp -d)"
+          git init -q
+          gh auth setup-git --hostname github.com
+          git fetch -q --no-tags "https://github.com/$GITHUB_REPOSITORY.git" "$INPUTS_COMMIT" "$BASELINE_COMMIT" "$GITHUB_SHA"
+          git show "$INPUTS_COMMIT:methodology-ci/tools.tgz" > tools.tgz
+          npm install --prefix "$PWD/tool" --offline --ignore-scripts --no-audit --no-fund "$PWD/tools.tgz"
+          "$PWD/tool/node_modules/.bin/methodology-baseline" verify --baseline "$BASELINE_COMMIT" --manifest "$MANIFEST" --candidate "$GITHUB_SHA"

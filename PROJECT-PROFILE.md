@@ -54,9 +54,11 @@ Use the [GitHub default](defaults/merge-train.md) when it fits the project.
 | --- | --- |
 | Activation decision, owner and reason, including measured demand where available | Not set |
 | Protected branch, sole writer identity, and protection evidence | Not set |
+| Immutable submission branch pattern, stable task key and ruleset | Not set |
+| Independent audit reviewers and trusted check publisher, workflow revision and required jobs | Not set |
 | Trusted train package and version, scheduler, runner, lock and status sources | Not set |
 | Expensive suite, approved temporary resource types and test environment, if applicable | Not set |
-| Night window, time zone, interval and maximum run duration | Not set |
+| Night window, time zone, maximum run duration and how the runner renews its access | Not set |
 | PR limit `N`, migration PR limit, and full-suite run budget | Not set |
 | Recurrence window `M` in days | Not set |
 | Paths eligible for the documentation-only route | Not set |
@@ -221,7 +223,7 @@ to people, teams, or [skills](#skills). The rules for the modes are in
 | Safe default when there is no response in time, per class of decisions | None — the decision waits for the owner or deputy |
 | Solo class for an unspecified UI detail matching an established screen, authoritative example, permitted choice, merge before confirmation | Unselected |
 | Solo class for generic error wording, authoritative example, permitted choice, merge before confirmation | Unselected |
-| Additional exclusions, cap, decision owner, private register, approvals and morning report | Not set. See [setup](defaults/solo-decisions.md) |
+| Additional exclusions, cap, decision owner, conversation and source reference for replies, existing independent publication check | Not set. See [setup](defaults/solo-decisions.md) |
 | Who resolves disputes between author and reviewer | Not set |
 
 For AI, state the actually supported models/reasoning levels, permitted

@@ -201,14 +201,15 @@ the measured adoption pilot are separate milestones.
 2. Install a verified build of the companion. Create a private local profile
    using the package's example. Give the task a stable alias. Set paths for
    the task, audit or development records the project actually keeps. The
-   [companion instructions](https://github.com/kostysh/development-methodology/tree/v5/tools)
+   [companion instructions](https://github.com/kostysh/development-methodology/tree/methodology-v5.0.1/tools)
    explain the profile, supported inputs, installation and recovery. Record
    the chosen commit, package version and integrity value with the project.
 3. Connect the selected [native client](#connect-a-native-client) and
    [operation sources](#record-at-the-operation). For each source, verify
    one allowed event, a replay and an unrelated session or task.
-4. At acceptance, record `task.accepted`. Read
-   `methodology-metrics summary PROFILE TASK --as-of UTC`. Check the first
+4. At acceptance, have the coordinator import each task operation spool and
+   record `task.accepted` from the owner source. Read
+   `methodology-metrics summary PROFILE TASK`. The default cutoff is the current instant. Supply `--as-of UTC` for an exact historical cutoff. A whole-second timestamp ends at the beginning of that second. Check the first
    PR and acceptance against the manual chronology. Recheck corrective work
    seven days after merge. Remove owned hooks when collection for that source ends.
 
@@ -217,8 +218,8 @@ the measured adoption pilot are separate milestones.
 Create the local JSON profile outside all worktrees. Give the profile mode
 0600 and keep the storage directory private. Replace the example paths and
 secret below. Generate a fresh 32-byte random key encoded as 64 hexadecimal
-characters. Supply stable project-issued IDs for the task, runner attempt,
-suite and decision used in your trial.
+characters. Issue the stable task alias before binding its sources. An
+operation can derive fresh task-scoped IDs as described below.
 
 ```json
 {
@@ -226,11 +227,12 @@ suite and decision used in your trial.
   "project_root": "/absolute/path/to/selected/worktree",
   "journal": "events.jsonl",
   "identity_key": "<64 random hexadecimal characters>",
-  "issued_ids": ["T1", "D1", "S1", "A1"],
+  "issued_ids": ["T1"],
   "sources": {
     "codex": { "kind": "codex_hook", "task_id": "T1" },
     "claude": { "kind": "claude_hook", "task_id": "T1" },
-    "ops": { "kind": "normalized", "task_id": "T1" },
+    "ops": { "kind": "operation_spool", "task_id": "T1" },
+    "owner": { "kind": "task", "task_id": "T1" },
     "ci": { "kind": "github_jobs", "task_id": "T1" }
   },
   "categories": {
@@ -242,23 +244,43 @@ suite and decision used in your trial.
 }
 ```
 
-1. Install the selected source with `methodology-metrics install-hooks PROFILE SOURCE`.
-   The command merges the installed executable's absolute path into the
-   project's `.codex/hooks.json` or worktree's `.claude/settings.local.json`.
-   In a linked Git worktree Codex discovers the local `.codex/` directory
-   and loads the corresponding main-checkout hooks file. The installer sets
-   up both locations. The private binding still selects the intended task. It keeps
-   existing handlers and permissions. Restart or reload the client settings.
-   Open Codex's `/hooks` and review the exact installed commands where the
-   client requires trust. Select the local settings source in Claude Code.
-2. Run `methodology-metrics arm-session PROFILE SOURCE`. Submit the printed
-   line once, as the whole prompt, in the intended project session within ten
-   minutes. This binds the native session and its transcript location at the
-   current end of file. Another session in the same directory cannot claim the
-   binding without the challenge. For a new task in the same session, use a
-   separate task-bound source and repeat the challenge. Keep a distinct source
-   for each simultaneously monitored session. Rearming a source retires its
-   previous binding.
+1. Put the operator-controlled companion binaries and Node on the client's
+   trusted PATH. Run `methodology-metrics install-hooks PROFILE SOURCE` for the
+   selected Git worktree. It merges a portable command into the Codex project
+   layer or Claude Code's local project settings. The private routes and
+   rollback bytes live in Git's administrative directory. The Codex layer can
+   be in the main checkout for a linked worktree. Review the project settings
+   diff. Keep an untracked settings file local using the repository's Git
+   exclusions if that is its intended scope.
+2. Open the intended client in the trusted project. In Codex, review the
+   registered commands in `/hooks` (desktop: Settings > Hooks) and trust
+   their current definitions. In Claude Code, review the workspace trust
+   prompt and the settings it enables. In VS Code, confirm both the editor's
+   workspace trust and Claude Code's folder trust. If Claude started before
+   folder approval, open a fresh session. The graphical panel's `/status`
+   shows **Setting sources**. Check for **Project local settings**. Use
+   `--setting-sources local,project` when selecting both sources in the CLI.
+
+   In the operator's terminal, run
+   `methodology-metrics bind-session PROFILE SOURCE NATIVE_SESSION_ID`.
+   Use the ID of the actual assigned chat. Codex exposes it in the session
+   status line and the App Server's `thread/start` response. In the Claude
+   Code graphical panel, open `/status` and copy **Session ID** from that
+   tab. In the CLI, you can also choose a UUID with `claude --session-id UUID`.
+   Selecting a new ID retires the previous session for the source. When
+   switching tasks in an existing session, select its ID on the new
+   task-bound source in the same profile. The first matching native callback
+   starts the approved transcript suffix at its current end.
+
+   Run `methodology-metrics doctor PROFILE SOURCE --probe` to clear the
+   previous observation. It returns 1 while awaiting a callback. Perform a
+   normal action in the assigned chat, then run `methodology-metrics doctor
+   PROFILE SOURCE`. Exit 0 requires the expected command version on the
+   operator's PATH, all registrations, and an observed callback for that
+   session in the last five minutes. If it returns 1, check project trust,
+   hook approval, settings scope and the **client process's** PATH, then
+   repeat the probe. Doctor reports what the selected callback reached.
+   Exercise each event needed for coverage.
 3. Run a small tool action, compact the conversation, and run another tool
    action. At the end of the turn, check the task summary. The hooks record
    the tool lifecycle by native call ID. The tool result for a supported
@@ -278,12 +300,13 @@ suite and decision used in your trial.
    unavailable host boundaries. Avoid counting overlapping primary streams.
 5. For a dedicated session with an independently verified identity, an operator
    can set the source's native `session_id` and approved exact transcript
-   `path` before installation. This selects the entire file. Use the challenge
-   route for an existing conversation with earlier activity outside the task.
+   `path` before installation. This selects the entire file. Use terminal session selection
+   for an existing conversation with earlier activity outside the task.
 6. To roll back, run `methodology-metrics uninstall-hooks PROFILE SOURCE`
-   from the same package installation that added the hooks. Repeat for each
-   enabled source. Restore the previously verified distribution and install
-   its selected handlers. Review trust again and repeat the tool and compaction
+   for each enabled source. The last removal restores the original file
+   bytes or removes the settings file created by the installer. If someone
+   edited settings in the meantime, removal preserves their other entries.
+   Reinstall the selected handlers from a previously verified distribution. Review trust again and repeat the tool and compaction
    checks. The operator controls the separate private journal and binding state.
 
 ### Record at the operation
@@ -296,6 +319,24 @@ Give another attempt a fresh key. For an imported verified timestamp add
 `--at UTC`; for an agent or service add `--actor agent` or `--actor automation`.
 Use the fields in the [event families](#event-types-and-fields).
 
+For a Codex `workspace-write` task, keep the profile readable and the private
+journal outside all sandbox writable roots, including temporary directories.
+Run the verified collector from a location the workspace cannot change. Add
+`/.methodology/operation-spool-*` to the project's `.gitignore` or local Git
+exclude file before the first operation. The task-bound `operation_spool`
+source checks the ignore rule and writes sanitized observations under
+`.methodology/`. Each spool file holds up to 2 MiB. The agent can change or
+remove these provisional observations. The owner supplies acceptance, audit
+verdicts and confirmations through a separate trusted source.
+
+Use fresh local keys for a test suite or attempt, decision, operation, audit,
+audit subject, finding occurrence, observation, cause or dispute. Start each
+key with a letter or digit and use at most 64 letters, digits, underscores or
+hyphens. The command maps each new key to an opaque alias for its task and
+identity field. Reuse an audit key as `prior_audit_id` for the next round.
+Previously issued aliases retain their values. Reserve issued aliases for
+shared identities that must match across tasks or external sources.
+
 ```sh
 printf '%s\n' '{}' | methodology-metrics mark "$profile" ops task.started start
 printf '%s\n' '{"decision_id":"D1","blocking":true}' |
@@ -305,8 +346,25 @@ printf '%s\n' '{"decision_id":"D1","operation_id":"A1"}' |
 printf '%s\n' '{"decision_id":"D1","operation_id":"A1"}' |
   methodology-metrics mark "$profile" ops decision.resolved resolution-1
 methodology-metrics run-test "$profile" ops S1 A1 -- npm test
-methodology-metrics github-sync "$profile" ci OWNER/REPO PULL_NUMBER
-printf '%s\n' '{}' | methodology-metrics mark "$profile" ops task.accepted accept
+```
+
+From a trusted coordinator shell with a trusted executable search path, import
+the selected task's spool before reading
+its summary, comparing tasks or removing its worktree. Repeat after any
+later observations. Import both task spools for a comparison. The importer
+uses the Linux host's `/usr/bin/flock` and validates each event's source, task,
+fields, clocks and identity. It assigns
+a scoped journal event ID and records the import time. A replay preserves
+the first receipt. A valid import containing coverage gaps returns status 1;
+inspect the summary and report the incomplete measurements. An invalid
+spool returns status 2. Retain it and investigate before reporting from it.
+At acceptance the owner records the verified result independently. For a
+report that requires a successful import, run the following.
+
+```sh
+printf '%s\n' '{}' | methodology-metrics mark "$profile" owner task.accepted accept
+methodology-metrics import-spool "$profile" ops &&
+methodology-metrics summary "$profile" T1 --as-of "$(date -u +%Y-%m-%dT%H:%M:%S.%NZ)"
 ```
 
 - Record `audit.started` and `audit.finished` around the actual reviewer
@@ -315,12 +373,16 @@ printf '%s\n' '{}' | methodology-metrics mark "$profile" ops task.accepted accep
   Record permission reviews, guard blocks and disputes at their owning
   boundary. A missing event source leaves its count unavailable.
 - The runner wrapper uses the process exit and elapsed time and the actual
-  Git checkout. An interrupted attempt can retain a start without a finish.
+  Git checkout. A valid invocation executes its command once and returns the
+  child status even if telemetry fails. A `test_coverage_gap` diagnostic means
+  that execution lacked a fresh, complete measurement. Use a new attempt key
+  for each real run. An interrupted attempt can retain a start without a finish.
   Git's local `post-rewrite` hook can forward its reason and stdin unchanged
   to `methodology-metrics git-rewrite PROFILE SOURCE "$1"` at the worktree
   root. The command checks the named branch's reflog against the supplied pairs.
   Preserve the adopting project's other hook handlers.
-- `github-sync` reads the named GitHub.com PR and paginated jobs for associated
+- `methodology-metrics github-sync "$profile" ci OWNER/REPO PULL_NUMBER`
+  reads the named GitHub.com PR and paginated jobs for associated
   runs and attempts on its current head. The PR opening time survives later
   head changes. Only a lifecycle webhook supplies the head observed at that
   transition. Existing candidate journals retain their raw REST rows and the

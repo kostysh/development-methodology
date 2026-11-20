@@ -1,0 +1,13 @@
+#!/bin/sh
+# Reference an isolated DB-backed contract with an exact committed fixture.
+# COPY reads CSV bytes as data. No candidate SQL or shell runs in this verifier.
+set -eu
+test ! -L /candidate/products.csv && test -f /candidate/products.csv || exit 1
+pg_isready -q || exit 2
+result=$(psql -XAtq -v ON_ERROR_STOP=1 <<'SQL'
+CREATE TEMP TABLE products (id integer primary key, price_cents integer check(price_cents >= 0));
+\copy products FROM '/candidate/products.csv' WITH (FORMAT csv, HEADER true)
+SELECT count(*) FROM products WHERE id=1 AND price_cents=125;
+SQL
+) || { code=$?; [ "$code" = 3 ] && exit 1; exit 2; }
+test "$result" = 1

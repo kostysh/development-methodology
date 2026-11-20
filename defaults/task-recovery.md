@@ -25,13 +25,18 @@ The [chapter 12 steps](../method/12-agents.md#context-recovery) govern its use.
    configured but unavailable fact appears as a gap. Review CI against the
    actual candidate revision. A lease that expired or a PID that vanished
    needs an independent outcome or cleanup readback.
-4. Configure the installed `methodology-recovery hook PROFILE` as a
-   synchronous `SessionStart` command with the `compact` matcher. Bind it
-   only to the intended worktree and verify hook discovery and trust on the
-   actual client. Trigger a compaction and observe both packet delivery
+4. On the host, run
+   `methodology-recovery install-hook PROFILE --client CLIENT --session-id NATIVE_SESSION_ID`,
+   using `codex` or `claude` and the assigned session's actual ID. The
+   installer registers a synchronous `SessionStart` command matching
+   `compact` for the selected worktree and session. Follow the
+   [client trust and PATH checks](process-metrics.md#connect-a-native-client).
+   Trigger a compaction and observe both packet delivery
    and the agent's first action. Repeat during a long run with saved
    stdout, stderr, exit status and launch revision. Try an interrupted
-   session and a missing or oversized state file.
+   session and a missing or oversized state file. Remove the registration with
+   `methodology-recovery uninstall-hook PROFILE --client CLIENT`. To switch
+   sessions, remove the old registration and install for the new ID.
    [Codex hooks](https://learn.chatgpt.com/docs/hooks#sessionstart) ·
    [Claude Code hooks](https://code.claude.com/docs/en/hooks#sessionstart).
 

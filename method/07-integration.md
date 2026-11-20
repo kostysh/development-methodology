@@ -14,7 +14,8 @@ explicitly, not as its PASS.
 5. Before merge, check base, head, conflicts, checks, findings, approvals,
    and the uniqueness of new IDs.
 6. Use the integration route in the profile. If the [merge train](#merge-train)
-   is enabled, the coordinator hands off to it. Re-read the PR, final commit,
+   is enabled, submit an immutable revision of the editable task branch. Correct
+   a returned revision on that task branch and obtain fresh admission. Re-read the PR, final commit,
    and branches after integration.
 7. After deploy, check the actually deployed revision.
 8. Finish your own resources and synchronize the main checkout.
@@ -101,8 +102,9 @@ base, PR head, and applicable gates before integrating.
 1. **Admit.** The train alone manages the queue label. Require
    [per-task verification](06-verification.md#verification-for-a-merge-train),
    including the published audit verdict on the current PR head, and check
-   that the PR integrates without conflicts. Remove the label on any new
-   commit and reconsider the PR on fresh evidence.
+   that the PR integrates without conflicts. Keep the submitted head immutable
+   during enabled publication. If the head changes on a dry run, remove the
+   label and require fresh evidence.
 2. **Start and recover.** Try the shared lock without waiting. Record an
    overlap as a skip and exit. An urgent single-PR run needs operator
    authorization and takes the same lock. After acquiring it, reconcile
@@ -120,6 +122,9 @@ base, PR head, and applicable gates before integrating.
 4. **Verify.** Run the [expensive suite and bounded diagnosis](06-verification.md#verification-for-a-merge-train).
    Integrate only an accepted candidate. Return an excluded PR with the
    reason, failed test when applicable, run ID and log locator. A fix
+   goes on the editable task branch. Close the returned submission, create a
+   fresh immutable submission for the same task and repeat admission on its
+   new head. Update dependent submissions and their prerequisite mapping. The fix
    follows the [type (a) route](06-verification.md#closing-review-findings)
    for a reproducible defect. Count an exclusion as a
    [fix and check cycle](14-learning-and-recovery.md#limit-on-a-chain-of-fixes).

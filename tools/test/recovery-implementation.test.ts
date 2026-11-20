@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test, type TestContext } from "node:test";
@@ -37,7 +37,7 @@ function setup(t: TestContext) {
     return installed ? run(installed, [operation, profile], input)
       : run(process.execPath, [fileURLToPath(new URL("../dist/recovery.js", import.meta.url)), operation, profile], input);
   }
-  return { root, repo, config, bin, head, git, configure, cli };
+  return { root, repo, config, bin, head, git, configure, cli, run, profile };
 }
 
 test("the state byte limit applies before replacement and before delivery by the hook", (t) => {
@@ -109,3 +109,29 @@ exit 1
   assert.equal(unavailable.status, 1, unavailable.stderr);
   assert.match(JSON.stringify(JSON.parse(unavailable.stdout).gaps), /publication/u);
 });
+
+for (const client of ["codex", "claude"]) {
+  test(client + " recovery registration serves only its chosen session and removes the created file", t => {
+    const f = setup(t);
+    const installed = process.env.METHODOLOGY_RECOVERY_BIN;
+    const exe = fileURLToPath(new URL("../dist/recovery.js", import.meta.url));
+    const invoke = (args: string[], input = "") => f.run(installed ?? process.execPath, [...(installed ? [] : [exe]), ...args], input);
+    const op = ["install-hook", f.profile, "--client", client];
+    assert.equal(invoke(op).status, 2);
+    assert.equal(invoke([...op, "--session-id", "selected"]).status, 0);
+    assert.equal(invoke([...op, "--session-id", "selected"]).status, 0);
+    assert.equal(invoke([...op, "--session-id", "foreign"]).status, 2);
+    const file = join(f.repo, client === "codex" ? ".codex/hooks.json" : ".claude/settings.local.json");
+    const groups = JSON.parse(readFileSync(file, "utf8")).hooks.SessionStart;
+    assert.deepEqual(groups, [{ matcher: "compact", hooks: [{ type: "command", command: "methodology-recovery dispatch-hook " + client }] }]);
+    writeFileSync(join(f.repo, ".git/info/exclude"), "/.methodology/task-state/\n");
+    assert.equal(f.cli("write", "Selected task checkpoint").status, 0);
+    const event = (id: string, source: string) => JSON.stringify({ hook_event_name: "SessionStart", source, session_id: id, cwd: f.repo });
+    assert.equal(invoke(["dispatch-hook", client], event("foreign", "compact")).stdout, "");
+    assert.equal(invoke(["dispatch-hook", client], event("selected", "startup")).stdout, "");
+    assert.match(invoke(["dispatch-hook", client], event("selected", "compact")).stdout, /Selected task checkpoint/u);
+    assert.equal(invoke(["uninstall-hook", f.profile, "--client", client]).status, 0);
+    assert.equal(existsSync(file), false);
+    assert.equal(invoke(["dispatch-hook", client], event("selected", "compact")).stdout, "");
+  });
+}

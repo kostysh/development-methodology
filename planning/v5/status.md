@@ -1,8 +1,10 @@
 # v5 delivery and evidence
 
-The [adoption-readiness plan](adoption-readiness.md) governs this release.
-The [release acceptance record](release-acceptance.md) identifies the published
-archives and the results observed in a clean adopting project.
+The [adoption-readiness plan](adoption-readiness.md) governs v5.
+The [external review follow-up](external-review-resolution.md) records the
+four adoption blockers in 5.0.0 and the verification of their 5.0.1 fixes.
+The [5.0.0 acceptance record](release-acceptance.md) identifies the earlier
+archives and the results observed in that particular clean project.
 The November 26 and December 3 pilot checkpoints were cancelled. They
 impose no wait on adoption or enabling approved solo classes or the train.
 
@@ -14,7 +16,7 @@ impose no wait on adoption or enabling approved solo classes or the train.
 | 4. Audit | Four finding types, response and re-audit rules and independently scoped reviewers. [Closure rules](../../method/06-verification.md#closing-review-findings) | Trace a real finding to a failed check, correction, and applicable independent decision. |
 | 5. Baseline tests | Specification-derived tests protected by an installed manifest verifier, native edits guard and trusted CI. [Frozen 27-case evidence](control-acceptance.md) | Verify a changed committed test is rejected and the clean SHA passes. Missing time/dispute history produces insufficient data. |
 | 6. Merge train | An installed GitHub writer, queue, isolated suites, bounded retries, deployment readback and six operational measures. [Two actual GitHub merges](train-runtime-acceptance.md) | Commission the chosen target branch, writer, trusted checks, frozen PR heads and test environment. |
-| 7. Solo decisions | Two optional, explicitly selectable classes, a pending limit, owner receipts, a morning report and a merge gate. [Setup](../../defaults/solo-decisions.md) | Exercise a permitted choice, an exclusion, overflow, confirmation, and a reversal on a new head. |
+| 7. Solo decisions | Delegated choices, a pending limit, ordinary chat decisions and the project's publication check. [Setup](../../defaults/solo-decisions.md) | Exercise a delegated choice, an exclusion, the owner's reply and a correction. Verify the independent publication boundary if enabled. |
 | 8. Recovery | Bounded local task state and a fresh snapshot after compaction, with saved operation results. [Native recovery evidence](native-acceptance.md) | Trigger compaction and recover the original revision, saved output and exit status. |
 
 ## November 19 historical snapshot

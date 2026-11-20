@@ -19,35 +19,24 @@ jobs:
     runs-on:
       group: methodology-train
       labels: train-linux
-    timeout-minutes: 55
+    timeout-minutes: 180
+    env:
+      TRAIN_INSTALLATION_ID: ${{ vars.TRAIN_INSTALLATION_ID }}
+      TRAIN_APP_KEY_FILE: /etc/methodology/train-app.pem
     steps:
-      - name: Mint the scoped installation token
-        id: app
-        uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2.2.1
-        with:
-          app-id: ${{ vars.TRAIN_APP_ID }}
-          private-key: ${{ secrets.TRAIN_APP_KEY }}
-          owner: ${{ vars.TRAIN_TARGET_OWNER }}
-          repositories: ${{ vars.TRAIN_TARGET_REPOSITORY }}
       - name: Start scheduled train
         if: github.event_name == 'schedule'
-        env:
-          GH_TOKEN: ${{ steps.app.outputs.token }}
         run: /opt/methodology/bin/methodology-train run /etc/methodology/train.json --scheduled
       - name: Start on demand
         if: github.event_name == 'workflow_dispatch' && !inputs.pr && !inputs.docs
-        env:
-          GH_TOKEN: ${{ steps.app.outputs.token }}
         run: /opt/methodology/bin/methodology-train run /etc/methodology/train.json
       - name: Start urgent train
         if: github.event_name == 'workflow_dispatch' && inputs.pr && !inputs.docs
         env:
-          GH_TOKEN: ${{ steps.app.outputs.token }}
           PR: ${{ inputs.pr }}
         run: /opt/methodology/bin/methodology-train run /etc/methodology/train.json --pr "$PR"
       - name: Start documentation train
         if: github.event_name == 'workflow_dispatch' && inputs.docs
         env:
-          GH_TOKEN: ${{ steps.app.outputs.token }}
           PR: ${{ inputs.pr }}
         run: /opt/methodology/bin/methodology-train run /etc/methodology/train.json --pr "$PR" --docs

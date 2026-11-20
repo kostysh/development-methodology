@@ -1,0 +1,3 @@
+#!/bin/sh
+# Example project requirement for the docs and full routes.
+test ! -L /candidate/README.md && test -f /candidate/README.md && test -s /candidate/README.md

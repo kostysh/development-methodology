@@ -3,6 +3,7 @@ import { isAbsolute } from "node:path";
 import { object, readJson } from "../baseline/manifest.js";
 
 export class Rejection extends Error {}
+export class ResourceBusy extends Rejection {}
 
 export function record(value: unknown, label: string): Record<string, unknown> {
   if (!object(value)) throw new Error(`Invalid ${label}`);

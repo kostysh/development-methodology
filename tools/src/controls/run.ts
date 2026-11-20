@@ -7,7 +7,7 @@ import {
 import { dirname, isAbsolute, join, relative, sep } from "node:path";
 import { constants as os } from "node:os";
 import { setTimeout as delay } from "node:timers/promises";
-import { absolute, array, canonical, identifier, onlyKeys, Rejection, string } from "./input.js";
+import { absolute, array, canonical, identifier, onlyKeys, Rejection, ResourceBusy, string } from "./input.js";
 
 type Operation = { command: string; args: string[] };
 type Outcome = {
@@ -120,7 +120,7 @@ function acquired(lock: number) {
   const result = spawnSync("flock", ["--exclusive", "--nonblock", "--conflict-exit-code", "75", "3"], {
     stdio: ["ignore", "ignore", "ignore", lock], env: safeEnv, timeout: 5_000,
   });
-  if (result.status === 75) throw new Rejection("Mutable resource is locked by another runner");
+  if (result.status === 75) throw new ResourceBusy("Mutable resource is locked by another runner");
   if (result.error || result.status !== 0) throw new Error("Cannot acquire the mutable-resource lock");
 }
 

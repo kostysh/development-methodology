@@ -4,6 +4,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync
 import { join } from "node:path";
 import { test, type TestContext } from "node:test";
 import { fileURLToPath } from "node:url";
+import { soloOwner } from "./solo-owner-fixture.ts";
 import { add,config,fail,fixture,git,has,makeEnv,mod,Objects,operate,pass,revision } from "./train-runtime-fixture.ts";
 function setup(t:TestContext) {
   const root = fixture(); t.after(()=>rmSync(root,{recursive:true,force:true}));
@@ -160,13 +161,19 @@ test("admission verifies check publisher, exact head and newest attempt; writer 
   const workflow={id:81,path:".github/workflows/check.yml",blob:"c".repeat(40)};
   let observedBlob=workflow.blob;
   const actionCheck={...check,app:{id:15368},check_suite:{id:82}};
-  const run={workflow_id:81,path:workflow.path,head_sha:head,head_branch:pull.ref,event:"push",check_suite_id:82,
+  const run={id:73,workflow_id:81,path:workflow.path,head_sha:head,head_branch:pull.ref,event:"push",check_suite_id:82,
     status:"completed",conclusion:"success",head_repository:{full_name:c.repository}};
   gh.api=()=>({type:"file",sha:observedBlob});
-  gh.pages=(path:string)=>path.includes("check-runs")?[actionCheck]:[run];
+  const job={run_id:run.id,head_sha:head,status:"completed",conclusion:"success",name:check.name,
+    check_run_url:"https://api.github.com/repos/"+c.repository+"/check-runs/"+check.id};
+  gh.pages=(path:string)=>path.includes("/jobs?")?[job]:path.includes("check-runs")?[actionCheck]:[run];
   const native=[{name:"audited",appId:15368,workflow}];
   assert.equal(gh.gates(pull,native),true);
   observedBlob="e".repeat(40); assert.equal(gh.gates(pull,native),false); observedBlob=workflow.blob;
+  const realJob=job.check_run_url; job.check_run_url+="-wrong"; assert.equal(gh.gates(pull,native),false); job.check_run_url=realJob;
+  run.event="workflow_dispatch"; assert.equal(gh.gates(pull,native),false);
+  assert.equal(gh.gates(pull,[{...native[0],workflow:{...workflow,event:"workflow_dispatch"}}]),true);
+  run.event="push";
   run.check_suite_id=111; assert.equal(gh.gates(pull,native),false);
   const set={id:1,target:"branch",source:c.repository,source_type:"Repository",enforcement:"active",
     updated_at:"2026-11-20T12:30:33.123Z",conditions:{ref_name:{include:["refs/heads/main"],exclude:[]}},rules:[{type:"update"}]};
@@ -177,6 +184,11 @@ test("admission verifies check publisher, exact head and newest attempt; writer 
   assert.deepEqual(gh.actors("main",rule("update",1),set),captured.bypass_actors);
   assert.equal(gh.actors("other",rule("update",1),set),undefined);
   assert.equal(gh.actors("main",rule("update",1),{...set,updated_at:"2026-11-20T12:30:33.124Z"}),undefined);
+  const pattern={...captured,conditions:{ref_name:{include:["refs/heads/ready/*"],exclude:[]}},bypass_actors:[]};
+  writeFileSync(c.ruleEvidence,JSON.stringify({repository:c.repository,repositoryId:323,rulesets:[pattern]}));
+  const live={...pattern,bypass_actors:undefined};
+  assert.deepEqual(gh.actors("ready/new",rule("update",1),live),[]);
+  assert.equal(gh.actors("ready/new",rule("update",1),{...live,conditions:set.conditions}),undefined);
 });
 
 test("receipts produce bounded train observations, operator report and idempotent journal replay",async t=>{
@@ -201,11 +213,11 @@ test("serializes owner batches and both PR gates with publication, ordinary Git 
   for (const order of ["owner-first","train-first","ordinary","crash"]) {
     const {root,c,base}=setup(t);
     const first=add(root,1,"first"), second=add(root,2,"second");
-    const profile=join(root,"solo.json"), inbox=join(root,"owner.json");
+    const owner=soloOwner(t), profile=owner.profile;
     const solo=process.env.METHODOLOGY_SOLO_BIN ?? fileURLToPath(new URL("../dist/solo.js",import.meta.url));
-    const cfg={repository:c.repository,branch:c.branch,pending_limit:3,approvals:inbox,ledger:join(root,"decisions.sqlite"),
+    const cfg={repository:c.repository,branch:c.branch,pending_limit:3,ledger:join(root,"decisions.sqlite"),
       classes:{established_ui:{allow_merge:true}}};
-    writeFileSync(profile,JSON.stringify(cfg),{mode:0o600}); writeFileSync(inbox,"[]",{mode:0o600});
+    owner.setup(cfg);
     const invoke=(op:string,args:string[]=[],input?:unknown)=>spawnSync(process.execPath,[solo,op,profile,...args],{
       encoding:"utf8", input:input===undefined?undefined:JSON.stringify(input),
     });
@@ -229,7 +241,7 @@ test("serializes owner batches and both PR gates with publication, ordinary Git 
 
     if(order==="owner-first") {
       const r=await operate(c,{},makeEnv(root,()=>{
-        writeFileSync(inbox,JSON.stringify(reversal));check("install-batch");return pass();
+        owner.save(reversal);check("install-batch");return pass();
       }));
       assert.deepEqual(r.integrated,[]); assert.match(r.incidents.join(),/admission rejected PR #1/);
       assert.equal(revision(root),base); assert.equal(invoke("gate",args1).status,1);
@@ -237,7 +249,7 @@ test("serializes owner batches and both PR gates with publication, ordinary Git 
       let seen=0;
       const env=makeEnv(root,pass,{permit:p=>{
         if(p.number===2 && ++seen===2) {
-          writeFileSync(inbox,JSON.stringify(reversal));
+          owner.save(reversal);
           assert.equal(invoke("install-batch").status,75);
           assert.equal(invoke("propose",[],{...decision,id:"NEW"}).status,75);
           assert.equal(invoke("bind",["T1","1",first]).status,75);
@@ -252,7 +264,7 @@ test("serializes owner batches and both PR gates with publication, ordinary Git 
       assert.deepEqual(r.incidents,[]); assert.equal(seen,2); assert.deepEqual(r.integrated,[1,2]);
       assert.equal(revision(root),r.candidate);check("install-batch");assert.equal(invoke("gate",args1).status,1);
     } else if(order==="ordinary") {
-      writeFileSync(inbox,JSON.stringify(reversal)); // Owner prepared a batch; it is not installed yet.
+      owner.save(reversal); // Owner prepared a batch; it is not installed yet.
       const cmd='set -eu\n"$1" "$2" gate "$3" "$4" "$5" 1 "$6"\n' +
         'if "$1" "$2" install-batch "$3"; then exit 19; else test "$?" = 75; fi\n' +
         'git -C "$7" merge-base --is-ancestor "$8" "$6"\n' +
@@ -263,7 +275,7 @@ test("serializes owner batches and both PR gates with publication, ordinary Git 
       const allowed=merge();assert.equal(allowed.status,0,allowed.stderr);assert.equal(revision(root),first);
       check("install-batch");assert.equal(merge().status,1);
     } else {
-      writeFileSync(inbox,JSON.stringify(reversal));
+      owner.save(reversal);
       writeFileSync(join(root,"train.json"),JSON.stringify(c));
       const tools=join(root,"bin");mkdirSync(tools);
       const realGit=execFileSync("which",["git"],{encoding:"utf8"}).trim();
@@ -295,4 +307,132 @@ exec "${realGit}" "$@"`,{mode:0o700});
       check("install-batch");assert.equal(invoke("gate",args1).status,1);
     }
   }
+});
+
+test("the installed admission and results exporter read the independent review and required exact-head runs", t => {
+  const {root,c} = setup(t), author = join(root,"author"), fake = join(root,"cli");
+  mkdirSync(fake);
+  const bin = process.env.METHODOLOGY_TRAIN_BIN ?? fileURLToPath(new URL("../dist/train.js",import.meta.url));
+  const baseline = process.env.METHODOLOGY_BASELINE_BIN ?? fileURLToPath(new URL("../dist/baseline.js",import.meta.url));
+  const source = revision(root);
+  writeFileSync(join(author,"manifest.json"),execFileSync(process.execPath,[baseline,"freeze","--source",source,"--protect","base"],{cwd:author}));
+  git(author,"add","manifest.json"); git(author,"commit","-m","accepted baseline");
+  git(author,"push",join(root,"remote.git"),"HEAD:main");
+  const baselineCommit = revision(root), head = add(root,1,"feature");
+  const ref = "ready/task-7-"+head;
+  const policy = {repository:c.repository,branch:c.branch,reviewerId:81,
+    required:[{id:"fast",name:"Fast",appId:234,minimum:80}], baseline:{commit:baselineCommit,manifest:"manifest.json"}};
+  const policyPath=join(root,"policy.json"), data=join(fake,"provider.json");
+  writeFileSync(policyPath,JSON.stringify(policy),{mode:0o600});
+  const pr={number:1,head:{sha:head,ref,repo:{full_name:c.repository}},base:{ref:c.branch},user:{id:73},labels:[],state:"open",draft:false};
+  const review={user:{id:81},state:"APPROVED",commit_id:head,body:"Methodology audit: PASS"};
+  const check={id:5,name:"Fast",app:{id:234},head_sha:head,status:"completed",conclusion:"success",output:{summary:'{"threshold":85,"measured":90}'}};
+  const state={pr,reviews:[review],checks:[check]};
+  writeFileSync(join(fake,"gh"),`#!/usr/bin/env node
+const fs=require("node:fs"),path=require("node:path"),s=JSON.parse(fs.readFileSync(path.join(__dirname,"provider.json")));
+const route=process.argv.at(-1);
+if(route.includes("/check-runs?"))console.log(JSON.stringify({check_runs:s.checks}));
+else if(route.includes("/reviews?"))console.log(JSON.stringify(s.reviews));
+else if(route.endsWith("/pulls/1"))console.log(JSON.stringify(s.pr)); else process.exit(1);
+`,{mode:0o700});
+  function run(op="admission",sha=pr.head.sha,branch=pr.head.ref) {
+    writeFileSync(data,JSON.stringify(state));
+    return spawnSync(process.execPath,[bin,op,policyPath,"1",sha,branch],{cwd:author,encoding:"utf8",
+      env:{PATH:fake+":"+process.env.PATH, GH_TOKEN:"read-only-contract-fixture"}});
+  }
+  assert.equal(run().status,0);
+  assert.deepEqual(JSON.parse(run("export-checks").stdout).results,[{id:"fast",candidate:head,status:"completed",exitCode:0,threshold:85,measured:90}]);
+  for (const other of [{...review,commit_id:source},{...review,state:"DISMISSED"},{...review,body:"ok"},
+    {...review,user:{id:73}},{...review,state:"CHANGES_REQUESTED"}]) {
+    state.reviews = [other]; assert.match(run().stderr,/independent audit/);
+  }
+  state.reviews=[review]; pr.user.id=81; assert.notEqual(run().status,0); pr.user.id=73;
+  assert.notEqual(run("admission",source).status,0); assert.notEqual(run("admission",head,"edit/task").status,0);
+  for (const extra of [{...check,app:{id:999}},{...check,head_sha:source},{...check,conclusion:"skipped"},
+    {...check,output:{summary:'{"threshold":10,"measured":10}'}},{...check,output:{summary:"unavailable"}}]) {
+    state.checks=[extra]; assert.notEqual(run().status,0); assert.equal(JSON.parse(run("export-checks").stdout).results[0].exitCode,1);
+  }
+  state.checks=[check,{...check,id:6,status:"in_progress"}]; assert.notEqual(run().status,0);
+  state.checks=[check]; const changed = add(root,2,"base","changed");
+  pr.head.sha=review.commit_id=check.head_sha=changed; pr.head.ref="ready/task-7-"+changed;
+  assert.match(run().stderr,/Changed protected content/);
+});
+
+test("the host refreshes the scoped writer credential after two forty-minute suites",async t=>{
+  const {root,c}=setup(t), key=join(root,"test-key"), cli=join(root,"cli"), minted=join(cli,"minted");
+  const {generateKeyPairSync}=await import("node:crypto");
+  const {privateKey}=generateKeyPairSync("rsa",{modulusLength:2048});
+  writeFileSync(key,privateKey.export({format:"pem",type:"pkcs8"}),{mode:0o600}); mkdirSync(cli);
+  writeFileSync(join(cli,"curl"),`#!/usr/bin/env node
+const fs=require("node:fs"),path=require("node:path"),file=path.join(__dirname,"minted");
+const claims=JSON.parse(Buffer.from(fs.readFileSync(0,"utf8").split(".")[1],"base64url"));
+const serial=fs.existsSync(file)?1+JSON.parse(fs.readFileSync(file)).serial:1;
+fs.writeFileSync(file,JSON.stringify({serial,body:JSON.parse(process.argv[process.argv.indexOf("--data-binary")+1]),iss:claims.iss}));
+console.log(JSON.stringify({expires_at:new Date((claims.iat+60+3600)*1000).toISOString(),token:"test-installation-"+serial}));
+`,{mode:0o700});
+  const previous={path:process.env.PATH,key:process.env.TRAIN_APP_KEY_FILE,id:process.env.TRAIN_INSTALLATION_ID};
+  const restore=(k:string,v:string|undefined)=>{if(v===undefined)delete process.env[k];else process.env[k]=v;};
+  t.after(()=>{restore("PATH",previous.path);restore("TRAIN_APP_KEY_FILE",previous.key);restore("TRAIN_INSTALLATION_ID",previous.id);});
+  process.env.PATH=cli+":"+previous.path;process.env.TRAIN_APP_KEY_FILE=key;process.env.TRAIN_INSTALLATION_ID="321";
+  const {writerCredential}=await mod("credential");
+  const start=Date.now();
+  t.mock.timers.enable({apis:["Date"],now:start});
+  c.timeoutSeconds=9000;
+  const token=writerCredential(c,start+c.timeoutSeconds*1000);
+  assert.equal(token(),"test-installation-1");
+  add(root,1,"good"); add(root,2,"bad");
+  const calls=join(cli,"git-calls"),realGit=execFileSync("which",["git"],{encoding:"utf8"}).trim();
+  writeFileSync(join(cli,"git"),`#!/usr/bin/env node
+const fs=require("node:fs"),path=require("node:path"),args=process.argv.slice(2);
+const op=args[2],auth=process.env.GIT_CONFIG_VALUE_0;
+if(["push","fetch"].includes(op) && auth){
+  const supplied=Buffer.from(auth.slice("Authorization: Basic ".length),"base64").toString().split(":")[1];
+  const clock=Number(fs.readFileSync(path.join(__dirname,"clock")));
+  const serial=Number(supplied.split("-").pop());
+  if(clock>=${start}+3600000 && serial<2)process.exit(1);
+  fs.appendFileSync(path.join(__dirname,"git-calls"),op+" "+serial+"\\n");
+}
+process.exit(require("node:child_process").spawnSync(${JSON.stringify(realGit)},args,{stdio:"inherit"}).status);
+`,{mode:0o700});
+  const clock=join(cli,"clock");writeFileSync(clock,String(start));
+  const env=makeEnv(root,(kind,sha,_tests,o)=>{
+    if(kind==="full"){
+      t.mock.timers.tick(40*60000);writeFileSync(clock,String(Date.now()));
+    }
+    return has(o,sha,"bad")?fail():pass();
+  });
+  env.objects=(dir,cfg,d)=>new Objects(dir,join(root,"remote.git"),cfg.branch,d,token);
+  const completed=await operate(c,{},env);
+  assert.deepEqual(completed.incidents,[]);
+  assert.equal(completed.attempts.filter(a=>a.kind==="full").length,2);
+  assert.deepEqual(completed.integrated,[1]);
+  assert.match(readFileSync(calls,"utf8"),/^fetch 1$/m);
+  assert.match(readFileSync(calls,"utf8"),/^push 2$/m);
+  assert.deepEqual(JSON.parse(readFileSync(minted,"utf8")),{serial:2,iss:c.writerAppId,
+    body:{repositories:["disposable"],permissions:{contents:"write",pull_requests:"write",checks:"read"}}});
+  t.mock.timers.tick(58*60000); assert.equal(token(),"test-installation-3");
+});
+
+test("a returned submission re-enters on its corrected immutable head and preserves the task exclusion limit",async t=>{
+  const {root,c}=setup(t); add(root,1,"bad"); add(root,2,"ok");
+  const {submissionTask}=await mod("github");
+  const env=makeEnv(root,(_kind,h,_tests,o)=>has(o,h,"bad")?fail():pass());
+  const old=env.host;
+  env.host=(cfg,deadline)=>{
+    const original=old(cfg,deadline);
+    const ref=(p:ReturnType<typeof original.get>)=>({...p,ref:"ready/"+(p.number===2?"other":"stable-task")+"-"+p.head});
+    return {...original,get:n=>ref(original.get(n)),list:()=>original.list().map(ref)};
+  };
+  const initial=await operate(c,{},env);
+  assert.deepEqual(initial.integrated,[2]); assert.equal(initial.excluded[0].task,"stable-task");
+  writeFileSync(join(root,"pulls.json"),"[]"); add(root,3,"bad","still broken");
+  const again=await operate(c,{},env);
+  assert.match(again.decisions.join(),/repeated exclusion/);
+  writeFileSync(join(root,"pulls.json"),"[]"); const corrected=add(root,4,"ok","corrected");
+  const held=await operate(c,{},env);
+  assert.equal(held.attempts.length,0); assert.match(held.decisions.join(),/disposition/);
+  c.disposition={"stable-task":again.id};
+  const admitted=await operate(c,{},env); assert.deepEqual(admitted.integrated,[4]);
+  assert.equal(submissionTask({ref:"ready/stable-task-"+corrected,head:corrected}),"stable-task");
+  assert.equal(submissionTask({ref:"ready/stable-task-"+corrected,head:initial.excluded[0].head}),undefined);
 });

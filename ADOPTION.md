@@ -19,28 +19,46 @@ conflicts. Keep its current owners. Do not replace the existing `AGENTS.md`,
 
 ## 2. Place and configure
 
-Install the guide and companion from the named [v5 release](https://github.com/kostysh/development-methodology/releases/tag/methodology-v5.0.0). Run the following in a clean project directory on Linux with Node.js 24.12–24.x, npm, Git, the GitHub CLI and GNU coreutils. For an update, stage these paths next to the existing installation and keep its hooks and profile until the replacement passes. Select a project-owned path for persistent executables outside disposable task worktrees.
+From the primary checkout, use an operator shell with Node.js 24.12–24.x on Linux, npm, Git, GitHub CLI (including `gh attestation verify`) and GNU coreutils. Choose a durable `METHODOLOGY_RELEASES` path outside agent-writable roots or use the project-specific default below. The installer places the [5.0.1 release](https://github.com/kostysh/development-methodology/releases/tag/methodology-v5.0.1) in a fresh version directory. Use your existing project instructions and filled profile in their current locations. For a first installation, copy the blank profile to a new project-owned file outside the release directory.
 
 ```sh
-release_dir="$PWD/.methodology/releases/5.0.0"
-tools_dir="$PWD/.methodology/tools/5.0.0"
-guide_dir="$PWD/docs/development-methodology"
-mkdir -p "$release_dir" "$tools_dir" "$guide_dir"
-gh release download methodology-v5.0.0 --repo kostysh/development-methodology --dir "$release_dir"
-(cd "$release_dir" && sha256sum --check SHA256SUMS)
-tar -xzf "$release_dir/methodology-guide-5.0.0.tar.gz" -C "$guide_dir"
-npm install --prefix "$tools_dir" --offline --ignore-scripts --omit=dev --no-audit --no-fund "$release_dir/kostysh-development-methodology-tools-5.0.0.tgz"
-export PATH="$tools_dir/node_modules/.bin:$PATH"
-methodology-metrics --version
-methodology-check-links "$guide_dir"
+(
+  set -eu
+  project=$(git rev-parse --show-toplevel)
+  root=${METHODOLOGY_RELEASES:-"${XDG_DATA_HOME:-$HOME/.local/share}/development-methodology/$(basename "$project")/releases"}
+  case "$root" in /*) ;; *) echo "Choose an absolute release path" >&2; exit 1 ;; esac
+  version=5.0.1
+  tag="methodology-v$version"
+  repo=kostysh/development-methodology
+  dest="$root/$version"
+  mkdir -p -- "$root"
+  if [ -e "$dest" ] || [ -L "$dest" ]; then
+    echo "Release path already exists: $dest. Verify the existing installation or choose a fresh path." >&2
+    exit 1
+  fi
+  stage=$(mktemp -d -- "$root/.stage-$version-XXXXXXXX")
+  mkdir -- "$stage/download" "$stage/guide" "$stage/tools"
+  gh release download "$tag" --repo "$repo" --dir "$stage/download"
+  (
+    cd "$stage/download"
+    gh attestation verify SHA256SUMS --repo "$repo" --source-ref "refs/tags/$tag" \
+      --signer-workflow "$repo/.github/workflows/methodology-tools.yml"
+    sha256sum --strict --check SHA256SUMS
+  )
+  tar -xzf "$stage/download/methodology-guide-$version.tar.gz" -C "$stage/guide"
+  npm install --prefix "$stage/tools" --offline --ignore-scripts --omit=dev --no-audit --no-fund \
+    "$stage/download/kostysh-development-methodology-tools-$version.tgz"
+  "$stage/tools/node_modules/.bin/methodology-check-links" "$stage/guide"
+  test "$("$stage/tools/node_modules/.bin/methodology-metrics" --version)" = "$version"
+  mv -Tn -- "$stage" "$dest"
+  test ! -e "$stage" || { echo "Destination was claimed; staged copy retained at $stage" >&2; exit 1; }
+  printf 'Installed in %s\n' "$dest"
+)
 ```
 
-Stop on a failed command. Record the verified SHA-256, source commit and installed version in the profile. Keep the download directory and the preceding release for rollback. Add the executable directory to the verified runner configuration. Native hooks record an absolute installed command path.
+The printed installation directory contains `guide/` and `tools/node_modules/.bin/`. Use the absolute bin path in the launch environment of the selected clients and trusted runners. If another OS account runs a client, select a release location readable by its existing group. Record the version and verified source commit in the project profile. A failed stage leaves the active configuration intact. Review a leftover `.stage-*` directory before discarding it.
 
-Fill in the [profile](PROJECT-PROFILE.md). Every material choice must have an
-owner and a basis. Use real, existing commands and verify their semantics,
-environment, and side effects. If a command does not exist, record the gap;
-an invented command does not become a working control.
+Fill in the project-owned copy of the [profile](PROJECT-PROFILE.md). Name the owner and basis for each material choice. Verify the project's real commands and record any missing check.
 
 Choose applicable checks from the [control register](defaults/controls.md).
 Record the trusted package version, command, owner and enforcing boundary in
@@ -97,9 +115,10 @@ Use the [templates](templates/README.md) to extend the project's entry points:
 - `PLANS.md` — activation of formal planning and a link to its contract;
 - local `AGENTS.md` files of documentation areas and packages — differences only.
 
-Templates do not replace existing requirements. After transferring them,
-replace every `{{...}}` with verified values and fix links relative to the
-file's location.
+Keep existing requirements. Replace every `{{...}}` with a verified value.
+From shared instructions, link to the project-owned profile and existing
+local guidance by relative path. For a chapter installed outside the project,
+link to its file in the exact release tag so the link works on other machines.
 
 ## 6. Configure documentation
 
@@ -139,24 +158,11 @@ union of overlapping intervals within each activity and report uncovered time
 as unexplained. Record missing history as unknown. A project starting without
 comparable history can use its first trial as the first observation.
 
-For each agent client selected in the profile, authorize the named task and
-sources and [install its native hooks](defaults/process-metrics.md#connect-a-native-client).
-Bind the session, perform an actual tool action and compact context. Verify the
-task journal gained both observations. Repeat delivery and check that the
-counts stay unchanged. A different session must leave the journal unchanged.
-Connect the [operation sources](defaults/process-metrics.md#record-at-the-operation),
-including Git, GitHub, CI, audit and task events where selected. Reconcile
-the first report with the actual chronology. Mature seven-day histories
-supply the quality rate. Missing history affects that measure only.
+For each selected native client, [register the hooks and verify a live callback](defaults/process-metrics.md#connect-a-native-client) from its assigned session. In Codex, trust both the actual project and its hook definitions. Check collection and recovery in the client surface the project uses. For `workspace-write`, use the task's [operation spool and trusted import](defaults/process-metrics.md#record-at-the-operation). The private journal belongs outside writable roots. Verify one wrapped test really runs and returns its own status, then reconcile the first report with the chronology.
 
-Record the owner's [integration route](method/07-integration.md#merge-train)
-in the [profile](PROJECT-PROFILE.md#merge-train). When the train is selected,
-[commission the installed command](#commission-the-merge-train) on the target.
+Record the [integration route](method/07-integration.md#merge-train) in the [profile](PROJECT-PROFILE.md#merge-train). If the project selects the train, [commission it](#commission-the-merge-train).
 
-Choose the `solo` or `team` mode and name the role owners
-([team composition](method/12-agents.md#team-composition)).
-For a solo project, select each delegated class and its pending merge rule,
-set the cap and exercise [a confirmation and a reversal](defaults/solo-decisions.md).
+Choose the `solo` or `team` role owners. In `solo`, act on choices the owner has already delegated. Ask for the owner's choice in the project conversation when one is needed. Give the alternatives and their consequences, then record the answer and its message reference. A local note cannot authorize a merge. Use the project's existing independent PR approval or protected check when publication requires one. [Solo decisions](defaults/solo-decisions.md)
 The project owner confirms the chosen route, mandatory checks, authority,
 exceptions, document scheme, skill set, and stop conditions. The acceptance
 record may live in the profile or in an existing decision. If the current
@@ -211,26 +217,7 @@ Keep the checkpoint report in the task or PR for its reader.
 
 ### Commission the merge train
 
-When the owner selects the train, install the released command and
-verifies the [branch and runner controls](defaults/merge-train.md#github-setup),
-the [audit closure](method/06-verification.md#closing-review-findings), and
-the [protected test baseline](method/06-verification.md#protected-test-baseline)
-where applicable. Run the [seven cases](defaults/merge-train.md#dry-run-cases)
-in a disposable setup. Run the target configuration in dry mode and compare
-the report with the expected admissions and exclusions. Enable live integration after the operator
-accepts the evidence, verifies the sole writer in the target repository,
-and approves the switch. Until then use the ordinary integration queue.
-After activation, hold integration when a required control is unavailable.
-Restore it or use a separately approved route that preserves protection and
-mandatory checks.
-
-Before relying on the [collector's train observations](defaults/process-metrics.md#train-observations), verify queue wait, exclusions by cause,
-flaky tests, full-suite runs per train, train duration, and skipped starts
-against the train's recorded facts. Measure queue wait from admission to
-selection. Count a retry of an entire suite as a full run and record
-targeted reruns separately. Compare time to acceptance and CI runs
-per task with comparable baseline tasks and track verification outcomes.
-Record missing coverage or an inconclusive comparison.
+Follow the [train commissioning procedure](defaults/merge-train.md) for the chosen branch, sole writer, exact revision of the audit and fast checks, and trusted verifier. Run the [seven cases](defaults/merge-train.md#dry-run-cases) on a disposable target. Compare the dry-run receipt against the expected queue and exclusions. Enable publication when the operator accepts the result. Verify the protected branch, merged PRs and test deployment. [Operational metrics](defaults/process-metrics.md#train-observations)
 
 ## Adoption is complete when
 
@@ -263,20 +250,7 @@ checks. The measurement method is in the
 
 ## Updating the methodology
 
-The project keeps its own copy of the package. A new version is not applied
-automatically.
-
-1. Read the [CHANGELOG](CHANGELOG.md) between the version in the profile and
-   the new one.
-2. Compare the new version with the local copy. Local differences should live
-   in the profile or in local `AGENTS.md` files; identify edits inside the
-   `method/` chapters and decide on them separately: move them to the profile,
-   propose them to the shared package, or keep them as a deliberate deviation.
-3. Transfer the changes to chapters and templates. Do not overwrite the profile
-   and the filled-in entry points: add only new fields and links to them.
-4. Update the skills if the new version relies on them.
-5. The methodology owner accepts the update; the new version is recorded in
-   the profile. For tasks in progress, state which new rules apply to them.
+Read the [changelog](CHANGELOG.md). Install the new version alongside the old one using [step 2](#2-place-and-configure). Compare the new guide and blank profile with your previous release, then merge applicable fields into your existing filled profile and retain project-specific chapters and entry points. For example, run `diff -ru -- "$old_release/guide" "$new_release/guide"` with the two recorded paths. Exit 1 reports differences. Switch client and runner paths only after the new installation passes the selected project checks. Keep the prior paths and profile for rollback.
 
 ### Roll back a release
 
@@ -285,8 +259,7 @@ automatically.
    ledger with their profile and owning data permissions.
 2. With the new executable still installed, run
    `methodology-metrics uninstall-hooks PROFILE SOURCE` for each changed
-   native source. Compare the resulting settings to the saved working copy.
-   Restore only project-owned entries, including the former recovery command.
+   native source and `methodology-recovery uninstall-hook PROFILE --client CLIENT` for recovery. Compare the resulting settings with the saved working copy.
 3. Switch executable paths, trusted CI configuration and versioned skill
    directories back to the recorded release. Restore its local lockfile and
    the prior profile. Verify the previous skill is discoverable in a new

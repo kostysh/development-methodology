@@ -1,7 +1,7 @@
 # Methodology tools
 
 This private npm package contains executable checks for use with the
-[methodology](https://github.com/kostysh/development-methodology/blob/7bbb60d714651e4549bcd264f608448dae4632b8/README.md). It builds TypeScript directly to JavaScript and
+[methodology](https://github.com/kostysh/development-methodology/blob/methodology-v5.0.1/README.md). It builds TypeScript directly to JavaScript and
 uses the lockfile for dependency resolution. The supported runtime is Node.js
 24.12 or later in the 24.x series. The automated package and installed-command
 checks run on Linux.
@@ -63,7 +63,7 @@ owns the version, public command path, and distribution files.
 ## Install an accepted build
 
 Download the named release, verify its SHA-256, and install the tested tarball
-offline using the [adoption guide](../ADOPTION.md#2-place-and-configure).
+offline using the [adoption guide](https://github.com/kostysh/development-methodology/blob/methodology-v5.0.1/ADOPTION.md#2-place-and-configure).
 CI can set `METHODOLOGY_RELEASE_DIR` during `npm run test:packed` to retain
 the exact archive installed by the tests. The release includes the runtime
 dependencies and the train dispatcher. Preserve the previous installation
@@ -74,7 +74,7 @@ until its replacement passes the project's selected acceptance checks.
 On Linux, install the package with Node.js 24 and make `flock` from util-linux
 available on `PATH`. Use a local filesystem for the journal. The event format
 and interpretation are in the
-[process metrics contract](https://github.com/kostysh/development-methodology/blob/7bbb60d714651e4549bcd264f608448dae4632b8/defaults/process-metrics.md).
+[process metrics contract](https://github.com/kostysh/development-methodology/blob/methodology-v5.0.1/defaults/process-metrics.md).
 
 Keep the private JSON profile and journal in an existing local directory
 outside Git worktrees. Set the profile's file mode to `0600`. Generate a random
@@ -104,13 +104,15 @@ Store approved aliases and categorical vocabularies in the following shape.
 }
 ```
 
-The [native setup](../defaults/process-metrics.md#connect-a-native-client)
+The [native setup](https://github.com/kostysh/development-methodology/blob/methodology-v5.0.1/defaults/process-metrics.md#connect-a-native-client)
 owns the project-local installation, session binding, positive test, replay,
 foreign-session check and rollback for Codex and Claude Code. A scoped file
 import supplies the approved session identity as required by its adapter.
-The [operation commands](../defaults/process-metrics.md#record-at-the-operation)
+The [operation commands](https://github.com/kostysh/development-methodology/blob/methodology-v5.0.1/defaults/process-metrics.md#record-at-the-operation)
 capture task and audit transitions, run a test with its real exit status,
 record Git rewrites and synchronize the selected GitHub PR and CI history.
+Under a workspace sandbox, the task writes operation observations to its
+ignored spool. The coordinator imports them into the private journal.
 
 The collector stores schema v1 events and a separate `.coverage.jsonl`
 sidecar. Both are private and append-only. File locks serialize participating
@@ -138,8 +140,7 @@ The passive `hook` command returns `0` for each outcome.
 
 ### Record train observations
 
-Install an accepted archive that supports `train.observed` (version 0.5.0
-introduced it) using the [installation steps](#install-an-accepted-build).
+Install the accepted archive using the [installation steps](#install-an-accepted-build).
 Confirm the version with `npm exec --offline -- methodology-metrics --version`.
 Use the same private profile, local journal and permissions as for task metrics.
 Add the pilot alias and each stable occurrence ID to `issued_ids`. Bind a
@@ -161,12 +162,12 @@ methodology-metrics summary /path/to/profile.json pilot_1 --as-of 2026-11-19T12:
 
 Verify the attempt in `train.attempts`, then replay the line and check that
 the attempt still appears once. Check rejection of an unapproved field with a
-synthetic input. The [train observations contract](https://github.com/kostysh/development-methodology/blob/231a21cc9595858ec391268b6763d18ff886be3b/planning/v5/train-metrics.md)
+synthetic input. The [train observations contract](https://github.com/kostysh/development-methodology/blob/methodology-v5.0.1/planning/v5/train-metrics.md)
 defines the measurements, missing values and `train.skipped_starts` bounds.
 To verify a zero, use `coverage` on the pilot-bound source with
 `event_types: ["train.observed"]` across the confirmed interval. For a rollback,
 restore the previous archive and lockfile and use the saved prior profile and
-journal. Retain the train profile and journal with the 0.5.0 setup for later use.
+journal. Keep the profile and journal with the version that produced them.
 
 ## Protect a test baseline
 
@@ -206,7 +207,7 @@ The host passes a JSON event on stdin. An allowed edit exits 0. A denied or
 uninspectable request exits 2 with the reason on stderr. Check both outcomes
 through the actual host. Record that host, its version and which actions
 the hook sees. Required CI covers committed shell edits. The
-[contract](https://github.com/kostysh/development-methodology/blob/537d54bfa1c1581ec27cc626b72a6f56514dfca5/planning/v5/baseline-manifest.md) describes path selection,
+[contract](https://github.com/kostysh/development-methodology/blob/methodology-v5.0.1/planning/v5/baseline-manifest.md) describes path selection,
 modes, host input and recovery. Restore the last verified archive and trusted
 settings after a bad update.
 
@@ -214,7 +215,7 @@ settings after a bad update.
 
 On Linux with Git, install the accepted package and verify
 `methodology-recovery --version`. Set up the
-[task-local state and ignore rule](https://github.com/kostysh/development-methodology/blob/a8332460c858b2bee0b1cac20f8a05097dfbdd76/defaults/task-recovery.md).
+[task-local state and ignore rule](https://github.com/kostysh/development-methodology/blob/methodology-v5.0.1/defaults/task-recovery.md).
 Keep this example profile outside the worktree, substitute the actual
 values and restrict its permissions to its owner.
 
@@ -251,26 +252,24 @@ are applicable, the profile accepts the following additional fields.
   `id`, its `state` (`active` or `released`) and optional UTC `expires_at`.
   Active Linux processes also need `pid`, `boot_id` and `start_ticks`.
 
-Use the absolute installed executable and profile paths in a synchronous
-`SessionStart` command hook with matcher `compact`. The command is
-`methodology-recovery hook /private/task-17.json`. The host sends native
-JSON on stdin and receives the task packet as additional context. Test the
-actual client, worktree and hook configuration. If context is unavailable or
-truncated, run explicit recovery from the bound worktree before acting.
+Use `methodology-recovery install-hook PROFILE --client CLIENT --session-id ID`
+from the selected worktree. The synchronous `SessionStart` hook sends the
+recovery packet after compaction. Test it in the chosen client. If the
+packet is unavailable or truncated, recover explicitly from that worktree.
 
 Explicit commands exit 0 on success, 1 on rejected state or partial facts
 and 2 on invalid invocation or binding. A partial snapshot contains the
 known fields and names each gap. The hook exits 0 and supplies the manual
 recovery instruction when it cannot safely deliver the packet. The
-[public contract](https://github.com/kostysh/development-methodology/blob/7bbb60d714651e4549bcd264f608448dae4632b8/planning/v5/recovery-contract.md)
+[public contract](https://github.com/kostysh/development-methodology/blob/methodology-v5.0.1/planning/v5/recovery-contract.md)
 defines the supported operations.
 
 
 ## Coordinate solo decisions and integration
 
-Use [solo decisions](../defaults/solo-decisions.md) for the pending limit,
-owner receipts and the revision-bound merge gate. Use the
-[executable train](../defaults/merge-train.md) for the restricted writer,
+Use [solo decisions](https://github.com/kostysh/development-methodology/blob/methodology-v5.0.1/defaults/solo-decisions.md) for delegated choices,
+recording an owner's chat reply and the project's publication check. Use the
+[executable train](https://github.com/kostysh/development-methodology/blob/methodology-v5.0.1/defaults/merge-train.md) for the restricted writer,
 isolated suite, deployment readback and repeatable recovery. The
-[control register](../defaults/controls.md) specifies how to exercise
+[control register](https://github.com/kostysh/development-methodology/blob/methodology-v5.0.1/defaults/controls.md) specifies how to exercise
 the installed controls at each selected boundary.

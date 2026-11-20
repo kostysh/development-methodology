@@ -8,7 +8,7 @@ profile records the set actually installed.
 ## Source
 
 Repository: [`kostysh/skills`](https://github.com/kostysh/skills).
-For methodology 5.0.0, use the [skills-v5.0.0 assets](https://github.com/kostysh/skills/releases/tag/skills-v5.0.0).
+For methodology 5.0.x, use the [skills-v5.0.0 assets](https://github.com/kostysh/skills/releases/tag/skills-v5.0.0).
 The catalog lists each skill's version, filename in its URL, and SHA-256.
 
 ## Stages and skills
@@ -67,23 +67,31 @@ mapping: `review` → `draft` under review, `baselined` → `accepted`, `updated
 
 Download the exact catalog and the selected built archives into an empty
 staging directory. This example installs one selected skill for Codex.
-Repeat for the set in the project profile. Use `.claude/skills` for Claude
+Repeat for the set in the project profile. Install in the checkout from which the agent runs. A linked worktree has its own untracked files. Start a fresh client there and verify the selected skill loads from that checkout. For a project-wide selection, use its existing tracked skills policy or repeat this installation in each task checkout. Use `.claude/skills` for Claude
 Code or `.agents/skills` for Codex. The example uses GitHub CLI, jq and GNU
 coreutils. Run each step only after the previous one succeeds.
 
 ```sh
+(
+set -eu
 skill_name=code-reviewer
 stage_dir="$PWD/.methodology/releases/skills-v5.0.0"
 target_dir="$PWD/.agents/skills"
 mkdir -p "$stage_dir" "$target_dir"
 gh release download skills-v5.0.0 --repo kostysh/skills --dir "$stage_dir" --pattern catalog.json --skip-existing
+(cd "$stage_dir" && printf '%s  catalog.json\n' 060fd26552e556bfd6def86a3b82e399e18e884ca22afc7b22734aca146045ed | sha256sum --strict --check)
 skill_asset=$(jq -er --arg name "$skill_name" '.skills[] | select(.name==$name) | .url | split("/") | last' "$stage_dir/catalog.json")
 skill_digest=$(jq -er --arg name "$skill_name" '.skills[] | select(.name==$name) | .sha256' "$stage_dir/catalog.json")
 gh release download skills-v5.0.0 --repo kostysh/skills --dir "$stage_dir" --pattern "$skill_asset" --skip-existing
 (cd "$stage_dir" && printf '%s  %s\n' "$skill_digest" "$skill_asset" | sha256sum --check)
 skill_stage=$(mktemp -d "$target_dir/.new-XXXXXXXX")
 tar -xzf "$stage_dir/$skill_asset" -C "$skill_stage"
-test -s "$skill_stage/SKILL.md" && test ! -e "$target_dir/$skill_name" && mv -T "$skill_stage" "$target_dir/$skill_name"
+test -s "$skill_stage/SKILL.md"
+test ! -e "$target_dir/$skill_name"
+test ! -L "$target_dir/$skill_name"
+mv -Tn "$skill_stage" "$target_dir/$skill_name"
+test ! -e "$skill_stage"
+)
 ```
 
 For an update, compare an existing skill with its recorded archive. Keep

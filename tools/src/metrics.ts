@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { setTimeout as delay } from "node:timers/promises";
 import { createHash } from "node:crypto";
 import { createReadStream, realpathSync, statSync } from "node:fs";
@@ -9,9 +9,10 @@ import { adaptRecord, indexCodexRollout, type AdapterContext } from "./metrics/a
 import {
   isTrainSource, isTrustedIdentity, mapIdentity, normalizeEvent, parseUtc, recordObject, type MetricsEvent,
 } from "./metrics/events.js";
-import { armSession, boundHook } from "./metrics/binding.js";
+import { bindSession, boundHook, observation } from "./metrics/binding.js";
 import { nativeHook, sessionFor } from "./metrics/native.js";
-import { configureHooks } from "./metrics/setup.js";
+import { configureHooks, dispatchNative, metricClient, registered } from "./metrics/setup.js";
+import { importSpool } from "./metrics/spool.js";
 import { mark, runTest, gitRewrite } from "./metrics/operations.js";
 import { syncGithub } from "./metrics/github-sync.js";
 import { adaptGithub } from "./metrics/github.js";
@@ -23,18 +24,21 @@ const usage = [
   "Usage: methodology-metrics record PROFILE",
   "       methodology-metrics collect PROFILE SOURCE",
   "       methodology-metrics hook PROFILE SOURCE",
-  "       methodology-metrics install-hooks|uninstall-hooks|arm-session PROFILE SOURCE",
+  "       methodology-metrics install-hooks|uninstall-hooks PROFILE SOURCE",
+  "       methodology-metrics bind-session PROFILE SOURCE NATIVE_SESSION_ID",
+  "       methodology-metrics doctor PROFILE SOURCE [--probe]",
   "       methodology-metrics mark PROFILE SOURCE EVENT OCCURRENCE [--at UTC] [--actor operator|agent|automation]",
   "       methodology-metrics run-test PROFILE SOURCE SUITE ATTEMPT -- COMMAND [ARG...]",
+  "       methodology-metrics import-spool PROFILE SOURCE",
   "       methodology-metrics git-rewrite PROFILE SOURCE amend|rebase",
   "       methodology-metrics github-sync PROFILE SOURCE OWNER/REPO PR",
-  "       methodology-metrics compare PROFILE BEFORE_TASK AFTER_TASK --as-of UTC",
-  "       methodology-metrics summary PROFILE TASK --as-of UTC",
+  "       methodology-metrics compare PROFILE BEFORE_TASK AFTER_TASK [--as-of UTC]",
+  "       methodology-metrics summary PROFILE TASK [--as-of UTC]",
 ].join("\n");
 const normalizedKinds = new Set(["normalized", "task", "audit", "development"]);
 const safeErrors = new Set([
-  "invalid_arguments", "invalid_profile", "invalid_input", "line_limit",
-  "session_binding_required", "occurrence_conflict", "unsafe_hook_settings", "journal_permissions", "journal_limit", "journal_unavailable", "journal_lock_unavailable", "journal_lock_busy",
+  "invalid_arguments", "invalid_profile", "invalid_input", "spool_ignore_required", "invalid_spool_observation", "spool_unavailable", "line_limit",
+  "hook_settings_changed", "hook_project_requires_git", "hook_registration_conflict", "session_already_bound", "session_binding_required", "occurrence_conflict", "unsafe_hook_settings", "journal_permissions", "journal_limit", "journal_unavailable", "journal_lock_unavailable", "journal_lock_busy",
 ]);
 const maxRowBytes = 256 * 1024;
 const maxBatchBytes = 16 * 1024 * 1024;
@@ -82,6 +86,7 @@ function ingest(
   source: MetricsSource | undefined,
   deferred = false,
   profilePath?: string,
+  fromClient = false,
 ) {
   const events: MetricsEvent[] = [];
   const gaps: CoverageGap[] = [];
@@ -150,7 +155,7 @@ function ingest(
         codexRollout,
       };
       const bound = operation === "hook" && source.kind.endsWith("_hook") && source.task_id
-        ? boundHook(profile, sourceId!, payload) : source;
+        ? boundHook(profile, sourceId!, payload, fromClient, deferred) : source;
       if (!bound) continue;
       if (bound.task_id && /^(?:claude|codex)_/u.test(source.kind)) {
         if (!bound.session_id) { note("session_binding_required"); continue; }
@@ -185,7 +190,7 @@ function ingest(
   return { events, gaps };
 }
 
-async function persist(profile: MetricsProfile, operation: string, sourceName?: string, profilePath?: string): Promise<number> {
+async function persist(profile: MetricsProfile, operation: string, sourceName?: string, profilePath?: string, callback?: Buffer): Promise<number> {
   const source = sourceName && Object.hasOwn(profile.sources, sourceName) ? profile.sources[sourceName] : undefined;
   if (sourceName && !source) {
     appendJournal(profile, [], [coverageGap("source_unconfigured")]);
@@ -201,8 +206,7 @@ async function persist(profile: MetricsProfile, operation: string, sourceName?: 
   }
   let raw: Buffer;
   try {
-    const input = operation === "collect" ? readSource(profile, source!) : process.stdin;
-    raw = await readInput(input, operation === "hook" ? maxRowBytes : maxBatchBytes);
+    raw = callback ?? await readInput(operation === "collect" ? readSource(profile, source!) : process.stdin, operation === "hook" ? maxRowBytes : maxBatchBytes);
   } catch (error) {
     const code = error instanceof Error && (error.message === "line_limit" || error.message === "source_missing")
       ? error.message : operation === "collect" ? "source_unreadable" : "invalid_input";
@@ -224,7 +228,7 @@ async function persist(profile: MetricsProfile, operation: string, sourceName?: 
     if (!selectors || !["Stop", "PostCompact"].includes(String(selectors.hook_event_name)) ||
         Object.keys(selectors).some(k => !["hook_event_name", "session_id", "transcript_path"].includes(k))) throw new Error("invalid_arguments");
   }
-  const { events, gaps } = ingest(profile, operation, raw, sourceName ?? null, source, deferred, profilePath);
+  const { events, gaps } = ingest(profile, operation, raw, sourceName ?? null, source, deferred, profilePath, !!callback);
   if (operation === "hook" && !events.length && !gaps.length) return 0;
   const result = appendJournal(profile, events, gaps);
   if (operation !== "hook") {
@@ -241,7 +245,7 @@ function readArguments() {
   try {
     return parseArgs({
       allowPositionals: true,
-      options: { help: { type: "boolean", short: "h" }, version: { type: "boolean" }, at: { type: "string" }, actor: { type: "string" }, "as-of": { type: "string" } },
+      options: { probe: { type: "boolean" }, help: { type: "boolean", short: "h" }, version: { type: "boolean" }, at: { type: "string" }, actor: { type: "string" }, "as-of": { type: "string" } },
     });
   } catch {
     throw new Error("invalid_arguments");
@@ -252,8 +256,17 @@ async function main(): Promise<number> {
   const passive = process.argv[2] === "hook";
   let status = 2;
   try {
+    if (process.argv[2] === "arm-session") {
+      warn("arm-session_retired_use_bind-session_with_the_native_session_id_in_your_terminal");
+      return 2;
+    }
+    if (process.argv[2] === "dispatch-hook" && process.argv.length === 4) {
+      const input = await readInput(process.stdin, maxRowBytes);
+      return await dispatchNative(process.argv[3], "metrics", input, r => persist(readProfile(r.profile), "hook", r.source, r.profile, input));
+    }
     const { values, positionals } = readArguments();
-    const asOf = values["as-of"];
+    const reporting = positionals[0] === "summary" || positionals[0] === "compare";
+    const asOf = values["as-of"] ?? (reporting ? new Date().toISOString() : undefined);
     if (!positionals.length && values.at === undefined && values.actor === undefined && asOf === undefined && values.help !== values.version) {
       console.log(values.help ? usage : packageInfo.version);
       return 0;
@@ -261,11 +274,12 @@ async function main(): Promise<number> {
     const [operation, profilePath, target] = positionals;
     const markClock = values.at;
     const actor = values.actor ?? "operator";
-    if (!profilePath || values.help || values.version
+    if (!profilePath || values.help || values.version || (values.probe && operation !== "doctor")
         || ((markClock !== undefined || values.actor !== undefined) && operation !== "mark")
         || (operation === "mark" && (positionals.length !== 5 || asOf !== undefined ||
           (markClock !== undefined && !parseUtc(markClock)) || !["operator", "agent", "automation"].includes(actor)))
         || (operation === "run-test" && (positionals.length < 6 || process.argv[7] !== "--" || asOf !== undefined))
+        || (operation === "import-spool" && (positionals.length !== 3 || !target || asOf !== undefined))
         || (operation === "git-rewrite" && (positionals.length !== 4 || asOf !== undefined))
         || (operation === "github-sync" && (positionals.length !== 5 || asOf !== undefined))
         || (operation === "compare" && (positionals.length !== 4 || target === positionals[3] || !parseUtc(asOf)))
@@ -273,20 +287,44 @@ async function main(): Promise<number> {
         || (operation === "collect" && (positionals.length !== 3 || !target || asOf !== undefined))
         || ((operation === "hook" || operation === "flush-hook") && (positionals.length !== 3 || !target || asOf !== undefined))
         || (operation === "summary" && (positionals.length !== 3 || !target || !parseUtc(asOf)))
-        || ((operation.endsWith("-hooks") || operation === "arm-session") && (positionals.length !== 3 || !target || asOf !== undefined))
-        || !["flush-hook", "mark", "compare", "run-test", "github-sync", "git-rewrite", "arm-session", "install-hooks", "uninstall-hooks", "record", "collect", "hook", "summary"].includes(operation)) throw new Error("invalid_arguments");
+        || ((operation.endsWith("-hooks") || operation === "doctor") && (positionals.length !== 3 || !target || asOf !== undefined))
+        || !["import-spool", "flush-hook", "mark", "compare", "run-test", "github-sync", "git-rewrite", "doctor", "bind-session", "install-hooks", "uninstall-hooks", "record", "collect", "hook", "summary"].includes(operation)) throw new Error("invalid_arguments");
+    if (operation === "run-test") {
+      let metrics: MetricsProfile | undefined;
+      try { metrics = readProfile(profilePath); } catch { /* Missing telemetry cannot skip a test. */ }
+      return runTest(metrics, target, positionals[3], positionals[4], positionals.slice(5));
+    }
     const profile = readProfile(profilePath);
+    if (operation === "import-spool") {
+      const result = importSpool(profile, target);
+      console.log(`Recorded ${result.appended} events, ${result.repeat} repeats, ${result.gaps} gaps.`);
+      return result.gaps ? 1 : 0;
+    }
     if (operation === "mark") {
       const input = (await readInput(process.stdin, maxRowBytes)).toString("utf8").trim();
       mark(profile, target, positionals[3], positionals[4], input ? JSON.parse(input) : {},
-        actor as MetricsEvent["actor_role"], markClock);
+        values.actor as MetricsEvent["actor_role"] | undefined, markClock);
       return 0;
     }
-    if (operation === "run-test") return runTest(profile, target, positionals[3], positionals[4], positionals.slice(5));
     if (operation === "github-sync") return await syncGithub(profile, target, positionals[3], positionals[4]);
     if (operation === "git-rewrite") return gitRewrite(profile, target, positionals[3], (await readInput(process.stdin, maxBatchBytes)).toString("utf8"));
-    if (operation === "arm-session") {
-      console.log(armSession(profile, target));
+    if (operation === "doctor") {
+      const client = metricClient(profile, target);
+      const installed = registered(profilePath, profile, target);
+      const { selected, observed } = observation(profile, target, !!values.probe);
+      const binary = spawnSync("methodology-metrics", ["--version"], { encoding: "utf8", timeout: 5000 });
+      const executable = binary.status === 0 && binary.stdout.trim() === packageInfo.version;
+      const now = Date.now();
+      const fresh = executable && installed !== null && observed !== undefined && observed >= installed && observed <= now && now - observed <= 300_000;
+      console.log(JSON.stringify({ client, registered: installed !== null, command_available: executable, session_selected: selected,
+        callback: fresh ? "observed" : observed ? "stale" : "unobserved", last_observed_at: observed ? new Date(observed).toISOString() : null }));
+      if (!fresh) warn("verify_project_trust_hook_trust_and_client_PATH_then_trigger_a_selected_session_callback");
+      return fresh ? 0 : 1;
+    }
+    if (operation === "bind-session") {
+      if (!registered(profilePath, profile, target)) throw new Error("session_binding_required");
+      bindSession(profile, target, positionals[3]);
+      console.log("Session selected. Run a client action, then check doctor.");
       return 0;
     }
     if (operation.endsWith("-hooks")) {

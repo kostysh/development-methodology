@@ -4,6 +4,13 @@ These entries are for a project that updates its copy of the package
 ([update procedure](ADOPTION.md#updating-the-methodology)). Each version
 states what requires action in the adopting project.
 
+## 5.0.1
+
+- Install the guide and tools in a fresh version directory, keep the filled project profile in its existing location and verify the CI checksum manifest before extracting. Use the paired `skills-v5.0.0` release. [Installation and update](ADOPTION.md#2-place-and-configure)
+- Select native sessions from the operator terminal, check project and hook trust and verify a real callback. Register recovery through the installed command. Use the operation spool for sandboxed task measurements and import it from the coordinator. [Metrics](defaults/process-metrics.md#connect-a-native-client) · [Recovery](defaults/task-recovery.md)
+- Keep normal owner decisions in the project conversation. Record their source. Use existing independent publication authority when required. [Solo decisions](defaults/solo-decisions.md)
+- Configure the reference admission and baseline workflows and verifier for the project's actual suite. Use one immutable submission namespace, resubmit corrected work, and configure renewable GitHub App access for long trains. A busy shared-resource runner returns 75. [Train](defaults/merge-train.md) · [Controls](defaults/controls.md)
+
 ## 5.0.0 — 2026-11-20
 
 - Reviewers classify each finding using the [closure rules](method/06-verification.md#closing-review-findings).

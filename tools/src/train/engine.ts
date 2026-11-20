@@ -1,8 +1,8 @@
 import type { Config } from "./config.js";
-import type { Pull } from "./github.js";
+import { submissionTask, type Pull } from "./github.js";
 
 export type Cause = "dependency" | "conflict" | "test" | "interaction" | "other" | "unknown";
-export type Exclusion = { pr: number; head: string; cause: Cause; reason: string; tests: string[] };
+export type Exclusion = { task?:string; pr: number; head: string; cause: Cause; reason: string; tests: string[] };
 export type Suite = { result: "pass" | "infra"; detail?: string; started?: boolean } | { result: "fail"; tests: string[] };
 export type Kind = "full" | "targeted" | "docs";
 export type Receipt = {
@@ -22,7 +22,7 @@ export type Kernel = {
   persist(): void;
 };
 export function exclude(r: Receipt, p: Pull, cause: Cause, reason: string, tests: string[] = []) {
-  if (!r.excluded.some(x => x.pr === p.number)) r.excluded.push({pr: p.number, head: p.head, cause, reason, tests});
+  if (!r.excluded.some(x => x.pr === p.number)) r.excluded.push({task:submissionTask(p),pr: p.number, head: p.head, cause, reason, tests});
 }
 function hold(reason: string): never { throw new Error(reason); }
 export function verifyBatch(config: Pick<Config, "fullBudget" | "flakeOwner">, r: Receipt,

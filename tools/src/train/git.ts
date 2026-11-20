@@ -1,5 +1,6 @@
 import { chmodSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { useToken, type Credential } from "./credential.js";
 import { command } from "./process.js";
 
 export function oid(s: unknown): string {
@@ -11,10 +12,11 @@ export class Objects {
   writerLock?: number;
   authorityFd?: number;
   constructor(readonly dir: string, readonly remote: string, readonly branch: string,
-    readonly deadline: number, readonly token?: string) {}
+    readonly deadline: number, readonly token?: Credential) {}
   git(args: string[], allowed = [0], extra: NodeJS.ProcessEnv = {}) {
-    const auth = this.token ? { GIT_CONFIG_COUNT: "1", GIT_CONFIG_KEY_0: "http.https://github.com/.extraHeader",
-      GIT_CONFIG_VALUE_0: "Authorization: Basic " + Buffer.from("x-access-token:" + this.token).toString("base64") } : {};
+    const token = this.token && ["fetch","push"].includes(args[0]) ? useToken(this.token) : undefined;
+    const auth = token ? { GIT_CONFIG_COUNT: "1", GIT_CONFIG_KEY_0: "http.https://github.com/.extraHeader",
+      GIT_CONFIG_VALUE_0: "Authorization: Basic " + Buffer.from("x-access-token:" + token).toString("base64") } : {};
     return command("git", ["-c", "core.hooksPath=/dev/null", ...args], { deadline: this.deadline, cwd: this.dir,
       allowed, authorityFd: args[0] === "push" ? this.authorityFd : undefined, writerLock: args[0] === "push" ? this.writerLock : undefined, env: { HOME: this.dir, GIT_CONFIG_NOSYSTEM: "1", GIT_CONFIG_GLOBAL: "/dev/null",
         GIT_TERMINAL_PROMPT: "0", GIT_AUTHOR_NAME: "Methodology train", GIT_COMMITTER_NAME: "Methodology train",

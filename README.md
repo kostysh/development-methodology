@@ -1,6 +1,6 @@
 # Portable development methodology
 
-Version **5.0.0**. Start with the [installation and commissioning guide](ADOPTION.md).
+Version **5.0.1**. Start with the [installation and commissioning guide](ADOPTION.md).
 
 This package describes how people and AI agents carry development from the
 initial request to a verified result, integration, operation, and process
@@ -96,4 +96,3 @@ evidence at the stated boundary.
 | [templates/](templates/README.md) | Blank forms and entry-point templates |
 | [GLOSSARY.md](GLOSSARY.md) | Terms |
 | [CHANGELOG.md](CHANGELOG.md) | Version history and actions on update |
-| [AGENTS.md](AGENTS.md) | Rules for maintaining this package |

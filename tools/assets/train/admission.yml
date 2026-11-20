@@ -1,0 +1,47 @@
+name: Methodology admission
+on:
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: Immutable submission PR number
+        required: true
+        type: string
+permissions:
+  contents: read
+  actions: read
+  checks: read
+  pull-requests: read
+jobs:
+  admission:
+    name: Methodology reviewed admission
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24.15.0'
+          package-manager-cache: false
+      - name: Read exact required runs, baseline and independent audit
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ inputs.pr }}
+          # Replace before installing and pinning this workflow's Git blob.
+          INPUTS_COMMIT: REPLACE_WITH_ACCEPTED_40_HEX_COMMIT
+        run: |
+          set -euo pipefail
+          umask 077
+          [[ "$PR" =~ ^[1-9][0-9]*$ && "$INPUTS_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+          cd "$(mktemp -d)"
+          git init -q
+          gh auth setup-git --hostname github.com
+          git fetch -q --no-tags "https://github.com/$GITHUB_REPOSITORY.git" "$GITHUB_SHA" "$INPUTS_COMMIT"
+          git show "$INPUTS_COMMIT:methodology-ci/tools.tgz" > tools.tgz
+          git show "$INPUTS_COMMIT:methodology-ci/admission.json" > policy.json
+          baseline=$(jq -er '.baseline.commit // "none"' policy.json)
+          if [[ "$baseline" != none ]]; then
+            [[ "$baseline" =~ ^[0-9a-f]{40}$ ]]
+            git fetch -q --no-tags "https://github.com/$GITHUB_REPOSITORY.git" "$baseline"
+          fi
+          npm install --prefix "$PWD/tool" --offline --ignore-scripts --no-audit --no-fund "$PWD/tools.tgz"
+          "$PWD/tool/node_modules/.bin/methodology-train" admission "$PWD/policy.json" "$PR" "$GITHUB_SHA" "$GITHUB_REF_NAME"

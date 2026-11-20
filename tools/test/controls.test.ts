@@ -333,7 +333,7 @@ test("separate runner processes share the same resource lock and recover an inte
   assert.equal(await listening(port), true);
 
   const contender = { ...runner(root, "contender.json"), cwd: cwdB };
-  rejected(execute(root, contender), /locked by another runner/u);
+  rejected(execute(root, contender), /locked by another runner/u, 75);
   assert.equal(existsSync(contender.result), false);
   assert.equal(execute(root, { ...runner(root, "other.json"), resource: "db/other" }).code, 0);
 
@@ -349,7 +349,7 @@ test("separate runner processes share the same resource lock and recover an inte
   await until(() => {
     const attempt = execute(root, contender);
     if (attempt.code === 0) return true;
-    rejected(attempt, /locked by another runner/u);
+    rejected(attempt, /locked by another runner/u, 75);
     return false;
   });
 });

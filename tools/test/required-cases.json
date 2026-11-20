@@ -80,13 +80,19 @@
     "delivery timestamps follow actual PR transitions and normal pushes do not count as ref rewrites"
   ],
   "metrics-native.test.ts": [
-    "codex installed hooks bind only the challenged session, project post-bind events, replay and uninstall",
-    "claude installed hooks bind only the challenged session, project post-bind events, replay and uninstall",
-    "actual runner returns the command status, captures checkout and refuses a repeated attempt",
+    "codex installed hooks collect only the operator-selected session, check fresh callbacks and restore exact settings",
+    "claude installed hooks collect only the operator-selected session, check fresh callbacks and restore exact settings",
+    "upgrading a v5 hook removes its old machine paths and preserves unrelated handlers",
+    "actual runner preserves command status on replay and keeps the first attempt",
     "mark reuses the actual occurrence clock, summary scopes sources and the operator can compare evidence",
     "compares two measured task histories with a complete zero and excludes missing historical evidence",
     "Git post-rewrite records named branch tips on both amend and rebase",
     "repeated GitHub sync across PR revisions and merge keeps the original opening time"
+  ],
+  "metrics-operations.test.ts": [
+    "task-scoped workspace observations reach the owner summary once with fresh opaque IDs",
+    "trusted import rejects foreign scope, owner claims, malformed data, future clocks and workspace links",
+    "valid wrapper executes once on missing telemetry and malformed invocations leave the command untouched"
   ],
   "metrics-report.test.ts": [
     "lead and first PR use elapsed time, per-type unions, and actual decision blocks",
@@ -133,10 +139,13 @@
   "recovery-implementation.test.ts": [
     "the state byte limit applies before replacement and before delivery by the hook",
     "recovery uses the same user exclude configuration as the worktree",
-    "a named remote branch has a publication result before a PR exists"
+    "a named remote branch has a publication result before a PR exists",
+    "codex recovery registration serves only its chosen session and removes the created file",
+    "claude recovery registration serves only its chosen session and removes the created file"
   ],
   "solo-contract.test.ts": [
-    "holds excluded, ambiguous, over-cap and unapproved merges and applies a batch to the exact decision"
+    "holds excluded, ambiguous, over-cap and unapproved merges and applies a batch to the exact decision",
+    "one account records the chat answer and correction while legacy receipts and shared files keep publication held"
   ],
   "train-metrics-contract.test.ts": [
     "summarizes each train attempt once and retains mode, measured values and missing fields",
@@ -155,7 +164,8 @@
     "a rejected train receipt from a second pilot source prevents a verified zero"
   ],
   "train-runtime-isolation.test.ts": [
-    "the actual OCI verifier sees the exact files without writer credentials, host Git data or writable candidate/authority"
+    "the actual OCI verifier sees the exact files without writer credentials, host Git data or writable candidate/authority",
+    "the packaged verifier exercises fresh PostgreSQL on full and targeted runs and releases its resources"
   ],
   "train-runtime.test.ts": [
     "the public train refuses to enable publication with mutable source heads",
@@ -170,6 +180,9 @@
     "a requested solo hold is checked again on the final admitted head",
     "admission verifies check publisher, exact head and newest attempt; writer bypass must be the sole actor and immutable sources fully locked",
     "receipts produce bounded train observations, operator report and idempotent journal replay",
-    "serializes owner batches and both PR gates with publication, ordinary Git updates and process death"
+    "serializes owner batches and both PR gates with publication, ordinary Git updates and process death",
+    "the installed admission and results exporter read the independent review and required exact-head runs",
+    "the host refreshes the scoped writer credential after two forty-minute suites",
+    "a returned submission re-enters on its corrected immutable head and preserves the task exclusion limit"
   ]
 }

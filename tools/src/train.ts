@@ -2,19 +2,24 @@
 import { parseArgs } from "node:util";
 import packageInfo from "../package.json" with {type:"json"};
 import { readConfig } from "./train/config.js";
+import { evidence } from "./train/evidence.js";
 import { operate } from "./train/operate.js";
 import { morning, observe } from "./train/report.js";
 import { history } from "./train/state.js";
 
 const usage = "Usage: methodology-train run PROFILE [--scheduled | --pr NUMBER [--docs]]\n" +
   "       methodology-train report PROFILE FROM_UTC THROUGH_UTC\n" +
-  "       methodology-train observations PROFILE";
+  "       methodology-train observations PROFILE\n" +
+  "       methodology-train export-checks|admission POLICY PR HEAD REF";
 try {
   const { values, positionals } = parseArgs({allowPositionals:true, options:{help:{type:"boolean"},version:{type:"boolean"},
     scheduled:{type:"boolean"},pr:{type:"string"},docs:{type:"boolean"}}});
   if (process.argv.length === 3 && values.help) console.log(usage);
   else if (process.argv.length === 3 && values.version) console.log(packageInfo.version);
-  else {
+  else if (["export-checks","admission"].includes(positionals[0]) && positionals.length === 5 && !Object.keys(values).length) {
+    const [op,path,pr,head,ref] = positionals;
+    console.log(JSON.stringify(evidence(op,path,pr,head,ref)));
+  } else {
     const [op, path, from, through] = positionals;
     if (!path || !["run","report","observations"].includes(op) || values.help || values.version ||
       positionals.length !== (op === "report" ? 4 : 2) ||

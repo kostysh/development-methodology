@@ -2,8 +2,9 @@ import { existsSync, mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { gateLockPath, type Config } from "./config.js";
+import { useToken, writerCredential, type Credential } from "./credential.js";
 import { exclude, verifyBatch, type Entry, type Receipt } from "./engine.js";
-import { GitHub, type Pull } from "./github.js";
+import { GitHub, submissionTask, type Pull } from "./github.js";
 import { Objects, oid, RejectedLease } from "./git.js";
 import { command } from "./process.js";
 import { observe } from "./report.js";
@@ -17,15 +18,13 @@ export type Environment = {
   suite: typeof runSuite;
   cleanup: typeof cleanupContainer;
 };
-const ordinary: Environment = {
-  host: (c,d) => {
-    const token = process.env.GH_TOKEN;
-    if (!token) throw new Error("A dedicated GitHub App installation token is required");
-    return new GitHub(c, token, d);
-  },
-  objects: (dir,c,d) => new Objects(dir, "https://github.com/" + c.repository + ".git", c.branch, d, process.env.GH_TOKEN),
-  suite: runSuite, cleanup: cleanupContainer,
-};
+function ordinary(c: Config, deadline: number): Environment {
+  let cached: Credential | undefined;
+  const token = () => useToken(cached ??= writerCredential(c,deadline));
+  return {host: () => new GitHub(c,token,deadline),
+    objects: dir => new Objects(dir,"https://github.com/" + c.repository + ".git",c.branch,deadline,token),
+    suite:runSuite,cleanup:cleanupContainer};
+}
 type Dispatch = { pr?: number; docs?: boolean; scheduled?: boolean };
 function matches(path: string, list: string[]) { return list.some(p => path === p || (p.endsWith("/") && path.startsWith(p))); }
 function work(c: Config, id: string) {
@@ -67,8 +66,9 @@ async function readback(c: Config, gh: Host, git: Objects, p: Pending, r: Receip
   r.deployed = deploy(c,p.candidate,d,git.writerLock);
 }
 
-export async function operate(c: Config, options: Dispatch, env: Environment = ordinary) {
+export async function operate(c: Config, options: Dispatch, supplied?: Environment) {
   const d = Date.now() + c.timeoutSeconds * 1000;
+  const env = supplied ?? ordinary(c,d);
   const r = receipt(c);
   const started = Date.parse(r.started);
   if (options.scheduled) {
@@ -126,11 +126,12 @@ export async function operate(c: Config, options: Dispatch, env: Environment = o
       }
       delete s.pending; checkpoint();
     }
-    const exclusionsSinceDisposition = (number: number) => {
-      const after = c.disposition?.[number];
-      const at = after ? prior.findIndex(x => x.id === after && x.excluded.some(e => e.pr === number)) : -1;
+    const exclusionsSinceDisposition = (number: number, task?:string) => {
+      const same = (e: Receipt["excluded"][number]) => e.pr === number || (!!task && e.task === task);
+      const after = c.disposition?.[number] ?? (task && c.disposition?.[task]);
+      const at = after ? prior.findIndex(x => x.id === after && x.excluded.some(same)) : -1;
       return prior.slice(at + 1).filter(x => x.mode === c.mode)
-        .flatMap(x => x.excluded.filter(e => e.pr === number && ["test","interaction","conflict"].includes(e.cause)));
+        .flatMap(x => x.excluded.filter(e => same(e) && ["test","interaction","conflict"].includes(e.cause)));
     };
     const eligible: Entry[] = [];
     for (const p of candidates) {
@@ -139,7 +140,7 @@ export async function operate(c: Config, options: Dispatch, env: Environment = o
         delete s.admitted[p.number]; gh.mark(p,false); exclude(r,p,"other","Admission invalidated by head change");
         continue;
       }
-      const blocks = exclusionsSinceDisposition(p.number);
+      const blocks = exclusionsSinceDisposition(p.number,submissionTask(p));
       const recurring = blocks.some((e,i) => blocks.slice(0,i).some(b => b.cause === e.cause && b.tests.join() === e.tests.join()));
       if (recurring || blocks.some(b => b.head === p.head)) {
         if (recurring) r.decisions.push("Operator disposition required for repeated exclusion of #" + p.number);
@@ -212,6 +213,7 @@ export async function operate(c: Config, options: Dispatch, env: Environment = o
           }
         }
         if (c.mode === "enabled") {
+          gh.verifyWriter();
           s.pending = { run:r.id, base:r.base, candidate, tree:r.tree,
             included:included.map(e => ({pr:e.pull.number,head:e.pull.head})), excluded:r.excluded.map(e => e.pr), deployment:c.deployment ?? null };
           checkpoint(); persist();
@@ -229,7 +231,7 @@ export async function operate(c: Config, options: Dispatch, env: Environment = o
         releaseAuthority?.();
       }
     }
-    for (const e of r.excluded) if (exclusionsSinceDisposition(e.pr).some(old =>
+    for (const e of r.excluded) if (exclusionsSinceDisposition(e.pr,e.task).some(old =>
       old.cause === e.cause && old.tests.join() === e.tests.join())) {
       r.decisions.push("Operator disposition required for repeated exclusion of #" + e.pr);
     }
@@ -256,7 +258,7 @@ export async function operate(c: Config, options: Dispatch, env: Environment = o
           if (gh) {
             const p = gh.get(e.pr); gh.mark(p,false);
             gh.comment(e.pr,"Train " + r.id + " returned #" + e.pr + ". " + e.reason +
-              (e.tests.length ? ". Tests: " + e.tests.join(", ") : "") + ". Run receipt: " + r.id);
+              (e.tests.length ? ". Tests: " + e.tests.join(", ") : "") + ". Run receipt: " + r.id + (e.task ? ". Close this returned PR, correct the editable task branch, submit a fresh ready/" + e.task + "-<new-head> PR and obtain fresh checks and independent review." : ""));
           }
         }
         save(join(c.stateDir,"state.json"),s);

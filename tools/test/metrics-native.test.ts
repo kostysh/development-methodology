@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { appendFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { test, type TestContext } from "node:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -32,24 +32,35 @@ function fixture(t: TestContext, provider = "codex") {
 }
 
 for (const provider of ["codex", "claude"]) {
-  test(provider + " installed hooks bind only the challenged session, project post-bind events, replay and uninstall", t => {
-    const { project, journal, transcript, run } = fixture(t, provider);
+  test(provider + " installed hooks collect only the operator-selected session, check fresh callbacks and restore exact settings", t => {
+    const { root, project, journal, transcript, run } = fixture(t, provider);
+    assert.equal(spawnSync("git", ["init", "-q", project]).status, 0);
+    const bin = join(root, "bin");
+    mkdirSync(bin);
+    const shim = join(bin, "methodology-metrics");
+    const shell = (arg: string) => "'" + arg.replaceAll("'", "'\\''") + "'";
+    writeFileSync(shim, "#!/bin/sh\nexec " + [process.execPath, cli].map(shell).join(" ") + ' "$@"\n', { mode: 0o700 });
+    const env = { ...process.env, PATH: (process.env.METHODOLOGY_METRICS_BIN ? dirname(process.env.METHODOLOGY_METRICS_BIN) : bin) + ":" + process.env.PATH };
     const dir = join(project, provider === "claude" ? ".claude" : ".codex");
     mkdirSync(dir);
     const settings = join(dir, provider === "claude" ? "settings.local.json" : "hooks.json");
     const prior = { hooks: { Stop: [{ matcher: "other", hooks: [{ type: "command", command: "true" }] }] },
       ...(provider === "claude" ? { permissions: { allow: ["Read"] } } : {}) };
-    writeFileSync(settings, JSON.stringify(prior));
+    const original = JSON.stringify(prior) + "  \n";
+    writeFileSync(settings, original);
+    assert.equal(spawnSync("git", ["-C", project, "add", "-f", settings]).status, 0);
     assert.equal(run(["install-hooks", "host"]).status, 0);
     const installed = readFileSync(settings, "utf8");
     assert.equal(run(["install-hooks", "host"]).status, 0);
     assert.equal(readFileSync(settings, "utf8"), installed);
     const hooks = JSON.parse(installed).hooks;
-    const prompt = run(["arm-session", "host"]).stdout.trim();
-    assert.match(prompt, /^methodology-bind [\da-f]{48}$/u);
+    assert.ok(!installed.includes(root) && !installed.includes(process.execPath));
+    assert.equal(run(["doctor", "host"], "", env).status, 1);
+    assert.equal(run(["arm-session", "host"]).status, 2);
+    assert.equal(run(["bind-session", "host", "approved"]).status, 0);
     function dispatch(phase: string, session: string, fields: Record<string, unknown> = {}) {
       const command = hooks[phase].at(-1).hooks[0].command;
-      const child = spawnSync("/bin/sh", ["-c", command], { cwd: project, encoding: "utf8",
+      const child = spawnSync("/bin/sh", ["-c", command], { cwd: project, encoding: "utf8", env,
         input: JSON.stringify({ hook_event_name: phase, cwd: project, session_id: session, transcript_path: transcript,
           prompt: "private-message", tool_input: { command: "private-command" }, ...fields }) });
       assert.equal(child.status, 0); assert.equal(child.stdout, ""); assert.equal(child.stderr, "");
@@ -58,8 +69,12 @@ for (const provider of ["codex", "claude"]) {
     dispatch("UserPromptSubmit", "foreign", { prompt: "another" });
     dispatch("PostToolUse", "foreign", { tool_use_id: "unrelated", tool_name: "Bash" });
     assert.equal(existsSync(journal), false);
-    dispatch("UserPromptSubmit", "approved", { prompt });
-    dispatch("UserPromptSubmit", "foreign", { prompt }); // A consumed challenge cannot rebind the source.
+    assert.equal(run(["doctor", "host"], "", env).status, 1);
+    dispatch("SessionStart", "approved");
+    assert.equal(run(["doctor", "host"], "", env).status, 0);
+    assert.equal(run(["doctor", "host", "--probe"], "", env).status, 1);
+    dispatch("UserPromptSubmit", "foreign");
+    assert.equal(run(["doctor", "host"], "", env).status, 1);
     const tool = { tool_use_id: "local_call", tool_name: "Bash" };
     dispatch("PreToolUse", "approved", tool);
     dispatch("PostToolUse", "approved", tool);
@@ -78,11 +93,38 @@ for (const provider of ["codex", "claude"]) {
     dispatch("PostCompact", "foreign");
     assert.equal(readFileSync(journal, "utf8"), first);
     assert.equal(run(["uninstall-hooks", "host"]).status, 0);
-    assert.deepEqual(JSON.parse(readFileSync(settings, "utf8")), prior);
+    assert.equal(readFileSync(settings, "utf8"), original);
+    assert.equal(run(["doctor", "host"], "", env).status, 1);
+    assert.equal(run(["install-hooks", "host"]).status, 0);
+    assert.equal(run(["doctor", "host"], "", env).status, 1);
+    const changed = JSON.parse(readFileSync(settings, "utf8"));
+    changed.hooks.Stop.push({ matcher: "concurrent", hooks: [{ type: "command", command: "true" }] });
+    writeFileSync(settings, JSON.stringify(changed));
+    assert.equal(run(["uninstall-hooks", "host"]).status, 0);
+    assert.deepEqual(JSON.parse(readFileSync(settings, "utf8")).hooks.Stop.map((r: {matcher: string}) => r.matcher), ["other", "concurrent"]);
   });
 }
 
-test("actual runner returns the command status, captures checkout and refuses a repeated attempt", t => {
+test("upgrading a v5 hook removes its old machine paths and preserves unrelated handlers", t => {
+  const { project, path, run } = fixture(t);
+  assert.equal(spawnSync("git", ["init", "-q", project]).status, 0);
+  const dir = join(project, ".codex");
+  mkdirSync(dir);
+  const file = join(dir, "hooks.json");
+  const shell = (arg: string) => "'" + arg.replaceAll("'", "'\\''") + "'";
+  const old = ["/missing/node", "/old/dist/metrics.js", "hook", path, "host"].map(shell).join(" ");
+  const handler = { hooks: [{ type: "command", command: old }] };
+  const unrelated = { matcher: "another", hooks: [{ type: "command", command: "true" }] };
+  writeFileSync(file, JSON.stringify({ hooks: { Stop: [unrelated, handler] } }));
+  assert.equal(run(["install-hooks", "host"]).status, 0);
+  const upgraded = readFileSync(file, "utf8");
+  assert.doesNotMatch(upgraded, /missing|old\/dist/u);
+  assert.ok(!upgraded.includes(path));
+  assert.equal(run(["uninstall-hooks", "host"]).status, 0);
+  assert.deepEqual(JSON.parse(readFileSync(file, "utf8")), { hooks: { Stop: [unrelated] } });
+});
+
+test("actual runner preserves command status on replay and keeps the first attempt", t => {
   const { project, journal, run } = fixture(t);
   const git = (...args: string[]) => spawnSync("git", args, { cwd: project, encoding: "utf8" });
   assert.equal(git("init", "--quiet").status, 0);
@@ -94,7 +136,9 @@ test("actual runner returns the command status, captures checkout and refuses a 
   assert.deepEqual(rows.map(row => row.event_type), ["test.started", "test.finished"]);
   assert.equal(rows[1].data.checkout_sha, git("rev-parse", "HEAD").stdout.trim());
   assert.equal(rows[1].data.exit_code, 7);
-  assert.equal(run(attempt).status, 2);
+  const repeated = run(attempt);
+  assert.equal(repeated.status, 7);
+  assert.match(repeated.stderr, /test_coverage_gap/u);
   assert.equal(readFileSync(journal, "utf8"), history);
 });
 
@@ -115,6 +159,9 @@ test("mark reuses the actual occurrence clock, summary scopes sources and the op
   const summary = JSON.parse(run(["summary", "T", ...asOf]).stdout);
   assert.deepEqual(summary.coverage.sources.map((row: {source_id: string}) => row.source_id), ["ops"]);
   assert.equal(summary.solo.counts.pending, 1);
+  const current = JSON.parse(run(["summary", "T"]).stdout);
+  assert.equal(current.solo.counts.pending, summary.solo.counts.pending);
+  assert.equal(run(["compare", "T", "B"]).status, 0);
   const comparison = JSON.parse(run(["compare", "T", "B", ...asOf]).stdout);
   assert.equal(comparison.before.acceptance_ms, 300000);
   assert.deepEqual(comparison.change.disputes, { status: "insufficient_data", value: null });

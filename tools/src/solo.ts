@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { createHash } from "node:crypto";
-import { closeSync, constants, existsSync, fstatSync, lstatSync, openSync, readFileSync, realpathSync } from "node:fs";
+import { accessSync, closeSync, constants, existsSync, fstatSync, lstatSync, openSync, readFileSync, realpathSync } from "node:fs";
 import { dirname, isAbsolute, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import packageInfo from "../package.json" with { type: "json" };
@@ -10,7 +10,7 @@ import { readProfile as readMetrics } from "./metrics/profile.js";
 import { authorityLock, AuthorityBusy } from "./train/state.js";
 
 const usage =
-  "Usage: methodology-solo propose|summary|install-batch PROFILE\n" +
+  "Usage: methodology-solo propose|answer|summary|install-batch PROFILE\n" +
   "       methodology-solo bind PROFILE TASK PR HEAD\n" +
   "       methodology-solo gate PROFILE REPOSITORY BRANCH PR HEAD\n";
 const classes = ["established_ui", "generic_error"];
@@ -35,7 +35,7 @@ function jsonFile(path: string) {
   );
   return JSON.parse(readFileSync(path, "utf8")) as unknown;
 }
-function policy(path: string) {
+function loadPolicy(path: string) {
   const p = recordObject(jsonFile(resolve(path)));
   requireValue(
     p &&
@@ -48,7 +48,9 @@ function policy(path: string) {
     "invalid solo policy",
   );
   const permissions = new Map<string, boolean>();
-  const selected = recordObject(p.classes);
+  const selected = Array.isArray(p.classes)
+    ? Object.fromEntries(p.classes.map(name => [id(name), { allow_merge: false }]))
+    : recordObject(p.classes);
   requireValue(selected, "invalid classes");
   for (const [name, settings] of Object.entries(selected)) {
     const allowed = recordObject(settings)?.allow_merge;
@@ -70,8 +72,9 @@ function policy(path: string) {
     limit: Number(p.pending_limit),
     permissions,
     ledger,
-    approvals: string(p.approvals, "approvals"),
-    approvalsOwner: p.approvals_owner_uid ?? lstatSync(resolve(path)).uid,
+    approvals: p.approvals === undefined ? undefined : string(p.approvals, "approvals"),
+    approvalsOwner: p.approvals_owner_uid,
+    profilePath: resolve(path),
     metrics: p.metrics,
   };
 }
@@ -114,19 +117,59 @@ type Receipt = {
   superseded_head?: string;
   verified_head?: string;
 };
-function readOwnerBatch(path: string, expectedUid: unknown) {
-  requireValue(Number.isSafeInteger(expectedUid) && Number(expectedUid) >= 0, "invalid approvals_owner_uid");
-  const dir = lstatSync(dirname(path));
-  requireValue(isAbsolute(path) && realpathSync(path) === path && dir.isDirectory() &&
-    dir.uid === expectedUid && !(dir.mode & 0o022), "owner-controlled approvals directory required");
-  const fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW);
+// A numeric setting selects an existing independent owner. The kernel must
+// establish control of both the publisher's configured policy and its inbox.
+function independentFile(path: string, owner: number) {
+  const file = lstatSync(path);
+  const parent = lstatSync(dirname(path));
+  requireValue(isAbsolute(path) && realpathSync(path) === path && file.isFile() && file.nlink === 1 &&
+    file.uid === owner && !(file.mode & 0o022) && parent.isDirectory() && parent.uid === owner &&
+    !(parent.mode & 0o022), "independent owner file and directory required");
+  for (const target of [path, dirname(path)]) {
+    let writable = true;
+    try { accessSync(target, constants.W_OK); } catch { writable = false; }
+    requireValue(!writable, "coordinator can write owner source");
+  }
+}
+
+function ownerSource(policy: ReturnType<typeof loadPolicy>) {
+  const uid = policy.approvalsOwner;
+  requireValue(typeof uid === "number" && Number.isSafeInteger(uid) && uid >= 0 &&
+    process.geteuid?.() !== undefined && uid !== process.geteuid() && policy.approvals,
+    "independent owner source required");
+  independentFile(policy.profilePath, uid);
+  independentFile(policy.approvals, uid);
+  return policy.approvals;
+}
+
+function readOwnerBatch(path: string, expectedUid: number) {
+  const fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
   try {
     const stat = fstatSync(fd);
     requireValue(stat.isFile() && stat.nlink === 1 && stat.uid === expectedUid && !(stat.mode & 0o022),
-      "owner-authored approvals file required");
+      "independent owner file required");
     return JSON.parse(readFileSync(fd,"utf8")) as unknown;
   } finally { closeSync(fd); }
 }
+
+type ChatAnswer = { id: string; status: "confirmed" | "changed"; choice: string; owner_source: string; at: string };
+function chatAnswer(raw: unknown, rows: Entry[], history: ChatAnswer[]): ChatAnswer {
+  const input = recordObject(raw);
+  const row = rows.find(row => row.id === input?.id);
+  requireValue(row && input && (input.status === "confirmed" || input.status === "changed"),
+    "existing decision and answer status required");
+  const owner_source = string(input.owner_source, "chat message reference");
+  const prior = history.find(note => note.id === row.id && note.owner_source === owner_source);
+  const last = history.findLast(note => note.id === row.id);
+  const choice = input.status === "changed" ? string(input.choice, "owner choice") : prior?.choice ?? last?.choice ?? row.choice;
+  requireValue(input.choice === undefined || input.choice === choice, "answer does not confirm the stated choice");
+  if (prior) {
+    requireValue(prior.choice === choice && prior.status === input.status, "message already records a different answer");
+    return prior;
+  }
+  return { id: row.id, status: input.status, choice, owner_source, at: new Date().toISOString() };
+}
+
 function receipts(raw: unknown, rows: Entry[]) {
   requireValue(Array.isArray(raw), "owner approvals must be an array");
   const approved = new Map<string, Receipt>();
@@ -209,7 +252,7 @@ function execute(cmd: string, profile: string, args: string[]) {
   finally { release(); }
 }
 function underLock(cmd: string, profile: string, args: string[], readOnly: boolean) {
-  const p = policy(profile);
+  const p = loadPolicy(profile);
   process.umask(0o077);
   const emptyReader = readOnly && !existsSync(p.ledger);
   const db = new DatabaseSync(emptyReader ? ":memory:" : p.ledger, {readOnly:readOnly && !emptyReader});
@@ -217,17 +260,19 @@ function underLock(cmd: string, profile: string, args: string[], readOnly: boole
     db.exec("PRAGMA busy_timeout=5000");
     if (!readOnly || emptyReader) db.exec(`CREATE TABLE IF NOT EXISTS decisions (id TEXT PRIMARY KEY, proposal TEXT NOT NULL, digest TEXT NOT NULL, applied_at TEXT, reason TEXT);
       CREATE TABLE IF NOT EXISTS bindings (pr INTEGER, task TEXT, head TEXT NOT NULL, PRIMARY KEY(pr,task));
-      CREATE TABLE IF NOT EXISTS owner_receipts (id TEXT PRIMARY KEY, receipt TEXT NOT NULL, verified_head TEXT);`);
+      CREATE TABLE IF NOT EXISTS verified_receipts (id TEXT PRIMARY KEY, receipt TEXT NOT NULL, verified_head TEXT);
+      CREATE TABLE IF NOT EXISTS chat_answers (answer TEXT NOT NULL);`);
     db.exec(readOnly ? "BEGIN" : "BEGIN IMMEDIATE");
     const ledgerVersion = db.prepare("PRAGMA user_version").get()?.user_version;
-    requireValue(ledgerVersion === 0 || ledgerVersion === 1, "unsupported decision ledger version");
+    requireValue(ledgerVersion === 0 || ledgerVersion === 1 || ledgerVersion === 2, "unsupported decision ledger version");
     const rows = loadEntries(db);
-    const previous = db.prepare("SELECT * FROM owner_receipts").all();
+    const previous = ledgerVersion === 2 ? db.prepare("SELECT * FROM verified_receipts").all() : [];
     const installed = previous.map(row => ({...JSON.parse(String(row.receipt)),
       ...(row.verified_head ? {verified_head:row.verified_head} : {})}));
     let approved = receipts(installed,rows);
     if (cmd === "install-batch" && !args.length) {
-      approved = receipts(readOwnerBatch(p.approvals,p.approvalsOwner),rows);
+      const file = ownerSource(p);
+      approved = receipts(readOwnerBatch(file, Number(p.approvalsOwner)), rows);
       for (const prior of previous) {
         const current = approved.get(String(prior.id));
         requireValue(current, "owner receipt removed");
@@ -237,12 +282,18 @@ function underLock(cmd: string, profile: string, args: string[], readOnly: boole
       }
       for (const receipt of approved.values()) {
         const {verified_head,...stable} = receipt;
-        db.prepare("INSERT INTO owner_receipts VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET verified_head=excluded.verified_head")
+        db.prepare("INSERT INTO verified_receipts VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET verified_head=excluded.verified_head")
           .run(receipt.id,JSON.stringify(stable),verified_head ?? null);
       }
-      db.exec("PRAGMA user_version=1");
+      db.exec("PRAGMA user_version=2");
     }
-    const pending = rows.filter((row) => row.applied_at && !approved.has(row.id));
+    const hasChat = db.prepare("SELECT 1 FROM sqlite_schema WHERE name='chat_answers'").get();
+    const history: ChatAnswer[] = hasChat ? db.prepare("SELECT answer FROM chat_answers ORDER BY rowid").all()
+      .map(row => JSON.parse(String(row.answer))) : [];
+    const notes = new Map(history.map(note => [note.id, note]));
+    const machineRegister = ledgerVersion === 2 || p.approvalsOwner !== undefined;
+    const resolutionFor = (id: string) => machineRegister ? approved.get(id) : notes.get(id);
+    const pending = rows.filter(row => row.applied_at && !resolutionFor(row.id));
     let status = 0,
       result: unknown;
     if (cmd === "propose" && !args.length) {
@@ -260,15 +311,19 @@ function underLock(cmd: string, profile: string, args: string[], readOnly: boole
             : pending.length >= p.limit
               ? "pending_cap"
               : null;
-      if (!existing?.applied_at && !approved.has(req.id)) {
+      if (!existing?.applied_at && !resolutionFor(req.id)) {
         db.prepare(
           "INSERT INTO decisions VALUES(?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET applied_at=excluded.applied_at,reason=excluded.reason",
         ).run(req.id, serialized, digest, reason ? null : new Date().toISOString(), reason);
       }
       const current = loadEntries(db).find((row) => row.id === req.id)!;
-      const resolution = approved.get(req.id);
+      const resolution = resolutionFor(req.id);
       result = resolution ? { ...current, resolution } : current;
       status = resolution ? (resolution.status === "confirmed" ? 0 : 1) : current.applied_at ? 0 : 1;
+    } else if (cmd === "answer" && !args.length) {
+      const note = chatAnswer(JSON.parse(readFileSync(0, "utf8")), rows, history);
+      if (!history.includes(note)) db.prepare("INSERT INTO chat_answers VALUES(?)").run(JSON.stringify(note));
+      result = note;
     } else if (cmd === "bind" && args.length === 3) {
       const [task, pr, head] = args;
       requireValue(id(task) && /^[1-9]\d*$/u.test(pr) && sha.test(head), "invalid task, PR or head");
@@ -280,7 +335,14 @@ function underLock(cmd: string, profile: string, args: string[], readOnly: boole
       const [repo, branch, pr, head] = args;
       const bindings = db.prepare("SELECT task,head FROM bindings WHERE pr=?").all(pr);
       const holds: string[] = [];
-      if (ledgerVersion !== 1) holds.push("owner_batch_not_installed");
+      try {
+        const owner = receipts(readOwnerBatch(ownerSource(p), Number(p.approvalsOwner)), rows);
+        for (const [id, receipt] of approved) {
+          const actual = owner.get(id);
+          if (!actual || JSON.stringify(actual) !== JSON.stringify(receipt)) holds.push(id);
+        }
+      } catch { holds.push("independent_owner_source_required"); }
+      if (ledgerVersion !== 2) holds.push("owner_batch_not_installed");
       if (
         repo !== p.repository ||
         branch !== p.branch ||
@@ -307,11 +369,13 @@ function underLock(cmd: string, profile: string, args: string[], readOnly: boole
     } else if (cmd === "summary" && !args.length) {
       const group = (status: Receipt["status"]) =>
         rows
-          .filter((r) => approved.get(r.id)?.status === status)
-          .map((row) => ({ ...row, resolution: approved.get(row.id) }));
+          .filter(row => resolutionFor(row.id)?.status === status)
+          .map(row => ({ ...row, resolution: resolutionFor(row.id) }));
       result = {
         pending,
-        held: rows.filter((row) => !row.applied_at && !approved.has(row.id)),
+        held: rows.filter(row => !row.applied_at && !resolutionFor(row.id)),
+        chat_history: history,
+        ...(ledgerVersion === 1 ? { legacy_receipts: "independent_reinstallation_required" } : {}),
         confirmed: group("confirmed"),
         changed: group("changed"),
       };
@@ -321,8 +385,8 @@ function underLock(cmd: string, profile: string, args: string[], readOnly: boole
       try { pushMetrics(p.metrics, loadEntries(db), approved); }
       catch (error) {
         // A telemetry failure after COMMIT cannot undo or deny the owner's acknowledged decision.
-        if (cmd !== "install-batch") throw error;
-        result = {installed:approved.size,metrics_sync:"pending"};
+        if (cmd !== "install-batch" && cmd !== "answer") throw error;
+        result = { ...recordObject(result), metrics_sync:"pending" };
       }
     }
     process.stdout.write(JSON.stringify(result) + "\n");

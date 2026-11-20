@@ -41,13 +41,14 @@ The working mode is set in the [profile](../PROJECT-PROFILE.md#roles-and-indepen
 owner. Review independence is ensured by a separate executor or agent context
 without the author's history. The owner may accept a document prepared by an
 agent on the owner's instruction; the acceptance is recorded in the usual way.
-The owner may delegate explicit, reversible decision classes in the profile.
-The coordinator checks the class, its exclusions and pending limit, records
-the choice, and applies the permitted next action. An uncertain or excluded
-choice waits for the owner. Each affected PR follows its class's pending
-merge rule. Other permitted work continues. The owner confirms exact choices
-in a batch or opens rework for a reversal. The reviewer traces each material
-choice to its source. [Decision register and examples](../defaults/solo-decisions.md).
+The owner may delegate reversible decision classes and set a pending limit.
+The agent checks the class, its exclusions and the limit before acting.
+When a choice falls outside that authority, ask the owner in the project
+conversation and continue independent work. Record the owner's answer with
+its message reference. If the owner changes a choice, update the affected
+work and verify the revision. The publisher uses the project's existing
+independent approval or protected check when publication requires it.
+[Decision register and examples](../defaults/solo-decisions.md).
 
 **`team`** — several people. For each role the profile names an owner, a
 deputy, and a response time. Rules:

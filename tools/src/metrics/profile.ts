@@ -8,6 +8,7 @@ export type MetricsProfile = {
   project_id: string;
   projectRoot: string;
   journal: string;
+  spoolByteLimit?: number; // Set internally only for the workspace transport.
   sources: Record<string, MetricsSource>;
   categories: Record<string, string[]>;
   identityKey: string;
@@ -16,7 +17,7 @@ export type MetricsProfile = {
 };
 
 const kinds = new Set([
-  "normalized", "task", "audit", "development",
+  "normalized", "task", "audit", "development", "operation_spool",
   "codex_app_server", "codex_hook", "codex_rollout", "claude_hook", "claude_monitoring",
   "github_webhook", "github_jobs",
 ]);
@@ -109,6 +110,7 @@ export function readProfile(file: string): MetricsProfile {
         if (typeof row.task_id !== "string" || !issuedIds.has(row.task_id)) invalid();
         source.task_id = row.task_id;
       }
+      if (source.kind === "operation_spool" && (!source.task_id || row.path !== undefined)) invalid();
       if (row.session_id !== undefined) {
         if (!source.task_id || !/^(?:codex_|claude_)/u.test(source.kind)
             || typeof row.session_id !== "string" || !/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,254}$/u.test(row.session_id)) invalid();

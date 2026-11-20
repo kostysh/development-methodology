@@ -1,47 +1,96 @@
 import { spawnSync } from "node:child_process";
 import { realpathSync } from "node:fs";
+import { constants as osConstants } from "node:os";
 import { isAbsolute, relative, sep } from "node:path";
-import { isEventType, isTrustedIdentity, mapIdentity, normalizeEvent, recordObject, type MetricsEvent } from "./events.js";
+import { isEventType, isTrustedIdentity, issuedAlias, sourceKey, mapIdentity, normalizeEvent, recordObject, type MetricsEvent } from "./events.js";
 import { appendJournal, coverageGap } from "./journal.js";
+import { checkObservation, withSpool } from "./spool.js";
 import type { MetricsProfile } from "./profile.js";
 
 export function operationSource(profile: MetricsProfile, id: string) {
   const source = profile.sources[id];
-  if (!source?.task_id || !["normalized", "task", "development", "audit"].includes(source.kind)) {
+  if (!source?.task_id || !["normalized", "task", "development", "audit", "operation_spool"].includes(source.kind)) {
     throw new Error("invalid_arguments");
   }
   return source;
 }
 
+const operationIds = new Set([
+  "suite_id", "attempt_id", "decision_id", "operation_id", "audit_id", "prior_audit_id",
+  "subject_id", "finding_occurrence_id", "observation_id", "cause_id", "dispute_id",
+]);
+
+function operationData(profile: MetricsProfile, task: string, data: Record<string, unknown>) {
+  return Object.fromEntries(Object.entries(data).map(([field, value]) => {
+    if (!operationIds.has(field) || typeof value !== "string" || isTrustedIdentity(value, profile) || !issuedAlias.test(value)) {
+      return [field, value];
+    }
+    const identity = field === "prior_audit_id" ? "audit_id" : field;
+    return [field, mapIdentity(profile, "operation." + identity, JSON.stringify([task, value]))];
+  }));
+}
+
 export function mark(profile: MetricsProfile, source: string, type: string, occurrence: string, data: unknown,
-  actor: MetricsEvent["actor_role"] = "operator", at?: string, requireNew = false) {
+  actor?: MetricsEvent["actor_role"], at?: string, requireNew = false) {
   const config = operationSource(profile, source);
-  if (!isEventType(type) || !/^[\w.:-]{1,160}$/u.test(occurrence) || !recordObject(data)) throw new Error("invalid_arguments");
+  const fields = recordObject(data);
+  if (!isEventType(type) || !/^[\w.:-]{1,160}$/u.test(occurrence) || !fields) throw new Error("invalid_arguments");
   const now = new Date().toISOString();
+  const spooled = config.kind === "operation_spool";
   const event = normalizeEvent({ schema_version: 1, project_id: profile.project_id, source_id: source,
     event_id: mapIdentity(profile, "event." + type, JSON.stringify([source, config.task_id, occurrence])),
-    event_type: type, task_id: config.task_id, occurred_at: at ?? now, observed_at: now, actor_role: actor, data }, profile);
-  const result = appendJournal(profile, [event], [], at === undefined);
+    event_type: type, task_id: config.task_id, occurred_at: at ?? now, observed_at: now,
+    actor_role: actor ?? (spooled ? "agent" : "operator"), data: operationData(profile, config.task_id!, fields) }, profile);
+  const append = (storage: MetricsProfile) => appendJournal(storage, [event], [], { operationClock: at === undefined });
+  if (spooled) checkObservation(event, source, config.task_id!, now);
+  const result = spooled ? withSpool(profile, source, true, append) : append(profile);
   if (result.gaps || (requireNew && result.repeat)) throw new Error("occurrence_conflict");
 }
 
-export function runTest(profile: MetricsProfile, source: string, suite: string, attempt: string, argv: string[]) {
-  if (!argv.length || !isTrustedIdentity(suite, profile) || !isTrustedIdentity(attempt, profile)) throw new Error("invalid_arguments");
+function operationGap(profile: MetricsProfile, source: string, code: string) {
+  const write = (storage: MetricsProfile) => appendJournal(storage, [], [coverageGap(code, source)]);
+  if (operationSource(profile, source).kind === "operation_spool") withSpool(profile, source, true, write);
+  else write(profile);
+}
+
+export function runTest(profile: MetricsProfile | undefined, source: string, suite: string, attempt: string, argv: string[]) {
+  if (!sourceKey.test(source) || !argv[0] || argv[0].startsWith("-") || ![suite, attempt].every(id => issuedAlias.test(id) ||
+      /^m_[a-f0-9]{32}_[a-f0-9]{32}$/u.test(id))) throw new Error("invalid_arguments");
   const cwd = realpathSync(process.cwd());
-  const rel = relative(profile.projectRoot, cwd);
-  if (isAbsolute(rel) || rel.split(sep)[0] === "..") throw new Error("invalid_arguments");
-  const git = spawnSync("git", ["rev-parse", "--verify", "HEAD"], { encoding: "utf8", timeout: 5000 });
-  const sha = git.status === 0 ? git.stdout.trim() : null;
-  const facts = { suite_id: suite, attempt_id: attempt, checkout_sha: sha, worktree_id: mapIdentity(profile, "git.worktree", cwd) };
-  mark(profile, source, "test.started", attempt, facts, "automation", undefined, true);
+  if (profile) {
+    const rel = relative(profile.projectRoot, cwd);
+    if (isAbsolute(rel) || rel.split(sep)[0] === "..") throw new Error("invalid_arguments");
+  }
+  let facts;
+  const warn = () => console.error("methodology-metrics: test_coverage_gap");
+  try {
+    if (!profile) throw new Error("invalid_profile");
+    operationSource(profile, source);
+    const git = spawnSync("git", ["rev-parse", "--verify", "HEAD"], { encoding: "utf8", timeout: 5000 });
+    const sha = git.status === 0 ? git.stdout.trim() : null;
+    const startFacts = { suite_id: suite, attempt_id: attempt, checkout_sha: sha, worktree_id: mapIdentity(profile, "git.worktree", cwd) };
+    mark(profile, source, "test.started", attempt, startFacts, "automation", undefined, true);
+    facts = startFacts;
+  } catch (error) {
+    warn();
+    if (profile && error instanceof Error && error.message === "occurrence_conflict") {
+      try { operationGap(profile, source, "test_coverage_gap"); } catch { /* The warning already identifies lost coverage. */ }
+    }
+  }
+
   const start = performance.now();
   const child = spawnSync(argv[0], argv.slice(1), { stdio: "inherit" });
   const duration = Math.round(performance.now() - start);
-  const exit = child.status;
-  const outcome = exit === 0 ? "success" : "failure";
-  mark(profile, source, "test.finished", attempt, { ...facts, exit_code: exit, duration_ms: duration,
-    outcome: profile.categories.outcome?.includes(outcome) ? outcome : null }, "automation");
-  return exit ?? 1;
+  const outcome = child.signal ? "cancelled" : child.status === 0 ? "success" : "failure";
+  if (facts && profile) {
+    try {
+      mark(profile, source, "test.finished", attempt, { ...facts, exit_code: child.status, duration_ms: duration,
+        outcome: profile.categories.outcome?.includes(outcome) ? outcome : null }, "automation");
+    } catch { warn(); }
+  }
+  if (child.signal) return 128 + osConstants.signals[child.signal];
+  if (child.error) return (child.error as NodeJS.ErrnoException).code === "ENOENT" ? 127 : 126;
+  return child.status ?? 1;
 }
 
 // This operation runs from Git's post-rewrite hook. The old and new tip must also
@@ -62,7 +111,7 @@ export function gitRewrite(profile: MetricsProfile, source: string, reason: stri
   if (!ref || !old || !head || !selector?.includes("@{") || old === head || !input.split("\n").some(line => {
     const [before, after] = line.split(/\s+/u); return before === old && after === head;
   })) {
-    appendJournal(profile, [], [coverageGap("git_rewrite_unverified", source)]);
+    operationGap(profile, source, "git_rewrite_unverified");
     return 1;
   }
   // Keep the historical event key for amendments captured before branch-reflog support.

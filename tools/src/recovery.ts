@@ -3,10 +3,11 @@ import { readFileSync, realpathSync } from "node:fs";
 import { isAbsolute } from "node:path";
 import packageInfo from "../package.json" with { type: "json" };
 import { recordObject } from "./metrics/events.js";
+import { configureNative, dispatchNative } from "./metrics/setup.js";
 import { snapshot } from "./recovery/snapshot.js";
 import { gitRoot, readBoundedState, readProfile, readState, StateError, within, writeState } from "./recovery/state.js";
 
-const usage = "Usage: methodology-recovery --version | {write|snapshot|recover|hook} PROFILE";
+const usage = "Usage: methodology-recovery --version | {write|snapshot|recover|hook} PROFILE | install-hook PROFILE --client codex|claude --session-id ID | uninstall-hook PROFILE --client codex|claude";
 const manual = "Use manual task recovery. Reconcile the assigned task, its authority and current facts before polling or resuming work.";
 type Profile = ReturnType<typeof readProfile>;
 
@@ -29,10 +30,10 @@ function packet(profile: Profile) {
   return { text, partial: missingState || current.gaps.length > 0 };
 }
 
-function hook(profilePath: string): number {
+function hook(profilePath: string, input?: Buffer): number {
   let context: string;
   try {
-    const event = recordObject(JSON.parse(readFileSync(0, "utf8")));
+    const event = recordObject(JSON.parse(input?.toString("utf8") ?? readFileSync(0, "utf8")));
     if (!event || typeof event.hook_event_name !== "string") throw new Error();
     if (event.hook_event_name !== "SessionStart") return 0;
     if (typeof event.source !== "string") throw new Error();
@@ -49,10 +50,24 @@ function hook(profilePath: string): number {
   return 0;
 }
 
-function run(args: string[]): number {
+async function run(args: string[]): Promise<number> {
   const [command, path] = args;
   if (args.length === 1 && (command === "--version" || command === "--help")) {
     console.log(command === "--version" ? packageInfo.version : usage);
+    return 0;
+  }
+  if (command === "dispatch-hook" && args.length === 2) {
+    const input = readBoundedState(0, 256 * 1024);
+    return dispatchNative(path, "recovery", input, r => hook(r.profile, input));
+  }
+  if (command === "install-hook" || command === "uninstall-hook") {
+    const install = command === "install-hook";
+    const [, , flag, client, selector, id] = args;
+    if (flag !== "--client" || (client !== "claude" && client !== "codex") ||
+        (install ? args.length !== 6 || selector !== "--session-id" || !/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,254}$/u.test(id) : args.length !== 4)) {
+      console.error(usage); return 2;
+    }
+    configureNative(readProfile(path).worktree, client, "recovery", path, install, undefined, id);
     return 0;
   }
   if (args.length !== 2 || !["write", "snapshot", "recover", "hook"].includes(command)) {
@@ -76,7 +91,7 @@ function run(args: string[]): number {
 }
 
 try {
-  process.exitCode = run(process.argv.slice(2));
+  process.exitCode = await run(process.argv.slice(2));
 } catch (error) {
   const rejected = error instanceof StateError;
   console.error(`methodology-recovery: ${rejected ? error.message : "invalid binding or unavailable input"}`);

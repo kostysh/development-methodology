@@ -1,0 +1,30 @@
+#!/bin/sh
+set -eu
+kind=$1
+sha=$2
+shift 2
+[ "${#sha}" = 40 ] || exit 2
+case "$sha" in *[!0-9a-f]*) exit 2;; esac
+case "$kind" in
+  full|docs)
+    [ "$#" = 0 ] || exit 2
+    set -f
+    # Lists contain one validated stable ID per line, without whitespace.
+    set -- $(cat "/opt/$kind.list")
+    ;;
+  targeted) ;;
+  *) exit 2;;
+esac
+[ "$#" -gt 0 ] || exit 2
+failures=
+for id do
+  case "$id" in ''|*[!A-Za-z0-9_-]*) exit 2;; esac
+  if [ "$kind" = targeted ]; then grep -Fqx -- "$id" /opt/full.list || exit 2; fi
+  [ -x "/opt/cases/$id" ] || exit 2
+  # The image owns every case. Only the supervisor writes the verdict.
+  if "/opt/cases/$id" >&2; then continue; else code=$?; fi
+  [ "$code" = 1 ] || exit 2
+  failures="${failures:+$failures,}\"$id\""
+done
+if [ -n "$failures" ]; then printf '{"result":"fail","tests":[%s]}\n' "$failures"
+else printf '{"result":"pass"}\n'; fi

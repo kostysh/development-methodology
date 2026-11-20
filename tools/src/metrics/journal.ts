@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process";
 import {
-  appendFileSync, closeSync, constants, fstatSync, fsyncSync, openSync, readFileSync,
+  appendFileSync, closeSync, constants, fstatSync, fsyncSync, openSync, readSync,
 } from "node:fs";
 import {
   isTrustedIdentity, normalizeEvent, parseUtc, recordObject, timeKey, trainObservation, type MetricsEvent,
@@ -20,9 +20,11 @@ export type JournalRead = {
   disputedTaskReceipts?: DisputedTaskReceipt[];
 };
 const maxFileBytes = 32 * 1024 * 1024;
+// A trusted spool import must not resolve helpers through the workspace PATH.
+const coordinatorLock = "/usr/bin/flock";
 
 const gapCodes = new Set([
-  "git_rewrite_unverified", "github_sync_failed", "session_binding_required", "tool_occurrence_identity_missing", "adapter_gap", "conflicting_event", "invalid_event", "invalid_input",
+  "test_coverage_gap", "git_rewrite_unverified", "github_sync_failed", "session_binding_required", "tool_occurrence_identity_missing", "adapter_gap", "conflicting_event", "invalid_event", "invalid_input",
   "journal_invalid", "coverage_invalid", "journal_missing", "line_limit",
   "source_missing", "source_unreadable", "source_unconfigured", "source_changed",
   "usage_response_identity_missing", "usage_counts_partial", "compaction_occurrence_identity_missing",
@@ -56,9 +58,9 @@ function openPrivate(path: string, write: boolean) {
   }
 }
 
-function enforceLock(fd: number, write: boolean): void {
+function enforceLock(fd: number, write: boolean, lockCommand: string): void {
   // The child inherits the open file description. The parent holds the lock until close.
-  const lock = spawnSync("flock", [write ? "-x" : "-s", "-w", "2", "3"], {
+  const lock = spawnSync(lockCommand, [write ? "-x" : "-s", "-w", "2", "3"], {
     stdio: ["ignore", "ignore", "ignore", fd],
     timeout: 3000,
   });
@@ -69,10 +71,14 @@ function enforceLock(fd: number, write: boolean): void {
 
 function inspectLines<T>(contents: string, parse: (value: unknown) => T, invalid: () => void): T[] {
   if (!contents) return [];
-  const rows = contents.split("\n");
-  if (!rows.at(-1)) rows.pop();
   const result: T[] = [];
-  for (const line of rows) {
+  let offset = 0;
+  while (offset < contents.length) {
+    const newline = contents.indexOf("\n", offset);
+    const end = newline === -1 ? contents.length : newline;
+    const line = contents.slice(offset, end);
+    offset = end + 1;
+    if (!line) { invalid(); continue; }
     try {
       result.push(parse(JSON.parse(line)));
     } catch {
@@ -125,11 +131,11 @@ function readGap(raw: unknown, profile: MetricsProfile): StoredGap {
   return { code: row.code, source_id: row.source_id, observed_at, event_id: row.event_id as string | undefined };
 }
 
-function appendLines(fd: number, contents: string, rows: readonly unknown[]): void {
+function appendLines(fd: number, contents: string, rows: readonly unknown[], limit = maxFileBytes): void {
   if (!rows.length) return;
   const prefix = contents && !contents.endsWith("\n") ? "\n" : "";
   const payload = prefix + rows.map((row) => JSON.stringify(row)).join("\n") + "\n";
-  if (fstatSync(fd).size + Buffer.byteLength(payload) > maxFileBytes) throw new Error("journal_limit");
+  if (fstatSync(fd).size + Buffer.byteLength(payload) > limit) throw new Error("journal_limit");
   appendFileSync(fd, payload, "utf8");
   fsyncSync(fd);
 }
@@ -143,9 +149,23 @@ type OpenJournal = {
   gaps: StoredGap[];
 };
 
+// Spool files are supplied by a workspace process which can ignore advisory locks.
+function boundedRead(fd: number, limit = maxFileBytes): string {
+  const size = fstatSync(fd).size;
+  if (size > limit) throw new Error("journal_limit");
+  const buffer = Buffer.alloc(size);
+  let offset = 0;
+  while (offset < size) {
+    const count = readSync(fd, buffer, offset, size - offset, offset);
+    if (!count) throw new Error("journal_unavailable");
+    offset += count;
+  }
+  return buffer.toString("utf8");
+}
+
 function view(fd: number, coverageFd: number | undefined, profile: MetricsProfile): OpenJournal {
-  const contents = readFileSync(fd, "utf8");
-  const coverageContents = coverageFd === undefined ? "" : readFileSync(coverageFd, "utf8");
+  const contents = boundedRead(fd, profile.spoolByteLimit);
+  const coverageContents = coverageFd === undefined ? "" : boundedRead(coverageFd, profile.spoolByteLimit);
   const glitches = new Set<string>();
   const gaps = inspectLines(coverageContents, (row) => readGap(row, profile), () => glitches.add("coverage_invalid"));
   const rows = inspectLines(contents, (row) => normalizeEvent(row, profile), () => glitches.add("journal_invalid"));
@@ -192,12 +212,12 @@ function projectionKey(event: MetricsEvent): string {
   return JSON.stringify(fact);
 }
 
-function withJournal<T>(profile: MetricsProfile, write: boolean, act: (state: OpenJournal) => T): T | undefined {
+function withJournal<T>(profile: MetricsProfile, write: boolean, act: (state: OpenJournal) => T, lockCommand = "flock"): T | undefined {
   let fd: number | undefined;
   let coverageFd: number | undefined;
   try {
     fd = openPrivate(profile.journal, write);
-    enforceLock(fd, write);
+    enforceLock(fd, write, lockCommand);
     try {
       coverageFd = openPrivate(coverageFile(profile.journal), write);
     } catch (error) {
@@ -212,6 +232,10 @@ function withJournal<T>(profile: MetricsProfile, write: boolean, act: (state: Op
     if (coverageFd !== undefined) closeSync(coverageFd);
     if (fd !== undefined) closeSync(fd);
   }
+}
+
+export function spoolReceipts(profile: MetricsProfile) {
+  return withJournal(profile, false, ({ rows, gaps }) => ({ rows, gaps }), coordinatorLock);
 }
 
 export function readJournal(profile: MetricsProfile, asOf?: string): JournalRead {
@@ -233,10 +257,10 @@ export function readJournal(profile: MetricsProfile, asOf?: string): JournalRead
   }) ?? { events: [], gaps: [coverageGap("journal_missing")] };
 }
 
-export function appendJournal(profile: MetricsProfile, entries: readonly MetricsEvent[], gaps: readonly CoverageGap[], operationClock = false) {
+export function appendJournal(profile: MetricsProfile, entries: readonly MetricsEvent[], gaps: readonly CoverageGap[], options: { operationClock?: boolean; importSpool?: boolean } = {}) {
   return withJournal(profile, true, (state) => {
     // A replay of an actual operation reuses its first local occurrence clock while holding the journal lock.
-    const clockById = new Map(operationClock ? state.rows.map(row => [row.event_id, row.occurred_at] as const) : []);
+    const clockById = new Map(options.operationClock ? state.rows.map(row => [row.event_id, row.occurred_at] as const) : []);
     const validated = entries.map(entry => normalizeEvent({ ...entry,
       occurred_at: clockById.get(entry.event_id) ?? entry.occurred_at }, profile));
     const affected = new Set(validated.map(({ event_id }) => event_id));
@@ -262,12 +286,20 @@ export function appendJournal(profile: MetricsProfile, entries: readonly Metrics
       }
     }
 
-    const newGaps = gaps.map((gap) => readGap(gap, profile));
+    const checkedGaps = gaps.map((gap) => readGap(gap, profile));
+    const knownGaps = new Set(options.importSpool ? state.gaps.map(gap => JSON.stringify(gap)) : []);
+    const newGaps = checkedGaps.filter(gap => {
+      if (!options.importSpool) return true;
+      const key = JSON.stringify(gap);
+      if (knownGaps.has(key)) return false;
+      knownGaps.add(key);
+      return true;
+    });
     const legacyConflicts = new Set(state.gaps.flatMap(({ event_id }) => event_id && affected.has(event_id) ? [event_id] : []));
     const inferred = reconcileReceipts([...priorRows, ...contributions], legacyConflicts).gaps;
     // Both sanitized contributions remain available for historical reconciliation.
-    appendLines(state.coverageFd!, state.coverageContents, newGaps);
-    appendLines(state.fd, state.contents, contributions);
-    return { appended: contributions.length, repeat, gaps: newGaps.length + legacyConflicts.size + inferred.length };
-  })!;
+    appendLines(state.coverageFd!, state.coverageContents, newGaps, profile.spoolByteLimit);
+    appendLines(state.fd, state.contents, contributions, profile.spoolByteLimit);
+    return { appended: contributions.length, repeat, gaps: checkedGaps.length + legacyConflicts.size + inferred.length };
+  }, options.importSpool ? coordinatorLock : "flock")!;
 }

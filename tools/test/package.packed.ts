@@ -13,6 +13,12 @@ const tools = fileURLToPath(new URL("../", import.meta.url));
 const stamp = "2026-11-19T10:00:00Z";
 
 test("packs once and invokes the installed commands with isolated local data", { timeout: 480_000 }, (t) => {
+  const inventoryBytes = readFileSync(join(tools, "test", "required-cases.json"));
+  // The release owner supplies the same digest independently to the Actions verification step.
+  const approvedInventory = process.env.METHODOLOGY_APPROVED_INVENTORY_SHA256 ?? "54b94fb57901cffdb97ab251f86254f1c453e5044fcb02eeafc72664f599ecb8";
+  assert.equal(createHash("sha256").update(inventoryBytes).digest("hex"), approvedInventory,
+    "Required test inventory differs from the release owner's approved inventory");
+  const inventory: Record<string, string[]> = JSON.parse(inventoryBytes.toString("utf8"));
   const root = mkdtempSync(join(realpathSync(tmpdir()), "methodology-metrics-packed-"));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const install = join(root, "install");
@@ -126,7 +132,7 @@ test("packs once and invokes the installed commands with isolated local data", {
   };
   // A nested Node test runner skips its files if it inherits this marker.
   delete contractEnv.NODE_TEST_CONTEXT;
-  const inventory: Record<string,string[]> = JSON.parse(readFileSync(join(tools,"test","required-cases.json"),"utf8"));
+
   const suites = readdirSync(join(tools,"test")).filter(name=>name.endsWith(".test.ts")).sort();
   assert.deepEqual(Object.keys(inventory).sort(),suites,"Every mandatory suite must have a reviewed inventory");
   const frozen: Record<string,string> = {

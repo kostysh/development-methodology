@@ -69,6 +69,27 @@ Bind the producer and the policy to a trusted boundary. The candidate
 must not supply its own mandatory results because it could claim a pass
 without executing the required checks.
 
+For GitHub Check Runs the installed producer is:
+
+```bash
+methodology-train export-checks /trusted/provider-policy.json "$pr" "$head" "$ref" > results.json
+methodology-controls checks /trusted/required-policy.json results.json
+```
+
+Set `repository`, target `branch` and the `required` rows (`id`, check
+`name`, publisher `appId` and pinned `workflow` for GitHub Actions) as in
+the [admission policy](merge-train.md#publish-a-head-bound-audit-and-required-results).
+Supply a scoped read token in `GH_TOKEN` and run the exporter in the trusted
+integration job. It checks the current same-repository PR and produces one
+row per required ID from the latest Check Run on the expected head. A
+missing run, wrong authority, failed check or skip produces an unverified
+row that holds the gate. If the policy sets a numeric `minimum`, the trusted
+publisher must expose `{"threshold":85,"measured":90}` in its Check Run
+output summary, with the actual values. The exporter checks both before
+emitting them. An installation that permits particular skips needs its own
+trusted skip evidence. Preserve the export command exit status before using
+its file. The packaged admission workflow runs the same exporter logic.
+
 ## Run with a shared resource
 
 Provision one protected lock directory on a filesystem that provides
@@ -91,7 +112,7 @@ Apply memory limits, filesystem, network and credential isolation at the
 runner boundary selected in the profile.
 
 The runner holds the lock through cleanup and result recording. A busy
-contender exits before it runs a command. If the invoking process dies,
+contender exits 75 before it runs a command. If the invoking process dies,
 the supervisor terminates the foreground group and runs cleanup. If the
 supervisor also dies, the kernel releases the file lock and the persistent
 reconciliation marker holds the next run. Set an absolute `reconcile`
@@ -142,6 +163,18 @@ verify the same archive was the input to the installed checks.
    manifest, and unavailable trusted inputs. Record which boundary rejected
    each case. Restore verified settings and repeat the affected checks after
    a control failure or update.
+
+For a GitHub push check, copy `assets/controls/baseline.yml` from the
+installed tooling to `.github/workflows/baseline.yml`. Set the accepted
+commit containing the verified release archive at `methodology-ci/tools.tgz`,
+the accepted baseline commit and the manifest path before approving the
+workflow. On a clean runner it fetches Git objects, installs the accepted
+archive offline and runs the verifier on the exact pushed commit. Configure
+the trusted gate to require the job from that pinned workflow, including
+its workflow ID, blob, event and check suite as in the
+[GitHub admission procedure](merge-train.md#publish-a-head-bound-audit-and-required-results).
+Give an ordinary integration route an equivalent independently protected
+workflow requirement. Run the baseline tests as their own required result.
 
 Select a versioned build and use its documented install and invocation
 commands. Record those commands and the tested host versions in the

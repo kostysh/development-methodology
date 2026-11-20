@@ -45,3 +45,54 @@ int main(int argc, char **argv) {
     assert.deepEqual(r.integrated,[1]); assert.deepEqual(r.attempts.map(a=>a.result),[{result:"pass"}]);
   } finally { process.umask(oldMask); if(previous === undefined) delete process.env.GH_TOKEN; else process.env.GH_TOKEN=previous; }
 });
+
+test("the packaged verifier exercises fresh PostgreSQL on full and targeted runs and releases its resources",async t=>{
+  const {dirname,resolve}=await import("node:path");
+  const {fileURLToPath}=await import("node:url");
+  const {realpathSync,cpSync,readFileSync}=await import("node:fs");
+  const {randomUUID}=await import("node:crypto");
+  const {Objects}=await import("./train-runtime-fixture.ts");
+  const root=fixture();t.after(()=>rmSync(root,{recursive:true,force:true}));
+  const src=process.env.METHODOLOGY_TRAIN_BIN?resolve(dirname(realpathSync(process.env.METHODOLOGY_TRAIN_BIN)),"../assets/train/verifier"):
+    fileURLToPath(new URL("../assets/train/verifier/",import.meta.url));
+  const base=readFileSync(join(src,"Dockerfile"),"utf8").match(/^ARG VERIFY_BASE=(\S+)/m)![1];
+  const docker=(...args:string[])=>execFileSync("docker",args,{encoding:"utf8",stdio:["ignore","pipe","pipe"],
+    env:{...process.env,BUILDX_CONFIG:join(root,"buildx")}}).trim();
+  const c=config(root);
+  c.suiteImage=docker("build","--network=none","-q",src);
+  c.postgresImage=base;
+  const dir=join(root,"run","git");mkdirSync(dir,{recursive:true});
+  const obj=new Objects(dir,join(root,"remote.git"),"main",Date.now()+100000);obj.init();
+  const edit=join(root,"author");
+  writeFileSync(join(edit,"README.md"),"Reference\n");writeFileSync(join(edit,"products.csv"),"id,price_cents\n1,125\n");
+  git(edit,"add","README.md","products.csv");git(edit,"commit","-m","contract input");git(edit,"push",obj.remote,"HEAD:main");
+  const sha=obj.base(),id=randomUUID(); const {runSuite}=await mod("suite");
+  assert.deepEqual(runSuite(c,obj,id,"full",sha,[]),{result:"pass"});
+  writeFileSync(join(edit,"products.csv"),"id,price_cents\n1,999\n");git(edit,"add","products.csv");git(edit,"commit","-m","different observed value");
+  git(edit,"push",obj.remote,"HEAD:main");
+  assert.deepEqual(runSuite(c,obj,id,"targeted",obj.base(),["postgres-roundtrip"]),{result:"fail",tests:["postgres-roundtrip"]});
+  assert.deepEqual(runSuite(c,obj,id,"docs",sha,[]),{result:"pass"});
+  // The trusted oracle contacts the separately running candidate over
+  // loopback and observes the bytes served from the exact selected tree.
+  const context=join(root,"service");mkdirSync(context);
+  writeFileSync(join(context,"service.pl"),`use IO::Socket::INET;
+my $s=IO::Socket::INET->new(LocalAddr=>"127.0.0.1",LocalPort=>8098,Listen=>8,ReuseAddr=>1) or die;
+while(my $client=$s->accept){open my $f,"<","/candidate/products.csv" or die;while(my $line=<$f>){print {$client} $line;}close $client;}
+`);
+  writeFileSync(join(context,"Dockerfile"),"FROM "+base+'\nCOPY service.pl /opt/service.pl\nENTRYPOINT ["perl","/opt/service.pl"]\n');
+  c.serviceImage=docker("build","--network=none","--label","methodology.test="+id,"-q",context);
+  t.after(()=>docker("image","rm",c.serviceImage!));
+  const oracle=join(root,"oracle");cpSync(src,oracle,{recursive:true});
+  writeFileSync(join(oracle,"full.list"),"service-readback\n");
+  writeFileSync(join(oracle,"cases","service-readback"),`#!/bin/bash
+for i in 1 2 3 4 5; do
+  if exec 3<>/dev/tcp/127.0.0.1/8098; then grep -qx '1,125' <&3; exit $?; fi
+  sleep 0.1
+done
+exit 2
+`,{mode:0o755});
+  c.suiteImage=docker("build","--network=none","--label","methodology.test="+id,"-q",oracle);
+  t.after(()=>docker("image","rm",c.suiteImage));
+  assert.deepEqual(runSuite(c,obj,id,"targeted",sha,["service-readback"]),{result:"pass"});
+  assert.equal(docker("ps","-aq","--filter","label=methodology.train.run="+id),"");
+});

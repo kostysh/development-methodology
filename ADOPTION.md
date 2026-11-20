@@ -254,16 +254,17 @@ Read the [changelog](CHANGELOG.md). Install the new version alongside the old on
 
 ### Roll back a release
 
-1. Pause the train dispatcher and reconcile its last write and deployment.
-   Keep the target protected. Retain the current task journal and decision
-   ledger with their profile and owning data permissions.
-2. With the new executable still installed, run
-   `methodology-metrics uninstall-hooks PROFILE SOURCE` for each changed
-   native source and `methodology-recovery uninstall-hook PROFILE --client CLIENT` for recovery. Compare the resulting settings with the saved working copy.
-3. Switch executable paths, trusted CI configuration and versioned skill
-   directories back to the recorded release. Restore its local lockfile and
-   the prior profile. Verify the previous skill is discoverable in a new
-   session, a clean check succeeds and the same known violation is blocked.
-4. If collection was enabled previously, verify a positive record using the
-   earlier hook. Read back protection, writer and deployed revision before
-   resuming integration. Record the observed results.
+1. If a train is active, pause its dispatcher, keep the target protected
+   and reconcile its last write and deployment. Preserve any journal and
+   decision ledger with their profile and access permissions.
+2. Remove each hook added by the new release while its executable is
+   available. For metrics use `methodology-metrics uninstall-hooks PROFILE SOURCE`.
+   For recovery use `methodology-recovery uninstall-hook PROFILE --client CLIENT`.
+   Compare the affected settings with the saved working copy.
+3. Switch the paths you changed back to the previous installation. Restore
+   any changed profile, skill, lockfile or CI configuration from the saved
+   copy. Verify a clean check succeeds and the same known violation fails.
+   If a skill changed, verify it in a fresh session.
+4. If collection was active on the earlier release, observe a positive
+   hook record. Before restarting a train, verify its branch protection,
+   writer and deployed revision. Record the results for the components used.

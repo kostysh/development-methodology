@@ -1,6 +1,6 @@
 {
   "name": "@kostysh/development-methodology-tools",
-  "version": "5.0.1",
+  "version": "5.0.2",
   "private": true,
   "description": "Project-local process metrics, decision gates, verification and integration tools",
   "type": "module",
@@ -14,6 +14,7 @@
     "methodology-metrics": "./dist/metrics.js",
     "methodology-recovery": "./dist/recovery.js",
     "methodology-solo": "./dist/solo.js",
+    "methodology-task": "./dist/task.js",
     "methodology-train": "./dist/train.js"
   },
   "files": [

@@ -1,0 +1,7 @@
+# System crontab for a trusted runner whose cron daemon uses UTC.
+# Set the installation ID, paths and service account for the adopting project.
+SHELL=/bin/sh
+PATH=/opt/methodology/bin:/usr/local/bin:/usr/bin:/bin
+TRAIN_INSTALLATION_ID=REPLACE_WITH_PROJECT_INSTALLATION_ID
+TRAIN_APP_KEY_FILE=/etc/methodology/train-app.pem
+0 0,2,4 * * * methodology-train /opt/methodology/bin/methodology-train run /etc/methodology/train.json --scheduled

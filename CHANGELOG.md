@@ -4,6 +4,23 @@ These entries are for a project that updates its copy of the package
 ([update procedure](ADOPTION.md#updating-the-methodology)). Each version
 states what requires action in the adopting project.
 
+## 5.0.2
+
+- Install 5.0.2 in a fresh release directory. Keep the existing filled
+  profile. Choose pinned guide links or an offline guide copy in a fresh
+  project directory. Verify links from the project's actual entry points.
+  The paired skill release is `skills-v5.0.0`. [Adoption](ADOPTION.md#5-connect-the-instructions)
+- Configure the installed task coordinator once. Use `methodology-task
+  begin` and `finish` for native hooks, optional recovery, workspace
+  observations and the final task report. Record acceptance only at the
+  project's agreed boundary. [Task commands](defaults/process-metrics.md#begin-and-finish-a-task)
+- Keep the usual GitHub identity for PRs. Configure the independent
+  reviewer, trusted App publisher and any protected verification paths.
+  To keep dependencies across replacement PRs, migrate the selected
+  numeric references to stable task keys. Commission an actual scheduled
+  start and verify the outcomes while the operator is offline.
+  [Train](defaults/merge-train.md) · [Review policy](defaults/controls.md#protect-the-review-policy)
+
 ## 5.0.1
 
 - Install the guide and tools in a fresh version directory, keep the filled project profile in its existing location and verify the CI checksum manifest before extracting. Use the paired `skills-v5.0.0` release. [Installation and update](ADOPTION.md#2-place-and-configure)

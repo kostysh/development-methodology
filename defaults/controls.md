@@ -128,6 +128,65 @@ minimal environment and exports fixed status fields. It discards child
 output. Run untrusted or read-only checks under an identity that cannot
 read writer credentials from the host, filesystem or service.
 
+## Protect the review policy
+
+The integration owner chooses the files that govern CI, the inventory of
+mandatory tests and its approval policy. Keep the approved policy on the
+coordinator outside the PR. For example, add this object to the train's
+trusted admission policy, using the digest of the inventory the owner
+actually reviewed.
+
+```json
+{
+  "reviewControls": {
+    "paths": [".github/workflows", "tools/test/package.packed.ts"],
+    "inventory": {
+      "path": "tools/test/required-cases.json",
+      "sha256": "<approved 64-character lowercase SHA-256>"
+    }
+  }
+}
+```
+
+Paths are literal repository files or directories. A directory covers its
+descendants. The inventory path is automatically protected. Include any
+project-owned file that defines who may approve these changes.
+
+The author opens the PR with the usual account. An independent reviewer
+assesses the exact base and proposed commit. The coordinator fetches these
+objects into a trusted Git repository and runs the installed
+[review publisher](merge-train.md#publish-an-independent-agents-verdict-through-the-existing-app)
+from that repository. It reads committed objects and checks the inventory
+digest against the external policy on every PASS. It detects changes in the
+PR relative to its common ancestor with the base.
+
+For a protected change the coordinator shows the owner the changed paths,
+the effect on the checks and the exact revision. An ordinary affirmative
+reply in the project conversation authorizes that change. Pass its message
+reference with `--owner-message`. To change the inventory, review the
+added and removed cases and update the external digest for the accepted
+revision before retrying. An unrelated PR needs only its independent review.
+A different head or base needs a new review. The private verdict and the
+reference are inputs from the trusted coordinator.
+
+For a branch where the coordinator merges through an ordinary project
+account, use the same policy with the installed command below. Run it from
+the trusted object repository. Take the base and head from the live PR.
+Supply the message reference only after the owner confirms the displayed
+change. A nonzero exit holds this PR. Recheck the branch, candidate and
+required CI before merging the reviewed head.
+
+```sh
+methodology-controls review-policy "$policy" "$base_sha" "$head_sha"
+# After an affirmative reply for a protected change:
+methodology-controls review-policy "$policy" "$base_sha" "$head_sha" --owner-message "$message_ref"
+```
+
+If GitHub must enforce this review, configure the branch to require the
+trusted result and verify it on an ordinary author PR before relying on
+it. A project that selects PR plus CI alone assigns the final check to its
+integration owner. The project profile names the enforcing boundary.
+
 ## Verify the distribution
 
 Run the owning package's locked install and install its packed distribution

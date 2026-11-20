@@ -57,8 +57,8 @@ export function makeEnv(root: string, suite: (kind:Kind, sha:string, tests:strin
     return {number:n,head,ref:"change/"+n,open:!merged,merged,draft:false,target:"main",sameRepo:true,labels:[]};
   }
   const env: Environment = {
-    host: () => ({ get,list:()=> (JSON.parse(readFileSync(join(root,"pulls.json"),"utf8")) as number[]).map(get).filter(p=>p.open),
-      gates:p=>p.open && (opts.permit?.(p) ?? true), verifyWriter:()=>{},verifyImmutable:()=>{},mark:()=>{},comment:()=>{} }),
+    host: () => ({ get,list:(state="open")=> (JSON.parse(readFileSync(join(root,"pulls.json"),"utf8")) as number[]).map(get).filter(p=>state==="all" || p.open),
+      audit:()=>false, gates:p=>p.open && (opts.permit?.(p) ?? true), verifyWriter:()=>{},verifyImmutable:()=>{},mark:()=>{},comment:()=>{} }),
     objects: (dir,c,d) => {
       const o = new Objects(dir,remote,c.branch,d);
       if (opts.publish) o.publish = (base,candidate) => opts.publish!(o,base,candidate);

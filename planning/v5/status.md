@@ -1,6 +1,8 @@
 # v5 delivery and evidence
 
 The [adoption-readiness plan](adoption-readiness.md) governs v5.
+The [5.0.2 follow-up](external-review-5.0.1-resolution.md) covers the
+independent 5.0.1 re-review, including the nightly route for a single-author project.
 The [external review follow-up](external-review-resolution.md) records the
 four adoption blockers in 5.0.0 and the verification of their 5.0.1 fixes.
 The [published 5.0.1 guide and tools](https://github.com/kostysh/development-methodology/releases/tag/methodology-v5.0.1)

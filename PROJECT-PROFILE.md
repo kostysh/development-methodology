@@ -39,6 +39,7 @@ reason; `unknown` blocks only the actions that depend on the missing decision.
 | Source isolation; task worktree or an accepted equivalent | Not set |
 | Branch names, commit style, PR, and history rules | Not set |
 | Required live protection/checks/reviews and how to read them | Not set |
+| Protected CI and test-inventory paths, external inventory digest and decision source, enforcing actor or branch check | Not set |
 | Integration method and proof of the final commit/tree | Not set |
 | Execution tracker; where the requirements owner's decisions live | Not set |
 | Mapping of local statuses to the task model | Not set |
@@ -54,11 +55,12 @@ Use the [GitHub default](defaults/merge-train.md) when it fits the project.
 | --- | --- |
 | Activation decision, owner and reason, including measured demand where available | Not set |
 | Protected branch, sole writer identity, and protection evidence | Not set |
-| Immutable submission branch pattern, stable task key and ruleset | Not set |
-| Independent audit reviewers and trusted check publisher, workflow revision and required jobs | Not set |
+| Immutable submission branch pattern, task keys and dependencies, ruleset and retention of closed refs | Not set |
+| Expected PR author ID if restricted, independent reviewer, App bot user ID or human review publisher | Not set |
+| Trusted check publisher, workflow revision and required jobs | Not set |
 | Trusted train package and version, scheduler, runner, lock and status sources | Not set |
 | Expensive suite, approved temporary resource types and test environment, if applicable | Not set |
-| Night window, time zone, maximum run duration and how the runner renews its access | Not set |
+| Night window, time zone, observed scheduler start, maximum run duration and how the runner renews its access | Not set |
 | PR limit `N`, migration PR limit, and full-suite run budget | Not set |
 | Recurrence window `M` in days | Not set |
 | Paths eligible for the documentation-only route | Not set |

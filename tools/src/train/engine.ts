@@ -5,7 +5,27 @@ export type Cause = "dependency" | "conflict" | "test" | "interaction" | "other"
 export type Exclusion = { task?:string; pr: number; head: string; cause: Cause; reason: string; tests: string[] };
 export type Suite = { result: "pass" | "infra"; detail?: string; started?: boolean } | { result: "fail"; tests: string[] };
 export type Kind = "full" | "targeted" | "docs";
+export type OwnerHold = {pr:number; head:string} & ({paths:string[]} | {requires:number});
+// Keep every dependency edge that leads to an outstanding owner decision.
+// Recording both parents lets a targeted release clear just the resolved path.
+export function activeOwnerHolds(rows: OwnerHold[]): OwnerHold[] {
+  const holds: OwnerHold[] = rows.filter(row => "paths" in row);
+  const blocked = new Set(holds.map(row => row.pr));
+  let waiting = rows.filter(row => "requires" in row);
+  while (waiting.length) {
+    const next = waiting.filter(row => {
+      if (!blocked.has(row.requires)) return true;
+      blocked.add(row.pr);
+      holds.push(row);
+      return false;
+    });
+    if (next.length === waiting.length) break;
+    waiting = next;
+  }
+  return holds;
+}
 export type Receipt = {
+  ownerHolds?: OwnerHold[]; requestedPr?: number;
   id: string; mode: "dry" | "enabled"; started: string; ended?: string; result: "running" | "completed" | "interrupted" | "skipped";
   retryable?: boolean; interruptionTimeUnknown?: boolean; slot?: string; base?: string; c0?: string; c1?: string; candidate?: string; tree?: string; branchReadback?: string; treeReadback?: string;
   deployed?: string; integrated: number[]; proposed: number[]; excluded: Exclusion[];

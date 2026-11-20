@@ -52,8 +52,9 @@ export class Repository {
   private readonly oidLength: number;
   private readonly trees = new Map<string, Map<string, Child>>();
 
-  constructor(cwd: string) {
-    this.root = utf8(git(cwd, ["rev-parse", "--show-toplevel"], "worktree root"), "worktree root")
+  constructor(cwd: string, location: "worktree" | "objects" = "worktree") {
+    const rootFlag = location === "objects" ? "--absolute-git-dir" : "--show-toplevel";
+    this.root = utf8(git(cwd, ["rev-parse", rootFlag], "repository root"), "repository root")
       .replace(/\n$/, "");
     const format = git(this.root, ["rev-parse", "--show-object-format=storage"], "object format").toString().trim();
     if (format !== "sha1" && format !== "sha256") throw new Error("Unsupported Git object format");
@@ -67,6 +68,11 @@ export class Repository {
     const type = git(this.root, ["cat-file", "-t", value], `${label} commit ${value}`).toString();
     if (type !== "commit\n") throw new Error(`Expected a commit for ${label} ${value}`);
     return value;
+  }
+
+  commonAncestor(base: string, head: string): string {
+    const ancestors = git(this.root, ["merge-base", "--all", base, head], "common ancestor").toString().trim();
+    return this.commit(ancestors, "unique common ancestor");
   }
 
   blob(entry: Entry): Buffer {

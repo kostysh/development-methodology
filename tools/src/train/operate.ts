@@ -1,17 +1,19 @@
 import { existsSync, mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
+import { Repository } from "../baseline/git.js";
+import { changedReviewPaths } from "./review-policy.js";
 import { gateLockPath, type Config } from "./config.js";
 import { useToken, writerCredential, type Credential } from "./credential.js";
-import { exclude, verifyBatch, type Entry, type Receipt } from "./engine.js";
-import { GitHub, submissionTask, type Pull } from "./github.js";
+import { activeOwnerHolds, exclude, verifyBatch, type Entry, type OwnerHold, type Receipt } from "./engine.js";
+import { GitHub, submissionIdentityIssue, submissionTask, type Pull } from "./github.js";
 import { Objects, oid, RejectedLease } from "./git.js";
 import { command } from "./process.js";
 import { observe } from "./report.js";
 import { AuthorityBusy, authorityLock, history, load, lock, read, receipt, save, type Pending } from "./state.js";
 import { cleanupContainer, runSuite } from "./suite.js";
 
-type Host = Pick<GitHub, "list"|"get"|"mark"|"comment"|"verifyWriter"|"verifyImmutable"|"gates">;
+type Host = Pick<GitHub, "list"|"get"|"mark"|"comment"|"verifyWriter"|"verifyImmutable"|"gates"|"audit">;
 export type Environment = {
   host(c: Config, deadline: number): Host;
   objects(dir: string, c: Config, deadline: number): Objects;
@@ -27,6 +29,37 @@ function ordinary(c: Config, deadline: number): Environment {
 }
 type Dispatch = { pr?: number; docs?: boolean; scheduled?: boolean };
 function matches(path: string, list: string[]) { return list.some(p => path === p || (p.endsWith("/") && path.startsWith(p))); }
+// Include open submissions and merged history on this target. A closed,
+// unmerged PR is a returned attempt, even if its protected branch still exists.
+function taskIndex(pulls: Pull[], branch: string) {
+  const index = new Map<string, number[]>();
+  for (const p of pulls) {
+    if ((!p.open && !p.merged) || !p.sameRepo || p.target !== branch) continue;
+    const task = submissionTask(p);
+    if (!task) continue;
+    const entries = index.get(task) ?? [];
+    entries.push(p.number);
+    index.set(task,entries);
+  }
+  return index;
+}
+
+function dependencies(c: Config, p: Pull, index?: Map<string, number[]>): number[] | string {
+  const deps = c.dependencies[p.number] ?? [];
+  if (!index || !c.taskDependencies) return deps;
+  const task = submissionTask(p);
+  if (!task) return "Stable task dependencies require a ready ref matching the exact PR head";
+  if (index.get(task)?.length !== 1) return "Ambiguous submission for task " + task;
+  const required = Object.hasOwn(c.taskDependencies,task) ? c.taskDependencies[task] : [];
+  const resolved = new Set(deps);
+  for (const key of required) {
+    const matches = index.get(key);
+    if (matches?.length !== 1) return (matches?.length ? "Ambiguous" : "Missing") + " prerequisite task " + key;
+    resolved.add(matches[0]);
+  }
+  return [...resolved];
+}
+
 function work(c: Config, id: string) {
   if (!/^[\da-f-]{36}$/.test(id)) throw new Error("Invalid owned workspace ID");
   return join(c.stateDir, "work-" + id);
@@ -70,6 +103,7 @@ export async function operate(c: Config, options: Dispatch, supplied?: Environme
   const d = Date.now() + c.timeoutSeconds * 1000;
   const env = supplied ?? ordinary(c,d);
   const r = receipt(c);
+  r.requestedPr = options.pr;
   const started = Date.parse(r.started);
   if (options.scheduled) {
     const hour = new Date(started);
@@ -103,12 +137,26 @@ export async function operate(c: Config, options: Dispatch, supplied?: Environme
       rmSync(work(c,s.resource),{recursive:true,force:true});
       r.recovery.push("Cleaned run-owned resources " + s.resource); delete s.resource; checkpoint();
     }
-    const pulls = gh.list().sort((a,b) => a.number - b.number);
+    const usesTaskKeys = Object.keys(c.taskDependencies ?? {}).length > 0;
+    const listed = gh.list(usesTaskKeys ? "all" : "open");
+    const tasks = usesTaskKeys ? taskIndex(listed,c.branch) : undefined;
+    const pulls = listed.filter(p => p.open).sort((a,b) => a.number - b.number);
     const open = new Set(pulls.map(p => String(p.number)));
     for (const n of Object.keys(s.admitted)) if (!open.has(n)) delete s.admitted[n];
-    const candidates = pulls.filter(p => !options.pr || options.pr === p.number);
+    const candidates = pulls.filter(p => {
+      if (options.pr && options.pr !== p.number) return false;
+      if (c.admission && p.sameRepo && submissionTask(p)) {
+        const issue = submissionIdentityIssue(p,c.admission);
+        if (issue) {
+          exclude(r,p,"other",issue + ". Check the configured PR author and independent review publisher");
+          return false;
+        }
+      }
+      return true;
+    });
     r.queue = pulls.map(p => p.number);
-    if (!s.pending && !candidates.length) { r.result = "completed"; return r; }
+    if (c.admission?.reviewControls) r.ownerHolds = [];
+    if (!s.pending && !candidates.length) { checkpoint(); r.result = "completed"; return r; }
 
     s.resource = r.id; checkpoint();
     const dir = join(work(c,r.id),"git"); mkdirSync(dir, {recursive:true, mode:0o700});
@@ -133,9 +181,38 @@ export async function operate(c: Config, options: Dispatch, supplied?: Environme
       return prior.slice(at + 1).filter(x => x.mode === c.mode)
         .flatMap(x => x.excluded.filter(e => same(e) && ["test","interaction","conflict"].includes(e.cause)));
     };
+    const policy = c.admission;
+    const controls = policy?.reviewControls;
+    const protectedChanges = new Set<number>();
+    const heldPrs = new Set<number>();
+    if (controls && policy) {
+      const repository = new Repository(dir,"objects");
+      const holds: OwnerHold[] = [];
+      for (const p of candidates) {
+        if (!p.sameRepo || p.draft || !submissionTask(p)) continue;
+        if (git.fetch("refs/pull/" + p.number + "/head") !== p.head) {
+          exclude(r,p,"other","PR changed during admission"); continue;
+        }
+        const paths = changedReviewPaths(controls,r.base,p.head,repository);
+        if (!paths.length) continue;
+        protectedChanges.add(p.number);
+        if (!gh.audit(p,policy,true)) holds.push({pr:p.number,head:p.head,paths});
+      }
+      if (holds.length) {
+        for (const p of candidates) {
+          const deps = dependencies(c,p,tasks);
+          if (Array.isArray(deps)) for (const requires of new Set(deps)) holds.push({pr:p.number,head:p.head,requires});
+        }
+        r.ownerHolds = activeOwnerHolds(holds);
+        for (const hold of r.ownerHolds) heldPrs.add(hold.pr);
+      }
+    }
     const eligible: Entry[] = [];
     for (const p of candidates) {
       const old = s.admitted[p.number];
+      if (heldPrs.has(p.number) || r.excluded.some(e => e.pr === p.number)) {
+        gh.mark(p,false); delete s.admitted[p.number]; continue;
+      }
       if (old && old.head !== p.head) {
         delete s.admitted[p.number]; gh.mark(p,false); exclude(r,p,"other","Admission invalidated by head change");
         continue;
@@ -146,11 +223,19 @@ export async function operate(c: Config, options: Dispatch, supplied?: Environme
         if (recurring) r.decisions.push("Operator disposition required for repeated exclusion of #" + p.number);
         gh.mark(p,false); delete s.admitted[p.number]; continue;
       }
-      if (!gh.gates(p,c.checks) || blockedState(c,p,d)) {
+      if (controls && (!p.sameRepo || p.draft || !submissionTask(p))) {
+        if (old || options.pr) exclude(r,p,"other","No eligible immutable submission");
+        gh.mark(p,false); delete s.admitted[p.number]; continue;
+      }
+      if (!gh.gates(p,c.checks,protectedChanges.has(p.number)) || blockedState(c,p,d)) {
         if (old || options.pr) exclude(r,p,"other","Missing admission checks or merge permission");
         gh.mark(p,false); delete s.admitted[p.number]; continue;
       }
-      if (git.fetch("refs/pull/" + p.number + "/head") !== p.head) {
+      const deps = dependencies(c,p,tasks);
+      if (typeof deps === "string") {
+        exclude(r,p,"dependency",deps); gh.mark(p,false); delete s.admitted[p.number]; continue;
+      }
+      if (!controls && git.fetch("refs/pull/" + p.number + "/head") !== p.head) {
         exclude(r,p,"other","PR changed during admission"); gh.mark(p,false); delete s.admitted[p.number]; continue;
       }
       const paths = git.paths(r.base,p.head);
@@ -164,12 +249,11 @@ export async function operate(c: Config, options: Dispatch, supplied?: Environme
         gh.mark(p,false); delete s.admitted[p.number]; continue;
       }
       s.admitted[p.number] ??= {head:p.head,at:Date.now()}; gh.mark(p,true);
-      eligible.push({pull:p, deps:c.dependencies[p.number] ?? [], migration,docs});
+      eligible.push({pull:p, deps, migration,docs});
     }
     checkpoint();
-    eligible.sort((a,b) => s.admitted[a.pull.number].at - s.admitted[b.pull.number].at || a.pull.number - b.pull.number);
+    const waiting = eligible.sort((a,b) => s.admitted[a.pull.number].at - s.admitted[b.pull.number].at || a.pull.number - b.pull.number);
     const chosen: Entry[] = [];
-    const waiting = [...eligible];
     while (waiting.length && chosen.length < c.maxPrs) {
       const at = waiting.findIndex(e => !e.deps.some(id => waiting.some(x => x.pull.number === id)) &&
         (!e.migration || chosen.filter(x => x.migration).length < c.maxMigrations));
@@ -203,11 +287,17 @@ export async function operate(c: Config, options: Dispatch, supplied?: Environme
       const releaseAuthority = authority ? authorityLock(authority,true) : undefined;
       try {
         git.authorityFd = releaseAuthority?.fd;
+        const finalTasks = usesTaskKeys ? taskIndex(gh.list("all"),c.branch) : undefined;
         for (const e of included) {
+          if (finalTasks) {
+            const deps = dependencies(c,e.pull,finalTasks);
+            if (typeof deps === "string" || deps.some((id,i) => id !== e.deps[i]) || deps.length !== e.deps.length)
+              throw new Error("Task dependency changed before publication for PR #" + e.pull.number);
+          }
           if (c.immutableSources) gh.verifyImmutable(e.pull.ref);
           const p = gh.get(e.pull.number);
           const required = e.migration ? [...c.checks,...c.migrationChecks] : c.checks;
-          if (p.head !== e.pull.head || p.ref !== e.pull.ref || !gh.gates(p,required) || blockedState(c,p,d)) {
+          if (p.head !== e.pull.head || p.ref !== e.pull.ref || !gh.gates(p,required,protectedChanges.has(p.number)) || blockedState(c,p,d)) {
             exclude(r,p,"other","Final PR head, admission checks or permission changed");
             throw new Error("Final admission rejected PR #" + p.number);
           }
@@ -257,8 +347,12 @@ export async function operate(c: Config, options: Dispatch, supplied?: Environme
           delete s.admitted[e.pr];
           if (gh) {
             const p = gh.get(e.pr); gh.mark(p,false);
+            const next = e.cause === "dependency"
+              ? ". Resolve the prerequisite and retry the unchanged head, or submit a correction if the dependant must change."
+              : e.task ? ". Close this returned PR, correct the editable task branch, submit a fresh ready/" + e.task +
+                "-<new-head> PR and obtain fresh checks and independent review." : "";
             gh.comment(e.pr,"Train " + r.id + " returned #" + e.pr + ". " + e.reason +
-              (e.tests.length ? ". Tests: " + e.tests.join(", ") : "") + ". Run receipt: " + r.id + (e.task ? ". Close this returned PR, correct the editable task branch, submit a fresh ready/" + e.task + "-<new-head> PR and obtain fresh checks and independent review." : ""));
+              (e.tests.length ? ". Tests: " + e.tests.join(", ") : "") + ". Run receipt: " + r.id + next);
           }
         }
         save(join(c.stateDir,"state.json"),s);

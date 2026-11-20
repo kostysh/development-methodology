@@ -1,16 +1,17 @@
 import { lstatSync, readFileSync, realpathSync } from "node:fs";
 import { isAbsolute } from "node:path";
+import { reviewControls, type ReviewControls } from "./review-policy.js";
 
 export type WorkflowAuthority = {id: number; path: string; blob: string; publicRead?: boolean; event?: "push" | "workflow_dispatch"};
 export type Gate = { name: string; appId: number; workflow?: WorkflowAuthority };
-export type Admission = {repository:string; branch:string; reviewerId:number; required:(Gate & {id:string; minimum?:number})[];
-  baseline?: {commit:string; manifest:string}};
+export type Admission = {repository:string; branch:string; reviewerId:number; submitterId?:number; required:(Gate & {id:string; minimum?:number})[];
+  reviewControls?: ReviewControls; baseline?: {commit:string; manifest:string}};
 export type Config = {
   repository: string; branch: string; writerAppId: number; stateDir: string; mode: "dry" | "enabled";
   admissionPolicy?: string; admission?: Admission; checks: Gate[]; migrationChecks: Gate[]; queueLabel: string; suiteImage: string; postgresImage?: string; serviceImage?: string;
   timeoutSeconds: number; maxPrs: number; maxMigrations: number; fullBudget: number;
   flakeDays: number; flakeOwner: string; migrationPaths: string[]; docsPaths: string[];
-  dependencies: Record<string, number[]>; disposition?: Record<string, string>; deployment?: string; immutableSources?: boolean; ruleEvidence?: string; mergeGateLock?: string; mergeGate?: string | [string, ...string[]];
+  dependencies: Record<string, number[]>; taskDependencies?: Record<string, string[]>; disposition?: Record<string, string>; deployment?: string; immutableSources?: boolean; ruleEvidence?: string; mergeGateLock?: string; mergeGate?: string | [string, ...string[]];
   schedule?: { hoursUtc: number[]; graceMinutes: number };
   metrics?: { profile: string; source: string; task: string };
 };
@@ -55,9 +56,12 @@ export function readAdmission(path: string, reviewRequired = true): Admission {
   const a = JSON.parse(readFileSync(path,"utf8")) as Admission;
   need(typeof a.repository === "string" && /^[\w.-]+\/[\w.-]+$/.test(a.repository) &&
     typeof a.branch === "string" && /^[\w][\w./-]*$/.test(a.branch) && (!reviewRequired || positive(a.reviewerId)), "admission repository, branch and independent reviewer ID");
+  need(a.submitterId === undefined || (positive(a.submitterId) && a.submitterId !== a.reviewerId),
+    "submission identity must differ from the reviewer ID");
   need(gates(a.required,true) && a.required.every(g => typeof g.id === "string" && /^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,127}$/.test(g.id) &&
       (g.minimum === undefined || (Number.isFinite(g.minimum) && g.minimum >= 0))) &&
     new Set(a.required.map(g=>g.id)).size === a.required.length, "required check authorities and unique result IDs");
+  a.reviewControls = reviewControls(a.reviewControls);
   if (a.baseline) need(/^[a-f0-9]{40}$/.test(a.baseline.commit) && typeof a.baseline.manifest === "string" && a.baseline.manifest.length, "baseline commit and manifest");
   return a;
 }
@@ -91,6 +95,12 @@ export function readConfig(path: string): Config {
   need(c.dependencies && typeof c.dependencies === "object" && !Array.isArray(c.dependencies) &&
     Object.entries(c.dependencies).every(([key, ids]) => /^[1-9]\d*$/.test(key) && Array.isArray(ids) &&
       ids.every(positive) && !ids.includes(Number(key))), "dependencies");
+  if (c.taskDependencies !== undefined) {
+    const task = /^[A-Za-z0-9][A-Za-z0-9_-]{0,80}$/;
+    need(c.taskDependencies && typeof c.taskDependencies === "object" && !Array.isArray(c.taskDependencies) &&
+      Object.entries(c.taskDependencies).every(([key, deps]) => task.test(key) && Array.isArray(deps) &&
+        deps.every(dep => typeof dep === "string" && task.test(dep) && dep !== key)), "taskDependencies");
+  }
   if (c.disposition !== undefined) need(c.disposition && !Array.isArray(c.disposition) &&
     typeof c.disposition === "object" && Object.entries(c.disposition).every(([pr,run]) =>
       /^[A-Za-z0-9][A-Za-z0-9_-]{0,80}$/.test(pr) && typeof run === "string" && /^[a-f\d-]{36}$/.test(run)), "operator disposition");

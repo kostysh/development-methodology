@@ -1,0 +1,15 @@
+{
+  "reviewControls": {
+    "paths": [
+      ".github/workflows",
+      ".github/CODEOWNERS",
+      "tools/test/package.packed.ts",
+      "tools/test/contract-results.ts",
+      "planning/v5/maintainer-review-policy.json"
+    ],
+    "inventory": {
+      "path": "tools/test/required-cases.json",
+      "sha256": "6beeedc45644d54b228064eb35a710181db9278d944774214f3af7fb3566a69e"
+    }
+  }
+}

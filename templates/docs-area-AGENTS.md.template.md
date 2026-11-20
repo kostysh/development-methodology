@@ -9,8 +9,9 @@ general rules here. This template is not active until adopted.
 # AGENTS.md
 
 This directory inherits the root `AGENTS.md`. Canonical artifact rules:
-`{{METHOD_PATH}}/method/13-artifacts-and-communication.md` and the profile
-section "Documentation and artifacts".
+[persistence rules](<{{METHOD_PATH}}/method/13-artifacts-and-communication.md#persistence-rules>)
+and the profile section
+[Documentation and artifacts](<{{PROJECT_PROFILE_PATH}}#documentation-and-artifacts>).
 
 ## What lives here
 

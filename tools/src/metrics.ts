@@ -9,7 +9,7 @@ import { adaptRecord, indexCodexRollout, type AdapterContext } from "./metrics/a
 import {
   isTrainSource, isTrustedIdentity, mapIdentity, normalizeEvent, parseUtc, recordObject, type MetricsEvent,
 } from "./metrics/events.js";
-import { bindSession, boundHook, observation } from "./metrics/binding.js";
+import { bindSession, boundHook, observation, withFlushLock } from "./metrics/binding.js";
 import { nativeHook, sessionFor } from "./metrics/native.js";
 import { configureHooks, dispatchNative, metricClient, registered } from "./metrics/setup.js";
 import { importSpool } from "./metrics/spool.js";
@@ -168,11 +168,13 @@ function ingest(
           (native?.hook_event_name === "PostCompact" || native?.hook_event_name === "Stop")) {
         const receipt = { hook_event_name: native.hook_event_name, session_id: native.session_id, transcript_path: native.transcript_path };
         // Pass only the three allowed selectors. The worker rechecks the active binding.
-        const child = spawn(process.execPath, [process.argv[1], "flush-hook", profilePath, sourceId!],
-          { detached: true, stdio: ["pipe", "ignore", "ignore"] });
-        child.stdin.on("error", () => {});
-        child.stdin.end(JSON.stringify(receipt));
-        child.unref();
+        withFlushLock(profilePath, "shared", fd => {
+          const child = spawn(process.execPath, [process.argv[1], "flush-hook", profilePath, sourceId!],
+            { detached: true, stdio: ["pipe", "ignore", "ignore", fd] });
+          child.stdin!.on("error", () => {});
+          child.stdin!.end(JSON.stringify(receipt));
+          child.unref();
+        });
         context.reportGap = code => {
           if (code !== "source_unreadable" && code !== "compaction_occurrence_identity_missing") note(code);
         };

@@ -7,6 +7,10 @@ risk triggers can move a task to a stricter route at any time.
 
 In solo mode, act on the [choices already delegated](method/12-agents.md#team-composition). For choices outside that authority, present the alternatives and consequences and record the owner's reply from the project conversation. Apply the project's existing approval for publication where required. Correct a returned train submission on the editable branch and submit its new revision under the [integration procedure](method/07-integration.md#merge-train).
 
+At night the scheduled train processes ready submissions without a live
+operator. A pending owner decision holds the affected PR and its dependants.
+The [morning report](defaults/merge-train.md#morning-report) lists the outcome.
+
 ## Small change — low risk
 
 1. Name the assignment, result, scope, and non-goals.

@@ -15,7 +15,7 @@ const stamp = "2026-11-19T10:00:00Z";
 test("packs once and invokes the installed commands with isolated local data", { timeout: 480_000 }, (t) => {
   const inventoryBytes = readFileSync(join(tools, "test", "required-cases.json"));
   // The release owner supplies the same digest independently to the Actions verification step.
-  const approvedInventory = process.env.METHODOLOGY_APPROVED_INVENTORY_SHA256 ?? "54b94fb57901cffdb97ab251f86254f1c453e5044fcb02eeafc72664f599ecb8";
+  const approvedInventory = process.env.METHODOLOGY_APPROVED_INVENTORY_SHA256 ?? "6beeedc45644d54b228064eb35a710181db9278d944774214f3af7fb3566a69e";
   assert.equal(createHash("sha256").update(inventoryBytes).digest("hex"), approvedInventory,
     "Required test inventory differs from the release owner's approved inventory");
   const inventory: Record<string, string[]> = JSON.parse(inventoryBytes.toString("utf8"));
@@ -48,6 +48,12 @@ test("packs once and invokes the installed commands with isolated local data", {
   ], { cwd: install, encoding: "utf8", timeout: 90_000 });
   assert.ifError(installed.error);
   assert.equal(installed.status, 0, installed.stderr);
+  const trainAssets = join(install, "node_modules", packageInfo.name, "assets", "train");
+  const cron = readFileSync(join(trainAssets, "methodology-train.cron"), "utf8");
+  const scheduled = "/opt/methodology/bin/methodology-train run /etc/methodology/train.json --scheduled";
+  assert.deepEqual(cron.split("\n").filter(line => /^\d/u.test(line)), ["0 0,2,4 * * * methodology-train " + scheduled]);
+  const dispatcher = readFileSync(join(trainAssets, "dispatcher.yml"), "utf8");
+  assert.ok(dispatcher.includes("cron: '0 0,2,4 * * *'") && dispatcher.includes("run: " + scheduled));
   function installedBin(command: keyof typeof packageInfo.bin) {
     const bin = join(install, "node_modules", ".bin", command);
     assert.equal(realpathSync(bin), join(install, "node_modules", packageInfo.name, packageInfo.bin[command]));
@@ -129,6 +135,7 @@ test("packs once and invokes the installed commands with isolated local data", {
     METHODOLOGY_CONTROLS_BIN: installedBin("methodology-controls"),
     METHODOLOGY_TRAIN_BIN: installedBin("methodology-train"),
     METHODOLOGY_SOLO_BIN: installedBin("methodology-solo"),
+    METHODOLOGY_TASK_BIN: installedBin("methodology-task"),
   };
   // A nested Node test runner skips its files if it inherits this marker.
   delete contractEnv.NODE_TEST_CONTEXT;

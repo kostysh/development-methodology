@@ -1,7 +1,13 @@
 # PLANS — entry-point template
 
+Merge the applicable rules into the existing file.
+
+```markdown
+# PLANS
+
 Formal planning is switched on when: `{{PLAN_ACTIVATION_RULE}}`.
-It follows `{{METHOD_PATH}}/method/03-planning.md` and the accepted profile.
+It follows the [planning chapter](<{{METHOD_PATH}}/method/03-planning.md>) and
+the accepted [project profile](<{{PROJECT_PROFILE_PATH}}>).
 The section is read in full before preparing a plan.
 
 When the full route is active, the following are mandatory: a check of
@@ -10,7 +16,7 @@ the two subjects from the canonical section, and the stated checkpoints. For a
 small task outside formal mode, this file does not switch on an audit
 automatically.
 
-For the test baseline step, follow `{{METHOD_PATH}}/method/03-planning.md#contents`.
+For the test baseline step, follow the [plan contents](<{{METHOD_PATH}}/method/03-planning.md#contents>).
 
 Owners and available means of review: `{{PLAN_REVIEW_OWNERS}}`.
 Accepted exceptions: `{{PLAN_EXCEPTIONS_OR_NONE}}`.
@@ -18,10 +24,10 @@ Accepted exceptions: `{{PLAN_EXCEPTIONS_OR_NONE}}`.
 Once accepted, a plan keeps its constraints during execution and across
 session changes. Each checkpoint explicitly sets continuation or a hard stop;
 by default it is informational. Permission for one checkpoint does not lift
-the others. Give the operator the report in
-`{{METHOD_PATH}}/templates/checkpoint-report.md`. Update the local task state
-using `{{METHOD_PATH}}/templates/task-state.md`.
+the others. Give the operator the [checkpoint report](<{{METHOD_PATH}}/templates/checkpoint-report.md>).
+Update the local [task state](<{{METHOD_PATH}}/templates/task-state.md>).
 
 This entry point does not duplicate normative text and does not authorize a
 commit, push, merge, external mutation, or new dependency without an existing
 basis.
+```

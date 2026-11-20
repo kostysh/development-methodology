@@ -436,3 +436,178 @@ test("a returned submission re-enters on its corrected immutable head and preser
   assert.equal(submissionTask({ref:"ready/stable-task-"+corrected,head:corrected}),"stable-task");
   assert.equal(submissionTask({ref:"ready/stable-task-"+corrected,head:initial.excluded[0].head}),undefined);
 });
+
+test("independent submission identity is checked before admission work",async t=>{
+  const {root,c,base}=setup(t);
+  const head=add(root,1,"feature"), ref="ready/feature-"+head;
+  const policy={repository:c.repository,branch:c.branch,submitterId:73,reviewerId:81,required:[{name:"Fast",appId:234,id:"fast"}]};
+  const path=join(root,"admission.json"), binDir=join(root,"fake-gh"), log=join(root,"calls");
+  mkdirSync(binDir);
+  const pr={number:1,head:{sha:head,ref,repo:{full_name:c.repository}},base:{ref:c.branch},user:{id:73},labels:[],state:"open",draft:false};
+  const data=join(root,"provider.json");
+  writeFileSync(join(binDir,"gh"),`#!/bin/sh
+echo "$*" >> "${log}"
+case "$*" in *"/pulls/1") cat "${data}" ;; *) exit 99 ;; esac
+`,{mode:0o700});
+  const exe=process.env.METHODOLOGY_TRAIN_BIN ?? fileURLToPath(new URL("../dist/train.js",import.meta.url));
+  function run(op:string) {
+    writeFileSync(path,JSON.stringify(policy),{mode:0o600}); writeFileSync(data,JSON.stringify(pr)); writeFileSync(log,"");
+    return spawnSync(process.execPath,[exe,op,path,"1",head,ref],{encoding:"utf8",
+      env:{PATH:binDir+":"+process.env.PATH, GH_TOKEN:"read-only-fixture"}});
+  }
+  const ok=run("identity"); assert.equal(ok.status,0,ok.stderr);
+  assert.deepEqual(JSON.parse(ok.stdout),{pr:1,head,authorId:73,reviewerId:81});
+  for (const [author,reason] of [[81,/share GitHub ID 81/],[77,/differs from the configured submitter/]] as const) {
+    pr.user.id=author;
+    assert.match(run("admission").stderr,reason); assert.equal(readFileSync(log,"utf8").trim().split("\n").length,1);
+  }
+  policy.submitterId=81;
+  assert.match(run("identity").stderr,/submission identity must differ/); assert.equal(readFileSync(log,"utf8"),"");
+  policy.submitterId=73; c.admission=policy;
+  const env=makeEnv(root,pass); const host=env.host;
+  env.host=(cfg,d)=>{
+    const original=host(cfg,d);
+    return {...original,list:()=>original.list().map(p=>({...p,ref,authorId:81})),
+      gates:()=>{throw new Error("unexpected check lookup");}};
+  };
+  env.objects=()=>{throw new Error("unexpected git fetch");};
+  const receipt=await operate(c,{},env);
+  assert.deepEqual(receipt.incidents,[]); assert.match(receipt.excluded[0].reason,/share GitHub ID 81/);
+  assert.deepEqual(receipt.attempts,[]); assert.equal(revision(root),base);
+});
+
+test("stable task dependencies follow corrected submissions and reject ambiguous or missing prerequisites",async t=>{
+  const {root,c,base}=setup(t);
+  c.taskDependencies={child:["parent"],later:["parent"]};
+  add(root,1,"child"); add(root,2,"broken");
+  const names:Record<number,string>={1:"child",2:"parent",3:"parent",4:"later"};
+  const closed=new Set<number>();
+  const env=makeEnv(root,(_kind,h,_tests,o)=>has(o,h,"broken")?fail():pass());
+  const host=env.host;
+  env.host=(cfg,d)=>{
+    const original=host(cfg,d);
+    const ref=(p:ReturnType<typeof original.get>)=>({...p,ref:"ready/"+names[p.number]+"-"+p.head,open:p.open&&!closed.has(p.number)});
+    return {...original,get:n=>ref(original.get(n)),list:state=>original.list("all").map(ref).filter(p=>p.open||state==="all")};
+  };
+  const failed=await operate(c,{},env); assert.deepEqual(failed.selected,[2,1]);
+  assert.deepEqual(failed.excluded.map(x=>[x.pr,x.cause]),[[2,"test"],[1,"dependency"]]);
+  add(root,3,"corrected");
+  const ambiguous=await operate(c,{},env);
+  assert.match(ambiguous.excluded.find(x=>x.pr===1)!.reason,/Ambiguous prerequisite task parent/);
+  assert.deepEqual(ambiguous.attempts,[]);
+  closed.add(2); closed.add(3);
+  const missing=await operate(c,{},env); assert.match(missing.excluded[0].reason,/Missing prerequisite task parent/);
+  assert.equal(revision(root),base);
+  closed.delete(3);
+  const fixed=await operate(c,{},env); assert.deepEqual(fixed.integrated,[3,1]);
+  add(root,4,"late-child");
+  const after=await operate(c,{},env); assert.deepEqual(after.integrated,[4]); assert.deepEqual(after.incidents,[]);
+});
+
+test("the trusted App publishes the independent exact-head verdict and holds unconfirmed protected changes",t=>{
+  const {root,c,base}=setup(t), dir=join(root,"orchestrator"), fake=join(root,"fake-gh"), author=join(root,"author");
+  mkdirSync(dir,{mode:0o700}); mkdirSync(fake);
+  const head=add(root,1,"ci.yml"), ref="ready/ci-"+head;
+  const policy={repository:c.repository,branch:c.branch,submitterId:73,reviewerId:81,reviewControls:{paths:["ci.yml"]},
+    required:[{name:"Fast",appId:234,id:"fast"}]};
+  const path=join(dir,"policy.json"), record=join(dir,"review.json");
+  writeFileSync(path,JSON.stringify(policy),{mode:0o600});
+  const pr={number:1,head:{sha:head,ref,repo:{full_name:c.repository}},base:{ref:c.branch,sha:base},user:{id:73},labels:[],state:"open",draft:false};
+  const v={repository:c.repository,branch:c.branch,pr:1,base,head,ref,reviewer:"review-session-1",evidence:"review-record-1",verdict:"PASS"};
+  const db=join(fake,"state.json");
+  writeFileSync(db,JSON.stringify({pr,viewer:81,reviews:[],posts:0}));
+  writeFileSync(join(fake,"gh"),`#!/usr/bin/env node
+const fs=require("node:fs"), db=require("node:path").join(__dirname,"state.json"), s=JSON.parse(fs.readFileSync(db));
+const method=process.argv.indexOf("-X"), route=process.argv[method+2];
+let data;
+if(route.includes("/installation/repositories"))data={total_count:1,repositories:[{full_name:s.pr.head.repo.full_name}]};
+else if(route==="graphql")data={data:{viewer:{databaseId:s.viewer}}};
+else if(route.endsWith("/pulls/1"))data=s.pr;
+else if(route.includes("/reviews?"))data=s.reviews;
+else if(route.endsWith("/reviews") && process.argv[method+1]==="POST"){
+ const req=JSON.parse(fs.readFileSync(0,"utf8"));
+ data={id:++s.posts,user:{id:81},commit_id:req.commit_id,body:req.body,state:req.event==="APPROVE"?"APPROVED":"CHANGES_REQUESTED"};
+ s.reviews.push(data);fs.writeFileSync(db,JSON.stringify(s));
+} else process.exit(1);
+console.log(JSON.stringify(data));
+`,{mode:0o700});
+  const exe=process.env.METHODOLOGY_TRAIN_BIN ?? fileURLToPath(new URL("../dist/train.js",import.meta.url));
+  const read=()=>JSON.parse(readFileSync(db,"utf8"));
+  function run(...opts:string[]) {
+    writeFileSync(record,JSON.stringify(v),{mode:0o600});
+    return spawnSync(process.execPath,[exe,"publish-review",path,"1",head,ref,record,...opts],{cwd:author,encoding:"utf8",
+      env:{PATH:fake+":"+process.env.PATH, GH_TOKEN:"scoped-review-app-fixture"}});
+  }
+  v.base="0".repeat(40); assert.match(run().stderr,/exact target, base/); v.base=base;
+  assert.notEqual(run().status,0); assert.equal(read().posts,0);
+  const confirm=["--owner-message","message-123"];
+  writeFileSync(db,JSON.stringify({...read(),viewer:999}));
+  assert.match(run(...confirm).stderr,/App identity differs/); assert.equal(read().posts,0);
+  writeFileSync(db,JSON.stringify({...read(),viewer:81}));
+  const approved=run(...confirm); assert.equal(approved.status,0,approved.stderr);
+  assert.deepEqual(JSON.parse(approved.stdout),{pr:1,base,head,authorId:73,reviewerId:81,reviewId:1,state:"APPROVED"});
+  assert.match(read().reviews[0].body,/Owner confirmation: message-123/);
+  function audit() {
+    return spawnSync(process.execPath,[exe,"admission",path,"1",head,ref],{cwd:author,encoding:"utf8",
+      env:{PATH:fake+":"+process.env.PATH, GH_TOKEN:"read-only-audit-fixture"}});
+  }
+  writeFileSync(db,JSON.stringify({...read(),pr:{...pr,base:{...pr.base,sha:"a".repeat(40)}}}));
+  assert.match(audit().stderr,/Missing independent audit/);
+  const {reviewControls: _protectedPaths, ...ordinaryPolicy}=policy;
+  writeFileSync(path,JSON.stringify(ordinaryPolicy));
+  assert.match(audit().stderr,/Missing independent audit/);
+  writeFileSync(path,JSON.stringify(policy));
+  writeFileSync(db,JSON.stringify({...read(),pr}));
+  assert.equal(run(...confirm).status,0); assert.equal(read().posts,1);
+  v.verdict="FAIL"; v.evidence="review-record-2";
+  const failed=run(); assert.equal(failed.status,0,failed.stderr);
+  assert.equal(JSON.parse(failed.stdout).state,"CHANGES_REQUESTED"); assert.equal(read().posts,2);
+  v.verdict="PASS"; v.evidence="review-record-1";
+  assert.match(run(...confirm).stderr,/superseded/);
+  assert.match(run("--owner-message","message-124").stderr,/superseded/); assert.equal(read().posts,2);
+});
+
+test("an unattended train holds protected changes and their dependants while an independent PR integrates",async t=>{
+  const {root,c,base}=setup(t);
+  c.maxPrs=1;
+  c.taskDependencies={child:["policy"],grandchild:["child"],multi:["policy","second-policy"]};
+  c.schedule={hoursUtc:Array.from({length:24},(_,i)=>i),graceMinutes:60};
+  const policy={repository:c.repository,branch:c.branch,submitterId:73,reviewerId:81,reviewControls:{paths:["ci"]},
+    required:[{name:"Fast",appId:234,id:"fast"}]};
+  c.admission=policy;
+  const keys=["","grandchild","child","policy","ordinary","confirmed-with-red-CI","second-policy","multi"];
+  const heads=[base,add(root,1,"grandchild"),add(root,2,"child"),add(root,3,"ci/policy"),add(root,4,"ordinary"),add(root,5,"ci/other"),add(root,6,"ci/second"),add(root,7,"multi")];
+  const {GitHub}=await mod("github") as typeof import("../src/train/github.ts");
+  const env=makeEnv(root,pass), host=env.host;
+  let confirmed=false, withdraw=false;
+  env.host=(cfg,deadline)=>{
+    const original=host(cfg,deadline);
+    const identify=(p:ReturnType<typeof original.get>)=>({...p,authorId:73,baseSha:revision(root),ref:"ready/"+keys[p.number]+"-"+p.head});
+    const gh=new GitHub(cfg,"fixture",deadline);
+    gh.decisions=p=>[{id:p.number,user:{id:81},state:"APPROVED",commit_id:p.head,body:
+      "Methodology audit: PASS\nReview base: "+p.baseSha+
+      (p.number===5 || p.number===3 && confirmed ? "\nOwner confirmation: chat-123":"")}];
+    gh.results=(p,required)=>required.map(()=>({candidate:p.head,status:p.number===5?"unverified":"completed",exitCode:p.number===5?1:0}));
+    return {...original,get:n=>identify(original.get(n)),list:state=>original.list(state).map(identify),
+      audit:gh.audit.bind(gh),gates:gh.gates.bind(gh)};
+  };
+  const secondHolds=[{pr:6,head:heads[6],paths:["ci"]},{pr:7,head:heads[7],requires:6}];
+  const expectedHolds=[{pr:3,head:heads[3],paths:["ci"]},secondHolds[0],{pr:2,head:heads[2],requires:3},
+    {pr:7,head:heads[7],requires:3},secondHolds[1],{pr:1,head:heads[1],requires:2}];
+  const night=await operate(c,{scheduled:true},env);
+  assert.deepEqual(night.incidents,[]); assert.deepEqual(night.decisions,[]); assert.equal(night.result,"completed");
+  assert.deepEqual(night.integrated,[4]); assert.deepEqual(night.ownerHolds,expectedHolds);
+  const bin=process.env.METHODOLOGY_TRAIN_BIN ?? fileURLToPath(new URL("../dist/train.js",import.meta.url));
+  const morning=(end:string)=>JSON.parse(execFileSync(process.execPath,[bin,"report",join(root,"train.json"),night.started,end],{encoding:"utf8"}));
+  const report=morning(night.ended!);
+  assert.deepEqual(report.ownerHolds,expectedHolds); assert.deepEqual(report.runs[0].integrated,[4]);
+  const suite=env.suite;
+  env.suite=(...args)=>{if(withdraw) confirmed=false;return suite(...args);};
+  confirmed=true; withdraw=true;
+  const lost=await operate(c,{},env);
+  assert.deepEqual(lost.integrated,[]); assert.match(lost.incidents.join(),/Final admission rejected PR #3/);
+  confirmed=true; withdraw=false;
+  const retry=await operate(c,{pr:3},env);
+  assert.deepEqual(retry.ownerHolds,[]); assert.deepEqual(retry.integrated,[3]);
+  assert.deepEqual(morning(retry.ended!).ownerHolds,secondHolds);
+});

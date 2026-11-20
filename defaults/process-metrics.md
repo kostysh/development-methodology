@@ -195,23 +195,64 @@ the measured adoption pilot are separate milestones.
 
 ## Collect one task
 
-1. Agree the task, time window, data owner, allowed sources and journal
-   location. Take the [historical baseline](../ADOPTION.md#7-accept-the-profile)
-   before enabling collection. Choose one primary source per fact.
-2. Install a verified build of the companion. Create a private local profile
-   using the package's example. Give the task a stable alias. Set paths for
-   the task, audit or development records the project actually keeps. The
-   [companion instructions](https://github.com/kostysh/development-methodology/tree/methodology-v5.0.1/tools)
-   explain the profile, supported inputs, installation and recovery. Record
-   the chosen commit, package version and integrity value with the project.
-3. Connect the selected [native client](#connect-a-native-client) and
-   [operation sources](#record-at-the-operation). For each source, verify
-   one allowed event, a replay and an unrelated session or task.
-4. At acceptance, have the coordinator import each task operation spool and
-   record `task.accepted` from the owner source. Read
-   `methodology-metrics summary PROFILE TASK`. The default cutoff is the current instant. Supply `--as-of UTC` for an exact historical cutoff. A whole-second timestamp ends at the beginning of that second. Check the first
-   PR and acceptance against the manual chronology. Recheck corrective work
-   seven days after merge. Remove owned hooks when collection for that source ends.
+Agree the task, time window, data owner and allowed sources. Take the
+[historical baseline](../ADOPTION.md#7-accept-the-profile) before enabling
+collection. Choose one primary source per fact.
+
+### Begin and finish a task
+
+On Linux, use the installed companion from the operator's trusted PATH.
+Put that PATH in the selected clients' launch environments too. Choose one
+persistent private directory per project, outside all repositories and agent
+writable roots. Its parent must exist. Export the same location in the
+operator's shell for each task. From the project, configure the selected
+clients once. Include `--recovery` when the project uses compact recovery.
+
+```sh
+export METHODOLOGY_TASK_HOME="/absolute/private/location/project-tasks"
+methodology-task setup project --clients codex,claude --recovery
+```
+
+For tracked project skills, add `--skills tracked --skill NAME` and repeat
+`--skill` for each selected name. For approved copies in each checkout, use
+`--skills per-checkout --skill NAME --skill-source /absolute/approved/skills`.
+The source contains the verified, extracted skill directories outside all
+repositories and agent writable roots. Setup records their digests. Begin
+copies missing entries offline, preserves matching entries, and reports a
+conflict for a different existing copy. Omit these options when skills are
+managed independently. Verify discovery in the actual client.
+
+At execution start, supply a fresh opaque task alias, its checkout root and
+the assigned session ID for each selected client. Get the IDs in the
+[client's status view](#connect-a-native-client). The first begin creates
+private task profiles, sets local Git exclusions, initializes the workspace
+spool, installs the selected hooks, binds the sessions and probes each client.
+
+```sh
+methodology-task begin T1 "$worktree" "codex=$codex_session_id" "claude=$claude_session_id"
+```
+
+Begin prints profile paths and each client's next action. Review project and
+hook trust, perform a normal action in each assigned session, then run
+`methodology-task begin T1` to check the callbacks. Exit 1 means evidence is
+pending. Repeating begin preserves existing bindings and observations. Use
+the reported metrics profile and source `ops` for [task operations](#record-at-the-operation).
+Begin records `task.started`. Use the reported recovery profile when
+[writing actual task state](task-recovery.md). Concurrent tasks use separate
+worktrees, aliases and assigned sessions.
+
+After the final client action and completed operation writes, run
+`methodology-task finish T1` before removing the checkout. Add `--accepted`
+only when the owner has accepted the task at its agreed boundary. Finish
+imports the spool, reads each doctor's status, removes this task's hook
+registrations and prints the summary and acceptance disposition. It saves
+the result for repeat calls. A finished report with exit 1 identifies an
+incomplete spool or missing fresh callback. Record that coverage gap with
+the finished task. Exit 2 identifies a setup, import or cleanup error.
+Correct that cause and retry the same command. To abandon an
+incomplete setup, run finish without the acceptance flag. Compare the first
+PR and acceptance with the manual chronology. Recheck corrective work seven
+days after merge using the project's delivery source.
 
 ### Connect a native client
 
@@ -336,6 +377,9 @@ hyphens. The command maps each new key to an opaque alias for its task and
 identity field. Reuse an audit key as `prior_audit_id` for the next round.
 Previously issued aliases retain their values. Reserve issued aliases for
 shared identities that must match across tasks or external sources.
+
+For a manual start, record `task.started` once. When using
+`methodology-task begin`, start with the next applicable operation.
 
 ```sh
 printf '%s\n' '{}' | methodology-metrics mark "$profile" ops task.started start

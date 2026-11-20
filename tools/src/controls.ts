@@ -6,9 +6,12 @@ import { checkResults } from "./controls/checks.js";
 import { checkGit } from "./controls/git.js";
 import { config, Rejection, ResourceBusy } from "./controls/input.js";
 import { runControl, supervise } from "./controls/run.js";
+import { trustedPath } from "./train/config.js";
+import { checkReviewControls, reviewControls } from "./train/review-policy.js";
 
 const usage = "Usage: methodology-controls artifacts|git|run|reconcile <policy.json>\n"
-  + "       methodology-controls checks <policy.json> <trusted-results.json>";
+  + "       methodology-controls checks <policy.json> <trusted-results.json>\n"
+  + "       methodology-controls review-policy POLICY BASE HEAD [--owner-message REFERENCE]";
 
 async function worker(mode: string, path: string) {
   if (!process.connected || (mode !== "run" && mode !== "reconcile")) throw new Error("Invalid resource worker invocation");
@@ -49,6 +52,15 @@ async function run([command, ...args]: string[]): Promise<number> {
   }
   if (command === "checks" && args.length === 2) {
     console.log(JSON.stringify(checkResults(config(args[0]), args[1])));
+    return 0;
+  }
+  if (command === "review-policy" && (args.length === 3 || (args.length === 5 && args[3] === "--owner-message"))) {
+    const [path, base, head, , message] = args;
+    trustedPath(path);
+    const controls = reviewControls(config(path).reviewControls);
+    if (!controls) throw new Error("Missing reviewControls in the coordinator policy");
+    const result = checkReviewControls(controls, base, head, message);
+    console.log(JSON.stringify({ base, head, ...result }));
     return 0;
   }
   throw new Error(usage);

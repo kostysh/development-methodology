@@ -7,8 +7,9 @@ with the project's [package checks](controls.md#common-checks).
 
 ## GitHub setup
 
-1. Use a scheduled GitHub Actions dispatcher that invokes the pinned train
-   build on a runner with access to the approved test environments.
+1. Schedule the pinned train on a trusted runner with access to the
+   approved test environments. Choose the [runner's system cron](#schedule-on-a-linux-host)
+   or the supplied GitHub Actions dispatcher. One scheduler owns a branch.
    GitHub's native merge queue forms `merge_group` candidates when PRs enter
    the queue. Its merge limits group final merges and leave build dispatches
    separate. The documented settings offer neither timed admission nor one
@@ -16,7 +17,7 @@ with the project's [package checks](controls.md#common-checks).
 2. Schedule a start every two hours during the project's night window.
    Record the start, end and time zone. Set a maximum duration and choose
    the interval with two full suites and diagnosis in mind. An overlap is
-   a normal skip. The scheduled workflow must exist on the default branch.
+   a normal skip. For GitHub Actions, the scheduled workflow must exist on the default branch.
    GitHub can delay or drop schedules. Accept a timed dispatch only for
    an identifiable open slot. Account for late or missing slots in the
    morning report. [GitHub schedule][schedule]
@@ -30,8 +31,17 @@ with the project's [package checks](controls.md#common-checks).
    invocation until the active train ends cannot supply an immediate skip.
    [GitHub workflow concurrency][concurrency]
 4. Configure a dedicated GitHub App identity as the sole writer to the
-   exact integration branch. Scope its installation and token to the
-   repository and the required permissions. Apply an active branch ruleset with
+   exact integration branch. Starting with only the owner's GitHub account,
+   open **Settings → Developer settings → GitHub Apps → New GitHub App**.
+   Register a private App, use the repository URL as its homepage, disable
+   webhooks, and grant Contents and Pull requests write, Checks read, and
+   Actions read when the project verifies private workflows. Install it
+   under **Only select repositories** for the target. Generate its private
+   key and place it only on the protected orchestration host. Record the App
+   slug, numeric App ID and installation ID (shown in the installation's
+   settings URL). An existing train installation needs no new registration.
+   [Register a GitHub App](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/registering-a-github-app).
+   Scope each token to the repository and the required permissions. Apply an active branch ruleset with
    **Restrict updates** and the App as its only bypass actor. Put permanent
    protections such as blocking force pushes and deletion in a separate
    ruleset the App cannot bypass. Verify the combined rules and retain
@@ -59,7 +69,8 @@ flaky-test recurrence window and timeout in the profile.
 
 Install the tools archive from the [adoption guide](../ADOPTION.md). Check
 `methodology-train --version` against its release. The archive includes
-`assets/train/dispatcher.yml`. Copy the dispatcher into a trusted management
+`assets/train/methodology-train.cron` and `assets/train/dispatcher.yml`.
+When using GitHub Actions, copy the dispatcher into a trusted management
 repository's default branch. Set the target repository and writer App ID in
 the protected train profile. Mount the dedicated App key on this runner at
 `/etc/methodology/train-app.pem` (owner-only, mode 0600) and set
@@ -75,7 +86,7 @@ Use Git 2.38 or newer with `merge-tree --write-tree`, GitHub CLI with
 `gh api`, util-linux `flock`, and Docker with the configured immutable suite
 image preloaded and read-only, non-recursive bind mounts. The GitHub adapter
 supports github.com and same-repository PRs. Pre-create the queue label.
-The dispatcher starts the train with the host key path and installation ID.
+Both schedulers start the train with the host key path and installation ID.
 On the host the train signs a short-lived App JWT and requests a token scoped
 to one repository, contents write, pull requests write (labels and comments)
 and checks read. Private Actions workflow readback also requests Actions read.
@@ -136,12 +147,20 @@ all applicable fast checks, affected tests, baseline and audit verdict.
   under `migrationChecks`, and the positive `maxMigrations` (default 1).
   Provide `docsPaths` for the documentation fast route. Select literal paths
   or directory prefixes ending in `/`. Both sides of a rename count.
-  `dependencies` maps PR numbers to arrays of prerequisite PR numbers. The
-  owner maintains the mapping in the trusted profile. Eligible prerequisites
-  enter first. A prerequisite already merged into the target can satisfy the
-  dependency. A repeated exclusion of the same kind for the same failing
-  tests requires an operator decision. After that decision, map the stable task key (or a legacy PR
-  number) to the last reviewed exclusion run UUID in `disposition`.
+  In the protected profile, set `"taskDependencies":{"child":["parent"]}`
+  once, using stable task keys from the ready refs. The train resolves each
+  key against same-repository PRs on the integration branch. A closed,
+  unmerged submission drops out. Its replacement keeps the same key.
+  Each required key must resolve to one open or merged submission. The
+  parent enters first, or its merged head must be an ancestor of the base.
+  A missing or ambiguous key holds the dependant. Close superseded submissions.
+  The train rereads the mapping before publication. This option reads paginated
+  PR history for the target branch. Existing `dependencies` maps PR numbers
+  to arrays of prerequisite PR numbers. With both forms, both apply.
+  For repeated exclusion of the same kind for the same failing tests, the
+  operator decides whether work may continue. After that decision, map the
+  stable task key (or a legacy PR number) to the reviewed exclusion run
+  UUID in `disposition`.
 - Enabled publication requires `immutableSources: true`. Create one active
   repository branch ruleset with include `refs/heads/ready/*`, no excludes,
   `update` and `deletion` rules, and an empty bypass list. Allow branch creation.
@@ -185,10 +204,10 @@ all applicable fast checks, affected tests, baseline and audit verdict.
   train checks at admission, then holds the shared authority lock across
   all final PR checks, the Git push and readback. A busy authority returns
   exit 75 for a later retry. The [solo procedure](solo-decisions.md)
-  covers installing an owner batch and ordinary publication. A one-account
-  project can record the owner's chat decision and use its existing protected
-  review or check for publication. Machine publication stays held until the
-  configured independent authority permits that exact head.
+  covers installing an owner batch and ordinary publication. On a project with
+  one GitHub account the normal author keeps opening PRs. A trusted orchestrator
+  can publish an independent review through the existing App as described below.
+  A chat note alone cannot release either the train or the solo publication gate.
 - Set `deployment` to the absolute path of a trusted installed adapter for
   the authorized **test** environment. The train calls `read REPO BRANCH`
   for a revision (or `none` for an empty environment), then
@@ -202,6 +221,34 @@ all applicable fast checks, affected tests, baseline and audit verdict.
   `methodology-train observations PROFILE` replays receipts after a
   journal interruption. Its stable event identities deduplicate replays.
 
+### Schedule on a Linux host
+
+A project with one GitHub account can run the train from an always-on
+Linux host with system cron. Use a service account with access to the
+trusted installation, Git, Docker, the test environment and private state.
+Install Node and the release commands on the service's PATH. The service
+gets the protected App key. PR code runs in the isolated verifier.
+
+Copy `assets/train/methodology-train.cron` from the installed package to
+a staging file. Set the actual service account, installation ID and paths.
+Install it as a root-owned, mode 0644 file at
+`/etc/cron.d/methodology-train` on that host. Keep the key itself in its
+private file. Check the cron daemon's scheduling time zone. The example
+runs at 00:00, 02:00 and 04:00 UTC on a UTC scheduler. For a different
+night window set its times and the profile's `schedule.hoursUtc` together,
+including the project's daylight-saving policy. Keep the daemon available
+when the operator logs out. Disable this one entry to stop new scheduled
+starts. The shared writer lock also covers urgent runs.
+
+Commission a disposable target with one near-term clock slot. Before the
+slot, prepare an independently reviewed ordinary PR and leave the operator
+offline. The scheduler must invoke the installed binary, the receipt must
+identify the slot, and GitHub and the configured test deployment must show
+the tested commit. Include a protected change without the owner's answer
+and a dependent PR when exercising the morning report. Confirm both stay
+open while independent work merges. Restore the chosen night hours before
+enabling the project's schedule.
+
 ### Submit and correct a ready revision
 
 Keep the editable task branch under the author's control. From its tested
@@ -209,6 +256,12 @@ checkout, set `repo` to the verified GitHub owner/repository, `base` to the
 integration branch and `task` to the stable task identifier (letters, digits,
 underscore or hyphen, up to 81 characters, starting with a letter or digit).
 Set `title` and `bodyfile` to the prepared PR title and description file.
+Use the normal author's Git and `gh` identity. If the owner and implementing
+agent share a GitHub account, that account authors every PR. Keep the train
+App key, installation tokens and trusted review records inaccessible to the
+implementing session. For an owner account with administrative access, give
+the authoring environment a repository-scoped author credential, without
+administration or ruleset bypass, and isolate the owner's unrestricted login.
 Check the remote before publishing. Use the same task identifier for every
 correction so repeated exclusions stay visible across PR numbers.
 
@@ -223,21 +276,55 @@ Keep a single open submission for this work. On return, use its run ID,
 failed tests and evidence to correct the editable task branch. Close the
 returned PR with `gh pr close "$old_pr" --repo "$repo"` and leave its protected
 ref intact. Repeat the commands with the corrected commit and the same task
-identifier. Update the profile's affected prerequisite PR numbers, then
-obtain new required results and an independent review on the replacement.
+identifier. For a legacy PR-number dependency, update the affected
+number. Task-key dependencies carry forward. Obtain fresh results and an
+independent review on the replacement.
 The train rechecks every gate before it admits or publishes the new head.
+
+#### Retain or retire closed ready refs
+
+Keeping these refs is the default. GitHub retains the PR and review history.
+If the owner chooses a retention period, review expired closed submissions in
+a maintenance window. Keep the task, PR, head OID, closure time and train
+receipt. Preserve the submitted Git object in the project's archive if its
+reproducibility policy requires it. A correction or exclusion alone does
+not authorize deletion.
+
+For deletion, pause the dispatcher and submissions, acquire the writer lock
+and reconcile pending publication. Proceed only when the owner can prevent
+PR creation and reopening during maintenance. Verify that every PR for
+each exact ref is closed, no queue or pending write references it, and its
+current OID still matches the receipt. Install an active, no-bypass rule
+restricting **updates and creations** on those exact refs before excluding
+only those full ref names from the ready deletion rule. Leave the wildcard
+rules active for all other refs. Verify effective rules and delete with an
+exact lease, for example `git push --force-with-lease="refs/heads/$ready:$head" origin ":refs/heads/$ready"`.
+Restore the original ruleset exclusions, verify the ref is absent and refresh
+the writer's ruleset evidence before releasing the lock. Remove the temporary
+exact-ref rule only after the wildcard restrictions are effective again.
+Where an owner cannot isolate this operation, retain the refs.
+[GitHub ruleset targeting](https://docs.github.com/en/repositories/configuring-branches-and-merges/managing-rulesets/creating-rulesets-for-a-repository)
 
 ### Publish a head-bound audit and required results
 
 1. Place the verified release tools tarball at `methodology-ci/tools.tgz`
    in an owner-reviewed Git commit. In that commit store
    `methodology-ci/admission.json` with the actual repository, target and
-   numeric GitHub ID of the independent reviewer. Supply the actual required
+   numeric GitHub user ID of the review publisher as `reviewerId`. For a
+   human author with an independent reviewing agent, use the existing train
+   App's **bot user ID**. This differs from its App ID. In the owner's
+   setup shell run `gh api user --jq .id` for the expected author, and
+   `gh api "users/${app_slug}%5Bbot%5D" --jq .id` for the publisher.
+   Record the two distinct numbers. Pin the author with `submitterId` for a
+   single-author project. A project with several permitted authors may omit
+   it. An existing independent human GitHub reviewer keeps their user ID in
+   `reviewerId` and submits the review themselves.
+   Supply the actual required
    fast checks, affected tests and baseline tests. For example:
 
    ```json
    {
-     "repository":"example/disposable","branch":"integration","reviewerId":24680,
+     "repository":"example/disposable","branch":"integration","submitterId":13579,"reviewerId":24680,
      "required":[{"id":"fast","name":"Project fast checks","appId":15368,
        "workflow":{"id":83,"path":".github/workflows/fast.yml","blob":"<accepted workflow blob OID>"}}],
      "baseline":{"commit":"<accepted baseline commit OID>","manifest":"methodology-ci/baseline.json"}
@@ -259,13 +346,22 @@ The train rechecks every gate before it admits or publishes the new head.
    Read its Git blob with `git rev-parse "$workflow_commit:.github/workflows/admission.yml"`.
    Pin both plus the job name, path and `workflow_dispatch` event in the
    train's `checks`. The aggregate cannot be one of its own prerequisites.
-3. After the ready PR exists, have the independent reviewer perform the
-   audit and submit an **Approve** review on that exact head with the
-   standalone line `Methodology audit: PASS` and the review evidence. Only
-   the configured reviewer's latest decisive submitted review qualifies.
-   A dismissed review, changes requested, a different head or reviewer, and
-   the PR author's own decision all hold admission.
-4. Dispatch the reviewed workflow on the submitted ref:
+3. Before requesting the audit, verify the live identities with a
+   repository read token in `GH_TOKEN`:
+   `methodology-train identity "$policy" "$pr" "$head" "$ready"`.
+   Match the returned author and publisher IDs to the profile. A missing,
+   shared or unexpected identity holds the submission before expensive checks.
+   For an App publisher, follow the procedure below. For an independent human
+   publisher, have that reviewer audit the revision and submit **Approve**
+   on the exact head with the standalone line `Methodology audit: PASS` and
+   the evidence. Only the publisher's latest decisive review qualifies. A
+   dismissal, changes requested, a different head or an absent audit holds it.
+   The App publisher includes the exact base SHA in its verdict. A base
+   change holds admission until the reviewer checks the new pair. When the
+   project configures protected review paths, its publisher must include the
+   base even for a human review.
+4. The submission coordinator dispatches the reviewed workflow on the
+   submitted ref as part of handoff:
    `gh workflow run admission.yml --repo "$repo" --ref "$ready" -f pr="$pr"`.
    Confirm the native job **Methodology reviewed admission** passed on that
    head. The train independently reads the latest required checks and
@@ -276,6 +372,66 @@ The train rechecks every gate before it admits or publishes the new head.
    existing authority after verifying its evidence and invalidation rules.
    [Dispatch semantics](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#workflow_dispatch),
    [PR reviews](https://docs.github.com/en/rest/pulls/reviews#list-reviews-for-a-pull-request).
+
+#### Publish an independent agent's verdict through the existing App
+
+Use this route when one human GitHub account authors PRs. Set up the train
+App and its protected host once as described above. Only the trusted
+orchestrator can invoke the review publisher with the App's key or token.
+The same publisher can attest an ordinary, editable PR in a project that
+uses PR-based integration. The train admits only immutable submissions.
+The implementing agent and the reviewing agent both work without these
+credentials or access to the orchestrator's private directory, executable
+search path and Git configuration. Give the reviewer a separate, read-only
+session with the authoritative requirements and exact Git objects.
+
+1. The orchestrator reads the current PR number, target branch, base commit,
+   head ref and head commit from GitHub. Give that tuple to the independent
+   reviewer. The reviewer examines the change and its required evidence,
+   then returns PASS or FAIL, their session/record locator and an evidence
+   reference. An absent review holds publication. If the PR changes, obtain
+   a review for the new tuple.
+2. Collect the result directly from the independent session. Store it in
+   the orchestrator's private directory (0700) in a regular file (0600).
+   Use public-safe locators in the two text fields. Do not copy a verdict
+   from the PR, its checkout or the implementing agent, since any of those could
+   supply its own approval. For example, the record has this shape:
+
+   ```json
+   {"repository":"example/disposable","branch":"integration","base":"<base SHA>",
+    "pr":17,"head":"<head SHA>","ref":"ready/feature-<head SHA>",
+    "verdict":"PASS","reviewer":"<independent review session>","evidence":"<review record locator>"}
+   ```
+
+3. Run the installed publisher in the trusted host's read-only Git object
+   checkout containing the exact base and head. Keep PR-controlled code out
+   of this process. Set `TRAIN_APP_ID` to the same numeric App ID as the
+   train writer and reuse its protected `TRAIN_APP_KEY_FILE` and
+   `TRAIN_INSTALLATION_ID`. The publisher mints a fresh repository-scoped
+   installation token with pull requests write and contents read. A host
+   that already issues such tokens can supply one in `GH_TOKEN` with the
+   key variable unset. Configure [protected review changes](controls.md#protect-the-review-policy)
+   in the trusted policy. Only when the comparison finds a protected change
+   does the coordinator need the owner's explicit chat confirmation for this
+   exact revision. Obtain it before publishing PASS and add
+   `--owner-message "$message_ref"` to the command. Ordinary PRs skip that step.
+
+   ```bash
+   methodology-train publish-review "$policy" "$pr" "$head" "$ready" "$verdict_file"
+   ```
+
+   PASS publishes **Approve**. FAIL publishes **Request changes**. The App
+   records the independent verdict on its exact commit and reads back the
+   latest review, including the actual numeric publisher, commit and state.
+   A retry reuses the same current review. A superseded or dismissed verdict
+   needs new review evidence. Serialize publication per PR on the trusted
+   host. Admission and final publication recheck the base of every
+   App-published verdict. A moved base requires fresh review. GitHub
+   attests that the App submitted the review. The evidence
+   identifies the independent reviewer. An owner message reference records
+   the coordinator's observation of chat approval. GitHub does not authenticate
+   the human behind a chat message.
+   [GitHub review API](https://docs.github.com/en/rest/pulls/reviews#create-a-review-for-a-pull-request)
 
 ### Build the isolated verifier
 
@@ -378,6 +534,13 @@ expected final ref and PR states, and the test revision when configured.
 
 Use one summary for the configured night window. Keep the facts for each
 train in its run record and link to them here.
+
+Read `ownerHolds` for the PR, its exact head and the protected paths that
+need a prior decision. A dependant names its prerequisite PR. The run's
+`integrated` list and deployment readback identify completed work.
+Schedule ordinary integration without interactive chat or a required
+GitHub environment reviewer on each run. Obtain any protected decision
+before its own PR enters the train.
 
 - Window, integration branch and run IDs —
 - Decisions awaiting the operator, with owner and required action —

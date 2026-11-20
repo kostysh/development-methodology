@@ -8,9 +8,7 @@ export function useToken(source: Credential) {
   return typeof source === "string" ? source : source();
 }
 
-// Request only the repository and permissions used by this writer. Mint on
-// demand so an expensive offline suite can span multiple installation tokens.
-export function writerCredential(c: Config, deadline: number): Credential {
+function scopedCredential(repository: string, appId: number, permissions: Record<string,string>, deadline: number): Credential {
   const key = process.env.TRAIN_APP_KEY_FILE;
   if (!key) {
     if (!process.env.GH_TOKEN) throw new Error("Missing host App key or installation token");
@@ -26,12 +24,9 @@ export function writerCredential(c: Config, deadline: number): Credential {
     if (now + 120000 < expiry) return token;
     const encode = (value: object) => Buffer.from(JSON.stringify(value)).toString("base64url");
     const seconds = Math.floor(now / 1000);
-    const claims = encode({alg:"RS256",typ:"JWT"}) + "." + encode({iss:c.writerAppId,iat:seconds-60,exp:seconds+300});
+    const claims = encode({alg:"RS256",typ:"JWT"}) + "." + encode({iss:appId,iat:seconds-60,exp:seconds+300});
     const jwt = claims + "." + sign("RSA-SHA256", Buffer.from(claims), readFileSync(key)).toString("base64url");
-    const checks = [...c.checks,...c.migrationChecks,...(c.admission?.required ?? [])];
-    const permissions = {contents:"write",pull_requests:"write",checks:"read",
-      ...(checks.some(g => g.workflow && !g.workflow.publicRead) ? {actions:"read"} : {})};
-    const body = JSON.stringify({repositories:[c.repository.split("/")[1]],permissions});
+    const body = JSON.stringify({repositories:[repository.split("/")[1]],permissions});
     const args = ["-q","--silent","--show-error","--fail","--proto","=https","--config","-",
       "--header","Content-Type: application/json","--data-binary",body,
       "https://api.github.com/app/installations/"+installation+"/access_tokens"];
@@ -42,4 +37,18 @@ export function writerCredential(c: Config, deadline: number): Credential {
     token = minted.token;
     return token;
   };
+}
+
+// Mint on demand so an expensive offline suite can span multiple installation tokens.
+export function writerCredential(c: Config, deadline: number): Credential {
+  const checks = [...c.checks,...c.migrationChecks,...(c.admission?.required ?? [])];
+  return scopedCredential(c.repository,c.writerAppId,{contents:"write",pull_requests:"write",checks:"read",
+    ...(checks.some(g => g.workflow && !g.workflow.publicRead) ? {actions:"read"} : {})},deadline);
+}
+
+export function reviewCredential(repository: string, deadline: number): Credential {
+  const appId = Number(process.env.TRAIN_APP_ID);
+  if (process.env.TRAIN_APP_KEY_FILE && (!Number.isSafeInteger(appId) || appId <= 0))
+    throw new Error("Set TRAIN_APP_ID for the review publisher's host App key");
+  return scopedCredential(repository,appId,{pull_requests:"write",contents:"read"},deadline);
 }

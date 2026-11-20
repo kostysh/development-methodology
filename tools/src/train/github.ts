@@ -5,10 +5,11 @@ import type { Admission, Config, Gate, WorkflowAuthority } from "./config.js";
 import { oid } from "./git.js";
 import { command } from "./process.js";
 
+export type Review = {id:number; user:{id:number} | null; commit_id:string; state:string; body:string | null};
 export type Pull = { number: number; head: string; ref: string; open: boolean; merged: boolean;
-  authorId?:number; draft: boolean; target: string; sameRepo: boolean; labels: string[] };
+  authorId?:number; baseSha?:string; draft: boolean; target: string; sameRepo: boolean; labels: string[] };
 type ApiPull = { user?: {id:number}; number: number; head: { sha: string; ref: string; repo: {full_name: string} | null };
-  base: { ref: string }; labels: { name: string }[]; state: string; merged?: boolean; draft: boolean };
+  base: { ref: string; sha?:string }; labels: { name: string }[]; state: string; merged?: boolean; merged_at?: string | null; draft: boolean };
 type Rule = { type: string; ruleset_id: number; ruleset_source_type: string; ruleset_source: string };
 type SetInfo = { id: number; name: string; updated_at?:string; target?:string; source?:string; source_type?:string; bypass_actors?: { actor_type: string; actor_id: number; bypass_mode: string }[];
   conditions?: { ref_name?: { include: string[]; exclude: string[] } }; rules?: {type: string}[]; enforcement?: string };
@@ -17,6 +18,13 @@ type Check = { id: number; name: string; head_sha: string; status: string; concl
 export function submissionTask(p: Pick<Pull,"head"|"ref">) {
   const match = /^ready\/([A-Za-z0-9][A-Za-z0-9_-]{0,80})-([a-f0-9]{40})$/.exec(p.ref);
   return match && match[2] === p.head ? match[1] : undefined;
+}
+
+export function submissionIdentityIssue(p: Pull, policy: Admission) {
+  if (!Number.isSafeInteger(p.authorId) || !p.authorId || p.authorId < 1) return "Missing numeric PR author ID";
+  if (p.authorId === policy.reviewerId) return "PR author and reviewer share GitHub ID " + p.authorId;
+  if (policy.submitterId !== undefined && p.authorId !== policy.submitterId)
+    return "PR author " + p.authorId + " differs from the configured submitter " + policy.submitterId;
 }
 
 export class GitHub {
@@ -42,11 +50,13 @@ export class GitHub {
     }
   }
   pull(p: ApiPull): Pull {
-    return { number: p.number, head: oid(p.head.sha), ref: p.head.ref, open: p.state === "open", merged: p.merged === true,
-      authorId:p.user?.id, draft: p.draft, target: p.base.ref, sameRepo: p.head.repo?.full_name.toLowerCase() === this.c.repository.toLowerCase(),
+    return { number: p.number, head: oid(p.head.sha), ref: p.head.ref, open: p.state === "open", merged: p.merged === true || typeof p.merged_at === "string",
+      authorId:p.user?.id, baseSha:p.base.sha, draft: p.draft, target: p.base.ref, sameRepo: p.head.repo?.full_name.toLowerCase() === this.c.repository.toLowerCase(),
       labels: p.labels.map(l => l.name) };
   }
-  list() { return this.pages<ApiPull>(this.repo("pulls?state=open&base=" + encodeURIComponent(this.c.branch))).map(p => this.pull(p)); }
+  list(state: "open" | "all" = "open") {
+    return this.pages<ApiPull>(this.repo("pulls?state=" + state + "&base=" + encodeURIComponent(this.c.branch))).map(p => this.pull(p));
+  }
   get(n: number) { return this.pull(this.api<ApiPull>(this.repo("pulls/" + n))); }
   workflow(p: Pull, w: WorkflowAuthority, check: Check) {
     const suite = check.check_suite?.id;
@@ -88,18 +98,26 @@ export class GitHub {
       return {...result,threshold,measured};
     });
   }
-  audit(p: Pull, a: Admission) {
-    if (!p.authorId || p.authorId === a.reviewerId) return false;
-    type Review = {user:{id:number} | null; commit_id:string; state:string; body:string | null};
-    const reviews = this.pages<Review>(this.repo("pulls/"+p.number+"/reviews"));
-    const latest = reviews.filter(r=>r.user?.id === a.reviewerId && ["APPROVED","CHANGES_REQUESTED","DISMISSED"].includes(r.state)).at(-1);
-    return latest?.state === "APPROVED" && latest.commit_id === p.head &&
-      latest.body?.split(/\r?\n/).some(line=>line === "Methodology audit: PASS") === true;
+  decisions(p: Pull, reviewerId: number) {
+    return this.pages<Review>(this.repo("pulls/"+p.number+"/reviews"))
+      .filter(r => r.user?.id === reviewerId && ["APPROVED","CHANGES_REQUESTED","DISMISSED"].includes(r.state));
   }
-  gates(p: Pull, required: Gate[]) {
+  audit(p: Pull, a: Admission, ownerRequired = false) {
+    if (submissionIdentityIssue(p,a)) return false;
+    const latest = this.decisions(p,a.reviewerId).at(-1);
+    const lines = latest?.body?.split(/\r?\n/) ?? [];
+    const bases = lines.filter(line => line.startsWith("Review base:"));
+    const currentBase = bases.length === 1 && !!p.baseSha && /^[a-f0-9]{40}$/.test(p.baseSha) &&
+      bases[0] === "Review base: " + p.baseSha;
+    return latest?.state === "APPROVED" && latest.commit_id === p.head && lines.includes("Methodology audit: PASS") &&
+      (currentBase || (bases.length === 0 && !a.reviewControls)) &&
+      (!ownerRequired || lines.filter(l => l.startsWith("Owner confirmation:")).length === 1 &&
+        lines.some(l => /^Owner confirmation: [^\x00-\x1f\x7f]{1,512}$/u.test(l) && l.slice(20).trim().length > 0));
+  }
+  gates(p: Pull, required: Gate[], ownerRequired = false) {
     if (!this.eligible(p)) return false;
     const a = this.c.admission;
-    if (a && (!submissionTask(p) || !this.audit(p,a))) return false;
+    if (a && (!submissionTask(p) || !this.audit(p,a,ownerRequired))) return false;
     return this.results(p,a ? [...required,...a.required] : required).every(row=>row.exitCode === 0);
   }
   mark(p: Pull, on: boolean) {

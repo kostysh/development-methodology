@@ -15,7 +15,9 @@ explicitly, not as its PASS.
    and the uniqueness of new IDs.
 6. Use the integration route in the profile. If the [merge train](#merge-train)
    is enabled, submit an immutable revision of the editable task branch. Correct
-   a returned revision on that task branch and obtain fresh admission. Re-read the PR, final commit,
+   a returned revision on that task branch and obtain fresh admission. A
+   scheduled train processes independently ready work while an owner decision
+   is pending. Re-read the PR, final commit,
    and branches after integration.
 7. After deploy, check the actually deployed revision.
 8. Finish your own resources and synchronize the main checkout.
@@ -105,6 +107,10 @@ base, PR head, and applicable gates before integrating.
    that the PR integrates without conflicts. Keep the submitted head immutable
    during enabled publication. If the head changes on a dry run, remove the
    label and require fresh evidence.
+   For a change to protected verification or approval rules, collect the
+   owner's decision for that revision in advance. If the decision is pending,
+   hold that PR and its dependants. The scheduled run continues with the other
+   admitted PRs and reports the held work for the owner.
 2. **Start and recover.** Try the shared lock without waiting. Record an
    overlap as a skip and exit. An urgent single-PR run needs operator
    authorization and takes the same lock. After acquiring it, reconcile
@@ -124,7 +130,8 @@ base, PR head, and applicable gates before integrating.
    reason, failed test when applicable, run ID and log locator. A fix
    goes on the editable task branch. Close the returned submission, create a
    fresh immutable submission for the same task and repeat admission on its
-   new head. Update dependent submissions and their prerequisite mapping. The fix
+   new head. Preserve dependencies by task identity. Update a dependent
+   submission when its code changes or its project uses PR-number dependencies. The fix
    follows the [type (a) route](06-verification.md#closing-review-findings)
    for a reproducible defect. Count an exclusion as a
    [fix and check cycle](14-learning-and-recovery.md#limit-on-a-chain-of-fixes).

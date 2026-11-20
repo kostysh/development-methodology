@@ -2,7 +2,7 @@ import { mapIdentity, normalizeEvent, parseUtc } from "../metrics/events.js";
 import { readProfile } from "../metrics/profile.js";
 import { appendJournal } from "../metrics/journal.js";
 import type { Config } from "./config.js";
-import type { Receipt } from "./engine.js";
+import { activeOwnerHolds, type OwnerHold, type Receipt } from "./engine.js";
 import { history } from "./state.js";
 
 export function observe(c: Config, r: Receipt) {
@@ -45,7 +45,17 @@ export function morning(c: Config, from: string, through: string) {
       if (c.schedule.hoursUtc.includes(hour.getUTCHours()) && !selected.some(r => r.slot === hour.toISOString())) missed.push(hour.toISOString());
     }
   }
-  return { decisions: selected.flatMap(r => r.decisions.map(action => ({run: r.id, action}))),
+  let holds: OwnerHold[] = [];
+  for (const r of selected.filter(r => r.mode === c.mode && r.result === "completed" && !r.incidents.length)) {
+    if (r.ownerHolds) {
+      // A single-PR run observes its own review. The previous full scan
+      // still supplies the dependencies on other open submissions.
+      holds = r.requestedPr ? holds.filter(h => h.pr !== r.requestedPr || "requires" in h) : [];
+      holds.push(...r.ownerHolds);
+    }
+    holds = holds.filter(h => !r.integrated.includes(h.pr) && !("requires" in h && r.integrated.includes(h.requires)));
+  }
+  return { ownerHolds: activeOwnerHolds(holds), decisions: selected.flatMap(r => r.decisions.map(action => ({run: r.id, action}))),
     window: { from, through }, branch: c.branch, runs: selected, missedSlots: missed,
     remainingQueue: selected.filter(r => r.result === "completed").at(-1)?.queue ?? null };
 }

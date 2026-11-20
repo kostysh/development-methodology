@@ -19,7 +19,7 @@ conflicts. Keep its current owners. Do not replace the existing `AGENTS.md`,
 
 ## 2. Place and configure
 
-From the primary checkout, use an operator shell with Node.js 24.12–24.x on Linux, npm, Git, GitHub CLI (including `gh attestation verify`) and GNU coreutils. Choose a durable `METHODOLOGY_RELEASES` path outside agent-writable roots or use the project-specific default below. The installer places the [5.0.1 release](https://github.com/kostysh/development-methodology/releases/tag/methodology-v5.0.1) in a fresh version directory. Use your existing project instructions and filled profile in their current locations. For a first installation, copy the blank profile to a new project-owned file outside the release directory.
+From the primary checkout, use an operator shell with Node.js 24.12–24.x on Linux, npm, Git, GitHub CLI (including `gh attestation verify`) and GNU coreutils. Choose a durable `METHODOLOGY_RELEASES` path outside agent-writable roots or use the project-specific default below. The installer places the [5.0.2 release](https://github.com/kostysh/development-methodology/releases/tag/methodology-v5.0.2) in a fresh version directory. Use your existing project instructions and filled profile in their current locations. For a first installation, copy the blank profile to a new project-owned file outside the release directory.
 
 ```sh
 (
@@ -27,7 +27,7 @@ From the primary checkout, use an operator shell with Node.js 24.12–24.x on Li
   project=$(git rev-parse --show-toplevel)
   root=${METHODOLOGY_RELEASES:-"${XDG_DATA_HOME:-$HOME/.local/share}/development-methodology/$(basename "$project")/releases"}
   case "$root" in /*) ;; *) echo "Choose an absolute release path" >&2; exit 1 ;; esac
-  version=5.0.1
+  version=5.0.2
   tag="methodology-v$version"
   repo=kostysh/development-methodology
   dest="$root/$version"
@@ -57,6 +57,10 @@ From the primary checkout, use an operator shell with Node.js 24.12–24.x on Li
 ```
 
 The printed installation directory contains `guide/` and `tools/node_modules/.bin/`. Use the absolute bin path in the launch environment of the selected clients and trusted runners. If another OS account runs a client, select a release location readable by its existing group. Record the version and verified source commit in the project profile. A failed stage leaves the active configuration intact. Review a leftover `.stage-*` directory before discarding it.
+
+GitHub CLI needs a writable cache to verify the attestation. In a shell
+with a read-only home, set `XDG_CACHE_HOME` to an operator-owned writable
+directory before running the installer.
 
 Fill in the project-owned copy of the [profile](PROJECT-PROFILE.md). Name the owner and basis for each material choice. Verify the project's real commands and record any missing check.
 
@@ -115,10 +119,62 @@ Use the [templates](templates/README.md) to extend the project's entry points:
 - `PLANS.md` — activation of formal planning and a link to its contract;
 - local `AGENTS.md` files of documentation areas and packages — differences only.
 
-Keep existing requirements. Replace every `{{...}}` with a verified value.
-From shared instructions, link to the project-owned profile and existing
-local guidance by relative path. For a chapter installed outside the project,
-link to its file in the exact release tag so the link works on other machines.
+Keep the existing instructions and project-owned profile. Set
+`{{PROJECT_PROFILE_PATH}}` to the relative link destination of that profile
+from each entry point. For a new profile copied from the blank template,
+adjust its links to the guide from the profile's actual location.
+
+Choose how collaborators will reach the guide:
+
+- **Pinned links.** Set `{{METHOD_PATH}}` to
+  `https://github.com/kostysh/development-methodology/blob/<release-tag>`
+  using the exact installed tag. This requires network access to follow the
+  links. Open each changed tag link and verify the target file and any
+  section anchor. The local link checker does not follow URLs.
+- **Offline links.** Copy the verified guide from [step 2](#2-place-and-configure)
+  into a fresh, versioned directory in the project. Share it with collaborators
+  who need offline access. Set `{{METHOD_PATH}}` relative to each entry point.
+  Leave the existing guide and filled profile in place.
+
+For the offline copy, set `release` to the absolute installation directory
+printed in step 2. Run from the project's primary checkout:
+
+```sh
+(
+  set -eu
+  release='/absolute/path/to/the/installed/version'
+  guide="$release/guide"
+  test -f "$guide/README.md"
+  if [ -e "$guide/AGENTS.md" ] || [ -L "$guide/AGENTS.md" ]; then
+    echo "Use the installed guide; this source includes maintainer instructions." >&2
+    exit 1
+  fi
+  docs="$(git rev-parse --show-toplevel)/docs"
+  dest="$docs/methodology-v$(basename -- "$release")"
+  mkdir -p -- "$docs"
+  if [ -e "$dest" ] || [ -L "$dest" ]; then
+    echo "Guide path already exists: $dest" >&2
+    exit 1
+  fi
+  stage=$(mktemp -d -- "$docs/.methodology-XXXXXXXX")
+  cp -R -- "$guide/." "$stage/"
+  "$release/tools/node_modules/.bin/methodology-check-links" "$stage"
+  mv -Tn -- "$stage" "$dest"
+  test ! -e "$stage" || { echo "Guide path was claimed; staged copy retained at $stage" >&2; exit 1; }
+  printf 'Guide copied to %s\n' "$dest"
+)
+```
+
+The copy includes the release's blank profile as reference material. Link
+project instructions to the filled profile. If a copy fails, inspect its
+staging directory before removing it. If the destination exists, verify it
+against the installed guide or choose a fresh versioned path.
+
+Replace every `{{...}}` with a verified value. Run the
+[documentation check](defaults/documentation.md#verify-links-and-anchors)
+in the adopting checkout after merging the entry points. Follow the rendered
+links from each entry point to confirm the guide, project-owned profile, and
+any section anchors resolve as intended.
 
 ## 6. Configure documentation
 
@@ -158,7 +214,15 @@ union of overlapping intervals within each activity and report uncovered time
 as unexplained. Record missing history as unknown. A project starting without
 comparable history can use its first trial as the first observation.
 
-For each selected native client, [register the hooks and verify a live callback](defaults/process-metrics.md#connect-a-native-client) from its assigned session. In Codex, trust both the actual project and its hook definitions. Check collection and recovery in the client surface the project uses. For `workspace-write`, use the task's [operation spool and trusted import](defaults/process-metrics.md#record-at-the-operation). The private journal belongs outside writable roots. Verify one wrapped test really runs and returns its own status, then reconcile the first report with the chronology.
+Set up the task coordinator once. For each task run `methodology-task begin`
+with its worktree and assigned session IDs, perform an action in each
+selected client, and verify that begin reports the callbacks. At the end,
+run `methodology-task finish`. These commands register and remove the hooks
+and import the workspace observations into the private journal. Add
+`--recovery` at project setup if the project uses it. Verify trust in the
+actual client, run one wrapped test and reconcile its recorded exit and the
+first task summary with the chronology. [Task commands](defaults/process-metrics.md#begin-and-finish-a-task)
+· [Client trust and diagnostics](defaults/process-metrics.md#connect-a-native-client)
 
 Record the [integration route](method/07-integration.md#merge-train) in the [profile](PROJECT-PROFILE.md#merge-train). If the project selects the train, [commission it](#commission-the-merge-train).
 
@@ -217,7 +281,15 @@ Keep the checkpoint report in the task or PR for its reader.
 
 ### Commission the merge train
 
-Follow the [train commissioning procedure](defaults/merge-train.md) for the chosen branch, sole writer, exact revision of the audit and fast checks, and trusted verifier. Run the [seven cases](defaults/merge-train.md#dry-run-cases) on a disposable target. Compare the dry-run receipt against the expected queue and exclusions. Enable publication when the operator accepts the result. Verify the protected branch, merged PRs and test deployment. [Operational metrics](defaults/process-metrics.md#train-observations)
+Set the target branch, writer App, independent reviewer and trusted fast
+checks. A single GitHub user can author all PRs through their usual
+`gh`. The coordinator can publish the independent verdict through the
+existing App. Exercise the seven train cases on a disposable target.
+Then observe an actual scheduled start with the operator offline. Verify
+the accepted branch and test deployment, the PRs held for a decision, and
+the morning report. Record the enabled schedule and its owner in the
+profile. [Train setup and commissioning](defaults/merge-train.md)
+· [Operational metrics](defaults/process-metrics.md#train-observations)
 
 ## Adoption is complete when
 
@@ -229,7 +301,9 @@ Follow the [train commissioning procedure](defaults/merge-train.md) for the chos
       locations of living documentation are named.
 - [ ] The root `AGENTS.md`, `CONTRIBUTING.md`, and, if needed, `PLANS.md`
       link to the methodology; no `{{...}}` remain in them.
-- [ ] Relative links from entry points to the methodology and documents work.
+- [ ] Local links and anchors from entry points work, including the link to
+      the project-owned profile. Guide links work from the shared offline copy
+      or have been opened and verified at the pinned release tag.
 - [ ] The trial task and negative case are complete. The profile identifies
       the historical baseline or first observation and its evidence limits.
 - [ ] An owner for maintaining the methodology and the next review event are assigned.

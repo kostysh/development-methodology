@@ -143,9 +143,20 @@
     "codex recovery registration serves only its chosen session and removes the created file",
     "claude recovery registration serves only its chosen session and removes the created file"
   ],
+  "review-policy.test.ts": [
+    "classifies only the PR's protected changes using committed objects in a bare repository",
+    "holds changed or removed inventory until its exact contents and owner decision are approved"
+  ],
   "solo-contract.test.ts": [
     "holds excluded, ambiguous, over-cap and unapproved merges and applies a batch to the exact decision",
     "one account records the chat answer and correction while legacy receipts and shared files keep publication held"
+  ],
+  "task-lifecycle.test.ts": [
+    "begins and finishes an installed task with a workspace spool and explicit acceptance",
+    "finish includes the selected session's deferred transcript observations before sealing the receipt",
+    "isolates linked tasks and preserves a missing callback on finish",
+    "retries a failed spool import without closing or accepting the task",
+    "provisions approved checkout skills and checks tracked skills"
   ],
   "train-metrics-contract.test.ts": [
     "summarizes each train attempt once and retains mode, measured values and missing fields",
@@ -183,6 +194,10 @@
     "serializes owner batches and both PR gates with publication, ordinary Git updates and process death",
     "the installed admission and results exporter read the independent review and required exact-head runs",
     "the host refreshes the scoped writer credential after two forty-minute suites",
-    "a returned submission re-enters on its corrected immutable head and preserves the task exclusion limit"
+    "a returned submission re-enters on its corrected immutable head and preserves the task exclusion limit",
+    "independent submission identity is checked before admission work",
+    "stable task dependencies follow corrected submissions and reject ambiguous or missing prerequisites",
+    "the trusted App publishes the independent exact-head verdict and holds unconfirmed protected changes",
+    "an unattended train holds protected changes and their dependants while an independent PR integrates"
   ]
 }

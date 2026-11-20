@@ -3,11 +3,14 @@
 After adoption, this file holds the verified rules of the adopting repository.
 Replace the placeholders and reconcile the content with the existing file.
 
+```markdown
+# CONTRIBUTING
+
 ## Owners
 
-- Methodology: `{{METHOD_PATH}}/README.md`.
+- Methodology: [guide](<{{METHOD_PATH}}/README.md>).
 - Profile, languages, permissions, and mandatory checks:
-  `{{METHOD_PATH}}/PROJECT-PROFILE.md`.
+  [project profile](<{{PROJECT_PROFILE_PATH}}>).
 - Local component rules: `{{PACKAGE_RULES_PATH}}`.
 - License constraints and permitted dependencies: `{{LICENSE_POLICY}}`.
 
@@ -32,7 +35,7 @@ replaced with an invented script.
 - Merge method and confirmation of the final state: `{{INTEGRATION_PROCEDURE}}`.
 - Cleanup and synchronization: `{{CLEANUP_PROCEDURE}}`.
 
-The process semantics belong to `{{METHOD_PATH}}/method/07-integration.md`.
+The process semantics belong to the [integration chapter](<{{METHOD_PATH}}/method/07-integration.md>).
 Having a credential does not authorize a bypass. Other people's changes are
 preserved.
 
@@ -46,6 +49,8 @@ acceptable here, without a second version of the requirements.
 - CI: `{{CI_GATES_OR_EXPLICIT_ABSENCE}}`.
 - Target environment, where applicable: `{{TARGET_ACCEPTANCE}}`.
 
-Dependencies and new tools go through a decision according to
-`{{METHOD_PATH}}/method/05-implementation.md`. Checks do not create
-permission to deploy, change credentials, or communicate externally.
+Dependencies and new tools go through a decision according to the
+[implementation chapter](<{{METHOD_PATH}}/method/05-implementation.md>).
+Checks do not create permission to deploy, change credentials, or communicate
+externally.
+```

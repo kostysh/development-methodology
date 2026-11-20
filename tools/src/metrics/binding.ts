@@ -9,6 +9,20 @@ const sessionId = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,254}$/u;
 type Binding = { project: string; task: string; observed?: number; started?: boolean;
   session?: string; path?: string; offset?: number };
 
+// A deferred reader inherits the shared lock on its task profile. Finish
+// takes the exclusive lock after unregistering the routes so the final
+// summary includes all previously scheduled transcript reads.
+export function withFlushLock<T>(profilePath: string, mode: "shared" | "exclusive", work: (fd: number) => T): T {
+  const fd = openSync(profilePath, "r");
+  try {
+    const lock = spawnSync("/usr/bin/flock", ["--" + mode, "-w", "2", "3"], {
+      stdio: ["ignore", "ignore", "ignore", fd], timeout: 3000,
+    });
+    if (lock.status !== 0) throw new Error("journal_lock_busy");
+    return work(fd);
+  } finally { closeSync(fd); }
+}
+
 function withBinding<T>(profile: MetricsProfile, sourceId: string,
   work: (prior: Binding | undefined, save: (state: Binding) => void) => T): T {
   const path = profile.journal + ".bindings";

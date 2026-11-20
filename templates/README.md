@@ -22,9 +22,20 @@ Templates do not require separate registers, automation, or a file per form.
 | [AGENTS for a documentation area](docs-area-AGENTS.md.template.md) | Local rules of one `docs/*` directory |
 
 `{{...}}` marks a value that is filled in during adoption. Before transferring
-entry-point files, replace the placeholders and adjust relative paths from the
-real destination. `{{METHOD_PATH}}` usually means `docs/development-methodology`,
-but this is the adopting project's choice.
+an entry-point block, remove its code fence and replace the placeholders.
+Follow [adoption step 5](../ADOPTION.md#5-connect-the-instructions) to set the
+two link destinations:
+
+- `{{METHOD_PATH}}` is the guide directory relative to the entry point, or the
+  URL prefix for files at the exact release tag. Omit a trailing slash.
+- `{{PROJECT_PROFILE_PATH}}` is the path to the filled profile, relative to the
+  entry point. Include the filename. Preserve the section anchors used in the
+  template or update them to match the actual profile.
+
+For example, with an offline guide in `docs/methodology-v<version>/` and a
+filled profile in `docs/PROJECT-PROFILE.md`, a root entry point uses
+`docs/methodology-v<version>` and `docs/PROJECT-PROFILE.md`. An entry point in
+`docs/product/` uses `../methodology-v<version>` and `../PROJECT-PROFILE.md`.
 
 Do not replace existing files wholesale. Map their rules to owners, add the
 necessary links, and resolve conflicts with the owner. A template does not

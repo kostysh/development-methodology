@@ -1,0 +1,36 @@
+{
+  "tag": "methodology-v5.0.2",
+  "source_commit": "a8a959ac6ae175297c21d80f884450256c8835d7",
+  "release": "https://github.com/kostysh/development-methodology/releases/tag/methodology-v5.0.2",
+  "paired_skills": "skills-v5.0.0",
+  "branch_ci": "https://github.com/kostysh/development-methodology/actions/runs/44754651919",
+  "tag_ci": "https://github.com/kostysh/development-methodology/actions/runs/44755124659",
+  "tag_jobs": {"verify": "success", "release-provenance": "success"},
+  "ci_artifact_id": 14635909594,
+  "guide_sha256": "cc8f288a54b550ada645ddf7677a701f6123a287d74a359a1e22bd9a6c1fd954",
+  "tools_sha256": "a244b9a88e65da885ddc9840766530a21a7afe4ecd6f2a3e899b31005e7307b8",
+  "checksum_manifest_sha256": "9003a979518eb5adb35f3ac23700b58323ddd46b501e58f5035c22250a9b2ecd",
+  "attestation": "Verified the manifest against the source commit, tag and methodology-tools.yml signer workflow.",
+  "local_and_tag_ci_tools_archive_byte_identical": true,
+  "installed_gate": {"suites": 20, "required": 161, "passed": 161, "failed": 0, "skipped": 0},
+  "governance": {
+    "previous_inventory_count": 150,
+    "new_cases": {"task_lifecycle": 5, "review_policy": 2, "train": 4},
+    "removed_cases": 0,
+    "approved_inventory_sha256": "6beeedc45644d54b228064eb35a710181db9278d944774214f3af7fb3566a69e",
+    "base": "fe7e35e3cd7cd3526c79e6e5903f53992b7c324f",
+    "candidate": "a8a959ac6ae175297c21d80f884450256c8835d7",
+    "protected_changes": [".github/workflows", "tools/test/package.packed.ts", "planning/v5/maintainer-review-policy.json", "tools/test/required-cases.json"],
+    "without_owner_confirmation": "held",
+    "owner_decision": "The owner approved all 150 previous cases and the 11 additional mandatory cases for the exact release candidate.",
+    "with_confirmed_reference": "passed",
+    "repository_rule": {
+      "id": 27733602, "active": true, "branch": "v5", "requires_pr": true,
+      "required_check": "verify", "check_publisher_app_id": 15368,
+      "requires_author_self_approval": false, "bypass_actors": [],
+      "native_enforcement": "PR and green CI",
+      "coordinator_enforcement": "Independent review and the owner's prior chat confirmation for protected changes.",
+      "stand_app_scope": "Disposable acceptance repository only."
+    }
+  }
+}

@@ -7,6 +7,44 @@ The original findings and evidence are retained unchanged by their author.
 The [previous resolution](external-review-resolution.md) covers the earlier
 sandbox metrics, safe installation, train and solo findings.
 
+The [published 5.0.2 release](https://github.com/kostysh/development-methodology/releases/tag/methodology-v5.0.2)
+is commit `a8a959ac6ae175297c21d80f884450256c8835d7`. All 161 mandatory
+cases passed on the installed archive. The independent consumer downloaded
+all five release assets, verified the attestation and matched the tag CI
+bytes. In a copy of existing project documentation it preserved 21 files
+and the filled profile. It opened the pinned guide links and recovered
+native Codex and Claude Code sessions after compaction. The Claude surface
+in this run was the executable bundled with the VS Code extension.
+[Release and controls](trials/5.0.2-release.json) · [Consumer and native clients](trials/5.0.2-cold.json)
+
+The [5.0.3 release](https://github.com/kostysh/development-methodology/releases/tag/methodology-v5.0.3)
+uses Codex to start the night train. System cron is an optional fallback.
+The installed train checks the requested UTC hour when it starts. The
+published archives matched tag CI, and an independent installation preserved
+the adopting project's existing documentation and filled profile on a disposable copy.
+The [release and stand results](trials/5.0.3-scheduler-and-train.json) identify the
+versions used. The long train trial installed 5.0.1 and added a 40-minute
+delay to each full suite to cross the real token lifetime. It excluded
+PR 12, integrated PR 11 and deployed the accepted revision. A separate
+probe of the published 5.0.2 credential provider observed the old token
+receive HTTP 401 and the renewed one receive HTTP 200. Its built module
+is byte-identical in 5.0.3.
+
+The release guide shows a standalone scheduled project task. To keep the
+commissioning conversation together, attach the same scheduled request to
+one existing project chat. Codex reuses that chat and its context. Give the
+chat the target, scope and fixed trigger during setup, and check its actual
+permissions. The train records its result in its receipt and in GitHub.
+[Schedule a task inside a chat](https://learn.chatgpt.com/docs/automations#schedule-a-task-inside-a-chat)
+
+On November 20 at 15:44 UTC, Codex fired the one-time schedule in the existing
+owner chat. The released 5.0.3 train integrated [PR 13](https://github.com/kostysh/methodology-v5-acceptance/pull/13)
+and deployed its tested commit on the disposable stand by 15:45 UTC. Independent
+GitHub and HTTP reads confirmed the same revision and the expected file contents.
+The morning report held PR 12 for an owner decision and PR 14 for its dependency
+on PR 12. Both remained open. This commissioning run used a daytime UTC slot.
+The stand's hosted admission workflow still used its approved 5.0.1 installation.
+
 | Finding | Change in 5.0.2 | Acceptance boundary |
 | --- | --- | --- |
 | N1. The usual PR author cannot approve their own PR | The usual account opens the PR. A separate agent reviews the exact base and head. The existing App publishes that verdict from the trusted coordinator. | Check the actual GitHub author and publisher IDs, exact commits, review and admission. Rejected, stale or superseded reviews hold the PR. |
@@ -35,3 +73,8 @@ merge with the owner's GitHub credentials can pass the native branch rule
 without that chat decision. The disposable acceptance App remains scoped
 to its stand. An adopting project's scheduled train uses its own configured
 publisher and writer and can leave an unanswered PR until morning.
+
+The [repository rule for v5](https://github.com/kostysh/development-methodology/rules/27733602)
+became active after the release. GitHub returned `refs/heads/v5` as its
+only target, the Actions `verify` job as its required check and an empty
+bypass list. The main branch retained its prior revision and rules.

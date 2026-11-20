@@ -1,0 +1,322 @@
+{
+  "release": "methodology-v5.0.3",
+  "repository": "kostysh/development-methodology",
+  "pull_request": "https://github.com/kostysh/development-methodology/pull/3",
+  "protected_paths": [
+    ".github/workflows",
+    "tools/test/package.packed.ts"
+  ],
+  "approved_head": "7ad8aadd6769d4f2ccc876565451f2a9f44d4798",
+  "source_commit": "ca45b4fd5e427b1a01a5fd9e3713f8173c0dd324",
+  "pr_ci_run": 44760934343,
+  "branch_ci_run": 44761364571,
+  "tag_ci_run": 44761742695,
+  "unchanged_inventory_sha256": "6beeedc45644d54b228064eb35a710181db9278d944774214f3af7fb3566a69e",
+  "mandatory_tests": 161,
+  "installed_test_suites": 20,
+  "independent_review": {
+    "preliminary_head": "b56423f8ec84412b4bf581738ac889e716aea555",
+    "result": "Changes requested after a delayed request could consume an adjacent hour. GitHub expression evaluation also needed an exact, case-sensitive ref check.",
+    "final_head_result": "Approved. Installed dispatcher and train rejected the previous hour, wrong-case branch, tag and exact grace boundary, before writing state. Last millisecond before cutoff reached the expected slot."
+  },
+  "optional_system_cron": {
+    "role": "Fallback when built-in scheduling is unavailable.",
+    "version_exercised": "5.0.2",
+    "result": "The existing shipped timer started the installed executable at a near-term wall-clock minute on the isolated Linux stand. A held lock produced a real skipped receipt.",
+    "run_id": "958de954-fe6c-4937-bcda-ed5a4e5e3506",
+    "at": "2026-11-20T14:49:01.668Z"
+  },
+  "public_release": {
+    "url": "https://github.com/kostysh/development-methodology/releases/tag/methodology-v5.0.3",
+    "published_at": "2026-11-20T15:20:06Z",
+    "guide_sha256": "0c76c96e1200fca48e76d4177be634ae499e32510e2accff0d4741e51af52ade",
+    "tools_sha256": "9099ab7a5512313880d0c5b92aad198662ae578ac72b687fcea726ad3dbf962c",
+    "checksum_manifest_sha256": "ff1c61ff21bcf0d393dfbe5a553c4556ff103457332f593928b721379e786848",
+    "tag_artifact_id": 14641686612,
+    "tag_jobs": [
+      "verify",
+      "release-provenance"
+    ],
+    "evidence": "Attestation verified against the source tag, commit and workflow; tag-CI tools archive exactly matched the locally installed and tested archive.",
+    "tag_attestation": "The GitHub CLI verified SHA256SUMS signed by the specified repository workflow, the release source reference and commit."
+  },
+  "unchanged_from_5_0_2": {
+    "dist/train/credential.js": "a528a3d66bf9e2d17ec5408c40d6c81c7ea5b433d7f2dae18387cbed6490bb2c",
+    "dist/train/github.js": "ea0224aa2ad486fa0bc9d1bc9b5c2e6b3af235fa3302dabb75feb6cc432fc63c",
+    "dist/train/engine.js": "9abb7246961893f347e830eeff1079eb94187be5d42fc7d5ef597bcba44d9e21",
+    "dist/train/suite.js": "262b37bbd055f381fdb255e86c3ef110c7e8e7d5b6be1a3c21c45fb098875a13",
+    "assets/train/methodology-train.cron": "351fc443082210a4c088f9a72ee05ea151647e24aeabaeb004230ab81a961cdd"
+  },
+  "cold_adoption": {
+    "tag_and_ci_files_identical": 5,
+    "guide_files": 40,
+    "existing_project_docs_preserved": 21,
+    "filled_profile_preserved": true,
+    "checked_links": {
+      "offline": {
+        "existing_unavailable_targets_equal_to_baseline": 74,
+        "rendered_links_in_entrypoints": 32,
+        "missing_file_and_anchor_rejected": true,
+        "project_owned_profile_bytes_preserved": true
+      },
+      "pinned": {
+        "existing_unavailable_targets_equal_to_baseline": 74,
+        "rendered_links_in_entrypoints": 32,
+        "missing_file_and_anchor_rejected": true,
+        "project_owned_profile_bytes_preserved": true
+      }
+    },
+    "pinned_distinct_targets": 23,
+    "pinned_anchors": 3,
+    "existing_install_refused": true,
+    "acceptance_scope": "Disposable copy of committed project entry points and prior guide, with a synthetic filled profile. No actual project rollout.",
+    "packed_dispatcher": {
+      "status": "pass",
+      "stage": "published",
+      "source_commit": "ca45b4fd5e427b1a01a5fd9e3713f8173c0dd324",
+      "installed_train_version": "5.0.3",
+      "installed_receiver_sha256": "0443c599d78e55a7048a70955217be03da4821bd676d165555575d308215e189",
+      "archive_installed_and_git_receiver_bytes_equal": true,
+      "only_workflow_dispatch_trigger": true,
+      "guide_command_argv_match": true,
+      "exact_case_sensitive_branch_ref_required_before_cli_invocation": true,
+      "scheduled_slot_forwarded_to_installed_cli": true,
+      "stale_request_refused_in_independently_verified_open_neighbor_slot": true,
+      "same_hour_expired_grace_refused": true,
+      "invalid_request_created_no_train_state_and_called_no_provider": true,
+      "current_neighbor_slot_produces_dry_empty_queue_receipt": true,
+      "missing_slot_or_invalid_mode_combinations_refused": true,
+      "manual_docs_route_preserved": true,
+      "boundary": "Executed the public tagged guide command and packed receiver shell, then actual installed train CLI. Controlled UTC clock and local GitHub CLI responses. No real scheduler, GitHub dispatch, integration or deployment in this check."
+    }
+  },
+  "clock_commissioning": {
+    "preflight_attempts": [
+      {
+        "started": "2026-11-20T15:03:18.859000+00:00",
+        "train_receipt": false,
+        "outcome": "declined opaque local signal"
+      },
+      {
+        "started": "2026-11-20T15:09:18.861000+00:00",
+        "train_receipt": false,
+        "outcome": "declined external lock holder because it could release before the child started"
+      },
+      {
+        "started": "2026-11-20T15:15:18.869000+00:00",
+        "train_receipt": false,
+        "outcome": "requested direct task authorization; no command attempted"
+      }
+    ],
+    "existing_chat_dispatch": {
+      "at": "2026-11-20T15:22:19Z",
+      "same_chat_verified": true,
+      "train_receipt": false,
+      "outcome": "The in-chat schedule returned to the existing acceptance chat. The agent requested a direct assignment in that chat."
+    },
+    "initial_test_scope": "Real Codex desktop clocks. These preflight attempts did not start an installed train.",
+    "completed_run": {
+      "result": "pass",
+      "provider": "Codex Automations",
+      "existing_owner_chat": true,
+      "fired_utc": "2026-11-20T15:44:19.219Z",
+      "received_utc": "2026-11-20T15:44:49.120242Z",
+      "slot_utc": "2026-11-20T15:00:00.000Z",
+      "test_window": "One daytime commissioning slot with no operator reply at dispatch.",
+      "stand": "https://github.com/kostysh/methodology-v5-acceptance",
+      "branch": "patch-rollover-20261120",
+      "installed_writer": "5.0.3",
+      "local_admission": "5.0.3",
+      "hosted_admission": "5.0.1 under the previously approved stand workflow",
+      "train_receipt": "c61b5969-48b4-4769-a684-6c4cb8687c6f",
+      "started_utc": "2026-11-20T15:44:49.156Z",
+      "finished_utc": "2026-11-20T15:45:30.150Z",
+      "base": "a3f754dad539754aa34011e6e9ec2c0d41dc09ed",
+      "candidate": "d98489328cb922fe32ff2b7540be1e9c00bdfe41",
+      "tree": "79a26e8c1911d4a8b3e3455e2b07454ec1b375d4",
+      "full_suite": "pass",
+      "integration": "https://github.com/kostysh/methodology-v5-acceptance/pull/13",
+      "merged_utc": "2026-11-20T15:45:26Z",
+      "protected_write_actor": "kostysh-v5-train-acceptance[bot]",
+      "github_branch_and_http_revision_match_candidate": true,
+      "http_payload_checks": ["ordinary change visible", "four unchanged catalog rows"],
+      "morning_holds": [
+        {"pr": 12, "state": "OPEN", "reason": "Owner decision required for products.csv"},
+        {"pr": 14, "state": "OPEN", "requires": 12}
+      ],
+      "remaining_queue": [],
+      "train_incidents": [],
+      "post_merge_checks": [
+        "https://github.com/kostysh/methodology-v5-acceptance/actions/runs/44766465246",
+        "https://github.com/kostysh/methodology-v5-acceptance/actions/runs/44766465193"
+      ],
+      "cleanup": "No pending writes or admitted entries. The writer lock was free and the temporary listeners and containers were stopped."
+    }
+  },
+  "long_run": {
+    "repository": "kostysh/methodology-v5-acceptance",
+    "branch": "patch-rollover-20261120",
+    "archiveVersion": "5.0.1",
+    "archiveSHA256": "f2b59a5f888336e8f5febdc5f013cd260b432b2b2809beb9b7e96dc50198f58a",
+    "suiteDelayMechanism": "Trusted verifier sleeps 2400 seconds at the start of each full suite, then executes its ordinary readme and real postgres-roundtrip cases. Targeted cases use that PostgreSQL case with no added delay.",
+    "issuance": [
+      {
+        "status": 201,
+        "providerDate": "2026-11-20T14:11:58+00:00",
+        "requestId": "FE92:269A28:C624818:12B91614:6B00552D"
+      },
+      {
+        "status": 201,
+        "providerDate": "2026-11-20T15:32:29+00:00",
+        "requestId": "2CDA:1BB216:68186E:9D70CC:6B00680D"
+      }
+    ],
+    "tokenExpiryObservation": "Two different GitHub HTTP 201 issuance request IDs. The first expiry is derived from the first provider Date and GitHub documented one-hour installation lifetime. The first credential was never re-exported or replayed by this train observation.",
+    "pullRequests": [
+      {
+        "pr": 11,
+        "url": "https://github.com/kostysh/methodology-v5-acceptance/pull/11",
+        "head": "fc5e751c873cd0249e11adb90935202048a58f65",
+        "ref": "ready/patch-owner-catalog-fc5e751c873cd0249e11adb90935202048a58f65",
+        "authorId": 431665,
+        "authorLogin": "kostysh",
+        "reviewId": 5993990062,
+        "reviewerId": 359126636,
+        "reviewerLogin": "kostysh-v5-train-acceptance[bot]",
+        "mergedAt": "2026-11-20T15:32:48Z"
+      },
+      {
+        "pr": 12,
+        "url": "https://github.com/kostysh/methodology-v5-acceptance/pull/12",
+        "head": "12253c4f2a9c02ab7e42d1f27b4ba74dd0cd79e2",
+        "ref": "ready/patch-owner-price-12253c4f2a9c02ab7e42d1f27b4ba74dd0cd79e2",
+        "authorId": 431665,
+        "authorLogin": "kostysh",
+        "reviewId": 5993990571,
+        "reviewerId": 359126636,
+        "reviewerLogin": "kostysh-v5-train-acceptance[bot]",
+        "mergedAt": null
+      }
+    ],
+    "protectedWrite": {
+      "id": 5260332672,
+      "actor_name": "kostysh-v5-train-acceptance[bot]",
+      "after_sha": "a3f754dad539754aa34011e6e9ec2c0d41dc09ed",
+      "ref": "refs/heads/patch-rollover-20261120",
+      "result": "bypass",
+      "pushed_at": "2026-11-20T16:32:46+01:00"
+    },
+    "targetReadback": {
+      "sha": "a3f754dad539754aa34011e6e9ec2c0d41dc09ed",
+      "tree": "e9810cc55ee04c25e4514e9c97d02e98727bd65f"
+    },
+    "deployment": {
+      "type": "local disposable HTTP static site deployed from independently fetched protected GitHub ref",
+      "method": "HTTP GET",
+      "revision": "a3f754dad539754aa34011e6e9ec2c0d41dc09ed",
+      "productsCSV": "id,price_cents\n1,125\n2,450\n3,500\n4,625\n"
+    },
+    "cleanup": {
+      "pendingWrites": 0,
+      "admitted": 0,
+      "ownedDockerContainers": 0,
+      "ownedWorkspaces": 0,
+      "writerLockAvailable": true
+    },
+    "run_id": "77f21cdf-c793-4471-accf-09507dc420fb",
+    "started": "2026-11-20T14:11:57.873Z",
+    "ended": "2026-11-20T15:32:55.463Z",
+    "excluded": [
+      {
+        "task": "patch-owner-price",
+        "pr": 12,
+        "head": "12253c4f2a9c02ab7e42d1f27b4ba74dd0cd79e2",
+        "cause": "test",
+        "reason": "Reproduces on isolated PR",
+        "tests": [
+          "postgres-roundtrip"
+        ]
+      }
+    ],
+    "full_attempts": [
+      {
+        "kind": "full",
+        "sha": "841576efc4bb9b40360fbda62550090c0ad04043",
+        "tests": [],
+        "result": {
+          "result": "fail",
+          "tests": [
+            "postgres-roundtrip"
+          ]
+        }
+      },
+      {
+        "kind": "full",
+        "sha": "a3f754dad539754aa34011e6e9ec2c0d41dc09ed",
+        "tests": [],
+        "result": {
+          "result": "pass"
+        }
+      }
+    ],
+    "independent_http_readback": "Orchestrator fetched the serving revision and four-row catalog after target integration."
+  },
+  "real_token_expiry": {
+    "repository": "kostysh/methodology-v5-acceptance",
+    "archiveVersion": "5.0.2",
+    "archiveSHA256": "a244b9a88e65da885ddc9840766530a21a7afe4ecd6f2a3e899b31005e7307b8",
+    "elapsedBeforeReal401Seconds": 3660.423,
+    "events": [
+      {
+        "event": "firstAuthenticatedScope",
+        "when": "2026-11-20T14:36:25.605Z",
+        "status": 200,
+        "providerDate": "Fri, 20 Nov 2026 14:36:25 GMT",
+        "requestId": "DEEC:204416:CA603F0:132009B0:6B005AE9",
+        "repositoryCount": 1,
+        "repositoryId": 1465349495
+      },
+      {
+        "event": "sameCredentialAfterWait",
+        "when": "2026-11-20T15:37:26.028Z",
+        "status": 401,
+        "providerDate": "Fri, 20 Nov 2026 15:37:25 GMT",
+        "requestId": "B166:3E3209:4A785C:EBF21A:6B006935"
+      },
+      {
+        "event": "renewedAuthenticatedScope",
+        "when": "2026-11-20T15:37:27.236Z",
+        "status": 200,
+        "providerDate": "Fri, 20 Nov 2026 15:37:27 GMT",
+        "requestId": "27EB:1465A1:4C7AE6:F25299:6B006936",
+        "repositoryCount": 1,
+        "repositoryId": 1465349495
+      },
+      {
+        "event": "finalTokenRevoked",
+        "when": "2026-11-20T15:37:27.761Z",
+        "status": 204,
+        "providerDate": "Fri, 20 Nov 2026 15:37:27 GMT",
+        "requestId": "576D:1D4A79:45B2CE:DD6C6C:6B006937"
+      }
+    ],
+    "credential_module_same_in_5_0_3": "a528a3d66bf9e2d17ec5408c40d6c81c7ea5b433d7f2dae18387cbed6490bb2c"
+  },
+  "hosted_admission": {
+    "13": {
+      "head": "b7d2b4c184be44cfdf212f29f585026b44a1dc3f",
+      "id": 44764522544,
+      "attempts": 2,
+      "first_diagnostic": "GitHub request returned curl exit 22, without an HTTP status in the workflow log. Same immutable revision passed on retry.",
+      "conclusion": "success",
+      "published_review": 5995197827
+    },
+    "14": {
+      "head": "62041c0fad5eb2e24d928280aed80f728ee0f514",
+      "id": 44764522740,
+      "attempts": 1,
+      "conclusion": "success",
+      "published_review": 5995198954
+    }
+  }
+}

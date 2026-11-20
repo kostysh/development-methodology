@@ -1,0 +1,148 @@
+{
+  "public_installation": {
+    "public_tag": "methodology-v5.0.2",
+    "source_commit": "a8a959ac6ae175297c21d80f884450256c8835d7",
+    "attestation_verified_for_exact_commit_and_signer": true,
+    "exact_printed_install_command_passed": true,
+    "canonical_adoption_equals_guide_archive_bytes": true,
+    "committed_fixture_entrypoints_existing_guide_and_synthetic_profile_unchanged": true,
+    "repeated_durable_install_refused_occupied_path": true,
+    "exact_ci_artifacts_equal": [
+      "SHA256SUMS",
+      "kostysh-development-methodology-tools-5.0.2.tgz",
+      "kostysh-development-methodology-tools-5.0.2.tgz.sha256",
+      "methodology-guide-5.0.2.tar.gz",
+      "source-commit.txt"
+    ],
+    "download_hashes": {
+      "SHA256SUMS": "9003a979518eb5adb35f3ac23700b58323ddd46b501e58f5035c22250a9b2ecd",
+      "kostysh-development-methodology-tools-5.0.2.tgz": "a244b9a88e65da885ddc9840766530a21a7afe4ecd6f2a3e899b31005e7307b8",
+      "kostysh-development-methodology-tools-5.0.2.tgz.sha256": "ab75a615ffb0d4b96bcfb0de7af913c02be807ca564155e371cded0fbfe5e91e",
+      "methodology-guide-5.0.2.tar.gz": "cc8f288a54b550ada645ddf7677a701f6123a287d74a359a1e22bd9a6c1fd954",
+      "source-commit.txt": "9c9226add5012000d7e4b20a12289b25667c6f29be3ab3012121fc1497db3954"
+    }
+  },
+  "entry_points": {
+    "stage": "public exact release",
+    "source_commit": "a8a959ac6ae175297c21d80f884450256c8835d7",
+    "public_tag_links_checked": true,
+    "pinned_candidate_tag_target_count": 23,
+    "pinned_anchor_count": 3,
+    "guide_tar_sha256": "cc8f288a54b550ada645ddf7677a701f6123a287d74a359a1e22bd9a6c1fd954",
+    "tools_tgz_sha256": "a244b9a88e65da885ddc9840766530a21a7afe4ecd6f2a3e899b31005e7307b8",
+    "installed_guide_manifest_sha256": "32cb70e6712be00ba16de9b132c24ca822710fd2722a34aeb815a71c7c74b481",
+    "entrypoint_checks": {
+      "offline": {
+        "existing_unavailable_targets_equal_to_baseline": 74,
+        "rendered_links_in_entrypoints": 32,
+        "missing_file_and_anchor_rejected": true,
+        "project_owned_profile_bytes_preserved": true
+      },
+      "pinned": {
+        "existing_unavailable_targets_equal_to_baseline": 74,
+        "rendered_links_in_entrypoints": 32,
+        "missing_file_and_anchor_rejected": true,
+        "project_owned_profile_bytes_preserved": true
+      }
+    },
+    "guide_file_count": 40,
+    "existing_methodology_count": 21,
+    "release_copy_bytewise_equal": true,
+    "existing_guide_and_profile_preserved": true,
+    "collision_existing_occupied_target_refused": true,
+    "collision_dangling_target_refused": true,
+    "collision_after_precheck_refused_and_stage_retained": true,
+    "existing_release_copy_refused": true,
+    "maintainer_agents_excluded": true,
+    "inputs": "Committed project entrypoints and 21 methodology files in a disposable archive; synthetic filled profile and adjacent entrypoint. Project bytes omitted."
+  },
+  "members": {
+    "status": "pass",
+    "source_commit": "a8a959ac6ae175297c21d80f884450256c8835d7",
+    "public_release": "https://github.com/kostysh/development-methodology/releases/tag/methodology-v5.0.2",
+    "tag_ci_run": 44755124659,
+    "tag_ci_artifact": 14635909594,
+    "member_inventories": {
+      "guide": {
+        "member_count": 40,
+        "manifest_sha256": "8ac7a7d4759052abfb3900e9ea53d3b5df449caa9001bc7ee33c2d0c4931bee8",
+        "every_installed_regular_file_equals_archive_member": true,
+        "members_equal_exact_git_blobs": true
+      },
+      "tools": {
+        "member_count": 300,
+        "manifest_sha256": "2355fd8ee6cc08f0250add5fa73a56b79535d29c044dccf5d073325026113035",
+        "every_installed_regular_file_equals_archive_member": true,
+        "members_equal_exact_git_blobs": null
+      }
+    }
+  },
+  "native_codex": {
+    "stage": "published",
+    "source_commit": "a8a959ac6ae175297c21d80f884450256c8835d7",
+    "archive_sha256": "a244b9a88e65da885ddc9840766530a21a7afe4ecd6f2a3e899b31005e7307b8",
+    "installed_version": "5.0.2",
+    "client": "codex-cli 0.171.0",
+    "transport": "isolated deterministic localhost; real CLI app-server and native hooks; no provider auth/model claim",
+    "setup": "configured",
+    "begin_pending": "awaiting_callback",
+    "begin_after_native_action": "ready",
+    "finish": "finished",
+    "finish_retry_same_receipt": true,
+    "finish_retry_journal_unchanged": true,
+    "hooks_rollback_bytewise": true,
+    "hook_count_individually_reviewed": 8,
+    "events": {
+      "task.started": 1,
+      "activity.started": 2,
+      "activity.finished": 2,
+      "model.usage": 5,
+      "context.compacted": 1,
+      "test.started": 2,
+      "test.finished": 2,
+      "task.accepted": 1
+    },
+    "wrapped_test_exit_codes": [
+      0,
+      3
+    ],
+    "operation_spool_imported": 4,
+    "recovery_packet_after_real_compaction": true,
+    "codex_skill_discovered_and_loaded_in_linked_worktree": true,
+    "skill_archive_sha256": "a490a6d30de61f5af69a76ccaa35c6fefd4030da0b33f5ad988e8c2e006bb41d",
+    "skill_file_sha256": "9c8f73500414ce97513b1f1113bd0f967f6940ff22f4a85c5e9dfe2f03e3b846",
+    "journal_sha256": "0b40d3b975297acb6b2da70460f0c630bc9b068186b5d9934f74a9c059a4cc53"
+  },
+  "native_claude": {
+    "stage": "published",
+    "source_commit": "a8a959ac6ae175297c21d80f884450256c8835d7",
+    "archive_sha256": "a244b9a88e65da885ddc9840766530a21a7afe4ecd6f2a3e899b31005e7307b8",
+    "client_version": "2.1.329 (Claude Code)",
+    "client_surface": "VS Code extension-bundled Claude Code native executable, headless CLI; no graphical extension panel launched",
+    "transport": "isolated deterministic localhost, no provider credentials or hosted inference",
+    "official_refs": [
+      "https://code.claude.com/docs/en/cli-reference",
+      "https://code.claude.com/docs/en/hooks",
+      "https://code.claude.com/docs/en/settings",
+      "https://code.claude.com/docs/en/memory#agents-md"
+    ],
+    "root_agents_md_observed_by_native_client": true,
+    "same_native_session_across_actions": true,
+    "initial_callback_pending": true,
+    "callback_after_real_bash": true,
+    "recovery_after_native_compaction": true,
+    "operation_spool_imported": 2,
+    "events": {
+      "task.started": 1,
+      "activity.started": 2,
+      "activity.finished": 2,
+      "model.usage": 4,
+      "context.compacted": 1,
+      "test.started": 1,
+      "test.finished": 1,
+      "task.accepted": 1
+    },
+    "finish_retry_same_receipt_and_journal": true,
+    "restored_existing_local_settings_bytes": true
+  }
+}

@@ -1,0 +1,66 @@
+{
+  "tag": "methodology-v5.0.1",
+  "source_commit": "cad54a019986d0e599616a0b0b54caa57c4fe425",
+  "ci": {
+    "branch_run": 44745341379,
+    "tag_run": 44745918246,
+    "source_tests_passed": 150,
+    "installed_required_cases_by_suite": {
+      "baseline-contract.test.ts": 27,
+      "baseline-implementation.test.ts": 5,
+      "check-links.test.ts": 8,
+      "contract-results.test.ts": 1,
+      "controls.test.ts": 9,
+      "metrics-adapters.test.ts": 13,
+      "metrics-github.test.ts": 3,
+      "metrics-native.test.ts": 8,
+      "metrics-operations.test.ts": 3,
+      "metrics-report.test.ts": 13,
+      "metrics-store.test.ts": 15,
+      "recovery-contract.test.ts": 8,
+      "recovery-implementation.test.ts": 5,
+      "solo-contract.test.ts": 2,
+      "train-metrics-contract.test.ts": 4,
+      "train-metrics-scope.test.ts": 8,
+      "train-runtime-isolation.test.ts": 2,
+      "train-runtime.test.ts": 16
+    }
+  },
+  "published_assets_sha256": {
+    "SHA256SUMS": "8ea06178c33e09e8c1eb80e298bbd20d42bb2837a52ebeb1988c9a2a3500130b",
+    "kostysh-development-methodology-tools-5.0.1.tgz": "f2b59a5f888336e8f5febdc5f013cd260b432b2b2809beb9b7e96dc50198f58a",
+    "kostysh-development-methodology-tools-5.0.1.tgz.sha256": "2bdc7a93f4815a2a43ff5183aa7122aebc25d0914fff313894263c06d14821fe",
+    "methodology-guide-5.0.1.tar.gz": "991e3afd7231d3f79f57b5730c504a0d621695ffdbce9e1d745b1a5e0658cee4",
+    "source-commit.txt": "98d5b07614adfe94bd6b91c4d6b5a955367da738868894c4dbe055e37192e04f"
+  },
+  "provenance": {
+    "subject": [
+      {
+        "name": "SHA256SUMS",
+        "digest": {
+          "sha256": "8ea06178c33e09e8c1eb80e298bbd20d42bb2837a52ebeb1988c9a2a3500130b"
+        }
+      }
+    ],
+    "workflow": {
+      "path": ".github/workflows/methodology-tools.yml",
+      "ref": "refs/tags/methodology-v5.0.1",
+      "repository": "https://github.com/kostysh/development-methodology"
+    },
+    "run": "https://github.com/kostysh/development-methodology/actions/runs/44745918246/attempts/1"
+  },
+  "same_second_report": {
+    "archive_sha256": "f2b59a5f888336e8f5febdc5f013cd260b432b2b2809beb9b7e96dc50198f58a",
+    "accepted_at": "2026-11-20T13:40:07.170Z",
+    "default_report_returned_at": "2026-11-20T13:40:07.225Z",
+    "default_lead_time": {
+      "status": "complete",
+      "value": 226
+    },
+    "explicit_cutoff": "2026-11-20T13:40:07Z",
+    "explicit_lead_time": {
+      "status": "unavailable",
+      "value": null
+    }
+  }
+}

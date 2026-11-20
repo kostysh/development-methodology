@@ -1,0 +1,372 @@
+{
+  "repository": "kostysh/methodology-v5-acceptance",
+  "repositoryId": 1465349495,
+  "asOf": "2026-11-20T13:37:24.226385+00:00",
+  "artifact": {
+    "version": "5.0.1",
+    "sha256": "f2b59a5f888336e8f5febdc5f013cd260b432b2b2809beb9b7e96dc50198f58a"
+  },
+  "defaultBranch": "master",
+  "refs": {
+    "ready/patch-product-93e73031704cce1ed02cb8df8b2895622e5cd7ca": "93e73031704cce1ed02cb8df8b2895622e5cd7ca",
+    "ready/patch-product-de15c3d8122ca9af3a2ddec30c894805bd8e4ae9": "de15c3d8122ca9af3a2ddec30c894805bd8e4ae9",
+    "ready/patch-supplement-59be01225b5417394af9022115be9063df25234d": "59be01225b5417394af9022115be9063df25234d",
+    "master": "e647db9f24c656517e0284a6bc12a9c5d4791024",
+    "patch-train-20261120": "59a5cb6e6212f4f8b278dcec96fe85518be6421e",
+    "edit/patch-product": "de15c3d8122ca9af3a2ddec30c894805bd8e4ae9",
+    "edit/patch-supplement": "59be01225b5417394af9022115be9063df25234d"
+  },
+  "rulesets": {
+    "soleWriter": 27727931,
+    "permanentTargetProtections": 27727934,
+    "immutableSubmissionPattern": 27727914
+  },
+  "appId": 5847655,
+  "reviewerId": 431665,
+  "reviewScope": "Separate coordinator audit of each synthetic exact head, submitted through the authorized operator identity.",
+  "requiredCheckIds": [
+    "fast",
+    "baseline"
+  ],
+  "exportedResults": [
+    {
+      "id": "fast",
+      "candidate": "93e73031704cce1ed02cb8df8b2895622e5cd7ca",
+      "status": "completed",
+      "exitCode": 0
+    },
+    {
+      "id": "baseline",
+      "candidate": "93e73031704cce1ed02cb8df8b2895622e5cd7ca",
+      "status": "completed",
+      "exitCode": 0
+    }
+  ],
+  "pullRequests": [
+    {
+      "number": 6,
+      "url": "https://github.com/kostysh/methodology-v5-acceptance/pull/6",
+      "head": "93e73031704cce1ed02cb8df8b2895622e5cd7ca",
+      "author": "kostysh-v5-train-acceptance[bot]",
+      "state": "closed",
+      "merged": false,
+      "mergedBy": null,
+      "reviewIds": [
+        5993437115
+      ],
+      "runs": [
+        {
+          "workflow": 424944890,
+          "run": 44744780076,
+          "event": "workflow_dispatch",
+          "conclusion": "success",
+          "jobs": [
+            {
+              "id": 136317180519,
+              "name": "Methodology reviewed admission",
+              "conclusion": "success"
+            }
+          ]
+        },
+        {
+          "workflow": 424944890,
+          "run": 44744585500,
+          "event": "workflow_dispatch",
+          "conclusion": "failure",
+          "jobs": [
+            {
+              "id": 136316489210,
+              "name": "Methodology reviewed admission",
+              "conclusion": "failure"
+            }
+          ]
+        },
+        {
+          "workflow": 425033637,
+          "run": 44744577182,
+          "event": "push",
+          "conclusion": "success",
+          "jobs": [
+            {
+              "id": 136316455732,
+              "name": "Methodology baseline integrity",
+              "conclusion": "success"
+            }
+          ]
+        },
+        {
+          "workflow": 425033636,
+          "run": 44744577035,
+          "event": "push",
+          "conclusion": "success",
+          "jobs": [
+            {
+              "id": 136316454254,
+              "name": "Patch synthetic fast contract",
+              "conclusion": "success"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "number": 7,
+      "url": "https://github.com/kostysh/methodology-v5-acceptance/pull/7",
+      "head": "de15c3d8122ca9af3a2ddec30c894805bd8e4ae9",
+      "author": "kostysh-v5-train-acceptance[bot]",
+      "state": "closed",
+      "merged": true,
+      "mergedBy": "kostysh-v5-train-acceptance[bot]",
+      "reviewIds": [
+        5993465212
+      ],
+      "runs": [
+        {
+          "workflow": 424944890,
+          "run": 44745121827,
+          "event": "workflow_dispatch",
+          "conclusion": "success",
+          "jobs": [
+            {
+              "id": 136318342173,
+              "name": "Methodology reviewed admission",
+              "conclusion": "success"
+            }
+          ]
+        },
+        {
+          "workflow": 425033637,
+          "run": 44744970037,
+          "event": "push",
+          "conclusion": "success",
+          "jobs": [
+            {
+              "id": 136317804023,
+              "name": "Methodology baseline integrity",
+              "conclusion": "success"
+            }
+          ]
+        },
+        {
+          "workflow": 425033636,
+          "run": 44744970024,
+          "event": "push",
+          "conclusion": "success",
+          "jobs": [
+            {
+              "id": 136317803754,
+              "name": "Patch synthetic fast contract",
+              "conclusion": "success"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "number": 8,
+      "url": "https://github.com/kostysh/methodology-v5-acceptance/pull/8",
+      "head": "59be01225b5417394af9022115be9063df25234d",
+      "author": "kostysh-v5-train-acceptance[bot]",
+      "state": "closed",
+      "merged": true,
+      "mergedBy": "kostysh-v5-train-acceptance[bot]",
+      "reviewIds": [
+        5993479360
+      ],
+      "runs": [
+        {
+          "workflow": 424944890,
+          "run": 44745299310,
+          "event": "workflow_dispatch",
+          "conclusion": "success",
+          "jobs": [
+            {
+              "id": 136318943912,
+              "name": "Methodology reviewed admission",
+              "conclusion": "success"
+            }
+          ]
+        },
+        {
+          "workflow": 425033637,
+          "run": 44745134825,
+          "event": "push",
+          "conclusion": "success",
+          "jobs": [
+            {
+              "id": 136318377434,
+              "name": "Methodology baseline integrity",
+              "conclusion": "success"
+            }
+          ]
+        },
+        {
+          "workflow": 425033636,
+          "run": 44745134948,
+          "event": "push",
+          "conclusion": "success",
+          "jobs": [
+            {
+              "id": 136318377826,
+              "name": "Patch synthetic fast contract",
+              "conclusion": "success"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "returned": {
+    "id": "e999bd34-548e-4d3d-b288-f5c4aa1cf2d3",
+    "started": "2026-11-20T13:30:11.252Z",
+    "ended": "2026-11-20T13:30:33.175Z",
+    "base": "ee27804cc888da2656a8ef0156c02a1d728f0db6",
+    "selected": [
+      6
+    ],
+    "integrated": [],
+    "excluded": [
+      {
+        "task": "patch-product",
+        "pr": 6,
+        "head": "93e73031704cce1ed02cb8df8b2895622e5cd7ca",
+        "cause": "test",
+        "reason": "Reproduces on isolated PR",
+        "tests": [
+          "postgres-roundtrip"
+        ]
+      }
+    ],
+    "attempts": [
+      {
+        "kind": "full",
+        "sha": "aca5de73e9140eebc55b7c568612ced0c66ad635",
+        "tests": [],
+        "result": {
+          "result": "fail",
+          "tests": [
+            "postgres-roundtrip"
+          ]
+        }
+      },
+      {
+        "kind": "targeted",
+        "sha": "aca5de73e9140eebc55b7c568612ced0c66ad635",
+        "tests": [
+          "postgres-roundtrip"
+        ],
+        "result": {
+          "result": "fail",
+          "tests": [
+            "postgres-roundtrip"
+          ]
+        }
+      },
+      {
+        "kind": "targeted",
+        "sha": "ee27804cc888da2656a8ef0156c02a1d728f0db6",
+        "tests": [
+          "postgres-roundtrip"
+        ],
+        "result": {
+          "result": "pass"
+        }
+      },
+      {
+        "kind": "targeted",
+        "sha": "aca5de73e9140eebc55b7c568612ced0c66ad635",
+        "tests": [
+          "postgres-roundtrip"
+        ],
+        "result": {
+          "result": "fail",
+          "tests": [
+            "postgres-roundtrip"
+          ]
+        }
+      },
+      {
+        "kind": "targeted",
+        "sha": "f29d80c548058cb993d186c28f7bc39716490ac4",
+        "tests": [
+          "postgres-roundtrip"
+        ],
+        "result": {
+          "result": "fail",
+          "tests": [
+            "postgres-roundtrip"
+          ]
+        }
+      }
+    ],
+    "incidents": [],
+    "decisions": []
+  },
+  "integrated": {
+    "id": "b51abc7e-7db8-4a26-bf3c-ead44e899086",
+    "started": "2026-11-20T13:33:27.204Z",
+    "ended": "2026-11-20T13:34:35.298Z",
+    "base": "ee27804cc888da2656a8ef0156c02a1d728f0db6",
+    "selected": [
+      7,
+      8
+    ],
+    "integrated": [
+      7,
+      8
+    ],
+    "excluded": [],
+    "candidate": "59a5cb6e6212f4f8b278dcec96fe85518be6421e",
+    "tree": "a62a23a594578f756b058683ab37a39fbe1e9695",
+    "branchReadback": "59a5cb6e6212f4f8b278dcec96fe85518be6421e",
+    "treeReadback": "a62a23a594578f756b058683ab37a39fbe1e9695",
+    "attempts": [
+      {
+        "kind": "full",
+        "sha": "59a5cb6e6212f4f8b278dcec96fe85518be6421e",
+        "tests": [],
+        "result": {
+          "result": "pass"
+        }
+      }
+    ],
+    "incidents": [],
+    "decisions": []
+  },
+  "dependencies": {
+    "8": [
+      7
+    ]
+  },
+  "verifiedTree": "a62a23a594578f756b058683ab37a39fbe1e9695",
+  "integratedCommitRuns": [
+    {
+      "id": 44745504867,
+      "name": "Patch acceptance fast contract",
+      "conclusion": "success"
+    },
+    {
+      "id": 44745504747,
+      "name": "Methodology protected baseline",
+      "conclusion": "success"
+    }
+  ],
+  "deployment": {
+    "configured": false,
+    "readback": null
+  },
+  "tokenExpiry": {
+    "provider": "Live repository-scoped GitHub App issuance and authorized leased push exercised.",
+    "duration": "Controlled-clock local integration exercised two 40-minute full suites, targeted diagnosis and a leased push with the second token after the first expired. The provider stand ran short real suites."
+  },
+  "cleanup": {
+    "trainLockAvailable": true,
+    "pendingWrites": 0,
+    "admitted": 0,
+    "ownedWorkspaces": 0,
+    "ownedContainers": 0,
+    "openActionsRuns": 0,
+    "busySelfHostedRunners": 0,
+    "editableRefsRestored": true
+  }
+}

@@ -1,0 +1,138 @@
+{
+  "status": "verified",
+  "scope": "Independent consumer; local project archive with existing methodology documents and entry points; filled profile is a seeded fixture. Restricted setup/preservation pilot only.",
+  "environment": {
+    "os": "Linux",
+    "node": "v24.15.0",
+    "gh": "2.96.0",
+    "codex": "0.171.0",
+    "profile_is_fixture": true,
+    "operator_cache": "Private writable XDG_CACHE_HOME for the GitHub CLI Sigstore verifier and private npm cache."
+  },
+  "before": {
+    "branch": "58c7a30b3423096edabea4f8c260d341ccfb93725eadccbfb45d4bd02a7a83b1",
+    "existing_methodology_files": 21,
+    "existing_methodology_readme": "338db0e30bb72329f6fdf65eddaf633f7e0ab989d791a0bdb74df81b418a8669",
+    "filled_profile": "4b63d8cdf7167edd2af446fb7884b8fc98936843f436d15611678289cf93ab2e",
+    "index": "7e17093c6ea07cdf243e5fdbc54eb3eeab4ad27f843f9ad2c134df70147ed72c",
+    "instructions": "f2214c17c0895c1e028b2e93075417e182f6534d856fc82fc24be230341a43b1",
+    "objects": "357a7f3fcc7272a60d3767da8e01e9910ac3b7a6dbb4e5106f243ca12db690ef",
+    "refs": "153fed0419d8ba2e5eb918478e60e1009587bb01bf35f9747bdd2d9decea47bd",
+    "top_readme": "9a7583f4349055566819188f148acf79fd6f6143e722995ee86a3e36bee48c84",
+    "tracked": 27,
+    "tracked_files": "983fd41ef57c975971c130650aeef7841afbf2937942575964c5e526e423ee85",
+    "working_state": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "previous_release": {
+    "version": "5.0.0",
+    "published_package_sha256": "432feb13e6ae9da28ef8992cbeb01cb4a05f67c96c1fe6e59045ffbbd9e9cfbc",
+    "published_guide_sha256": "db891e528655534039e8bd306f1683349e86aa06f50624f2399088d8762a6a2b",
+    "verification": "5.0.0 installer: downloaded release checksums and package matched GitHub release digest; clean input accepted and broken link rejected. No 5.0.0 attestation claimed."
+  },
+  "skills": {
+    "tag": "skills-v5.0.0",
+    "installed": "code-reviewer",
+    "version": "0.4.9",
+    "archive_sha256": "a490a6d30de61f5af69a76ccaa35c6fefd4030da0b33f5ad988e8c2e006bb41d",
+    "catalog_sha256": "060fd26552e556bfd6def86a3b82e399e18e884ca22afc7b22734aca146045ed",
+    "second_install_refused": true,
+    "native": {
+      "linked_worktree": {
+        "found": true,
+        "enabled": true,
+        "scope": "repo",
+        "matched_expected_file": true,
+        "metadata_read": true,
+        "errors": 0
+      },
+      "primary": {
+        "found": false,
+        "enabled": null,
+        "scope": null,
+        "matched_expected_file": false,
+        "metadata_read": false,
+        "errors": 0
+      },
+      "read_selected_instructions": {
+        "archive_matches_bytes": true,
+        "sha256": "9c8f73500414ce97513b1f1113bd0f967f6940ff22f4a85c5e9dfe2f03e3b846",
+        "bytes": 19263
+      }
+    },
+    "isolated_client_home": true,
+    "credentials_copied": false,
+    "model_turn_exercised": false
+  },
+  "frozen_solo_control": {
+    "method": "printed example, one simulated owner confirmation, local register",
+    "confirmed": 1,
+    "history": 1,
+    "pending": 0,
+    "signatures_supplied": 0
+  },
+  "limits": [
+    "No production project change, model execution, organization-wide rollout, skill quality or process-effectiveness measurement."
+  ],
+  "release": {
+    "release_tag": "methodology-v5.0.1",
+    "source_commit": "cad54a019986d0e599616a0b0b54caa57c4fe425",
+    "tag_matches_signed_source_commit": true,
+    "frozen_tools_match": true,
+    "tools_sha256": "f2b59a5f888336e8f5febdc5f013cd260b432b2b2809beb9b7e96dc50198f58a",
+    "guide_sha256": "991e3afd7231d3f79f57b5730c504a0d621695ffdbce9e1d745b1a5e0658cee4",
+    "manifest_sha256": "8ea06178c33e09e8c1eb80e298bbd20d42bb2837a52ebeb1988c9a2a3500130b",
+    "attestation": "Verified by gh with repo, source tag, exact commit and signer workflow",
+    "exact_guide_commands": true,
+    "root_maintainer_agents_excluded": true,
+    "guide_file_count": 40,
+    "unchanged_after_install": true,
+    "link_check_in_installer": true,
+    "installed_tools_checks": {
+      "version": "5.0.1",
+      "clean_exit": 0,
+      "broken_exit": 1
+    }
+  },
+  "collisions": {
+    "existing_release_exit": 1,
+    "dangling_destination_exit": 1,
+    "existing_artifacts_preserved": true,
+    "project_snapshot_unchanged": true
+  },
+  "rollback": {
+    "previous_release": {
+      "version": "5.0.0",
+      "clean_exit": 0,
+      "broken_exit": 1
+    },
+    "active_after_rollback": {
+      "version": "5.0.0",
+      "clean_exit": 0,
+      "broken_exit": 1
+    },
+    "new_release_retained": true,
+    "filled_profile_restored_byte_for_byte": true,
+    "client_path_switched_back": true,
+    "same_skill_still_discovered_in_new_session": true,
+    "train_hooks_ci_deployment": "unconfigured in disposable pilot"
+  },
+  "after": {
+    "branch": "58c7a30b3423096edabea4f8c260d341ccfb93725eadccbfb45d4bd02a7a83b1",
+    "existing_methodology_files": 21,
+    "existing_methodology_readme": "338db0e30bb72329f6fdf65eddaf633f7e0ab989d791a0bdb74df81b418a8669",
+    "filled_profile": "4b63d8cdf7167edd2af446fb7884b8fc98936843f436d15611678289cf93ab2e",
+    "index": "7e17093c6ea07cdf243e5fdbc54eb3eeab4ad27f843f9ad2c134df70147ed72c",
+    "instructions": "f2214c17c0895c1e028b2e93075417e182f6534d856fc82fc24be230341a43b1",
+    "objects": "357a7f3fcc7272a60d3767da8e01e9910ac3b7a6dbb4e5106f243ca12db690ef",
+    "refs": "153fed0419d8ba2e5eb918478e60e1009587bb01bf35f9747bdd2d9decea47bd",
+    "top_readme": "9a7583f4349055566819188f148acf79fd6f6143e722995ee86a3e36bee48c84",
+    "tracked": 27,
+    "tracked_files": "983fd41ef57c975971c130650aeef7841afbf2937942575964c5e526e423ee85",
+    "working_state": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "notes": [
+    "Disposable primary checkout contains a restricted archive of actual Passapure entrypoints and existing methodology; separate synthetic filled profile. Byte fingerprints for all tracked files, Git refs and objects were unchanged after rollback.",
+    "A test harness originally expected gh to print SHA256SUMS on success; gh did not. The documented installer completed on that attempt. Repeated in a second fresh release root, using tool exit status and independent exact-source verification.",
+    "Amended rollback procedure scopes inactive train, hooks, deployment and skill updates to configured cases."
+  ]
+}

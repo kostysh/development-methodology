@@ -3,6 +3,9 @@
 The [adoption-readiness plan](adoption-readiness.md) governs v5.
 The [external review follow-up](external-review-resolution.md) records the
 four adoption blockers in 5.0.0 and the verification of their 5.0.1 fixes.
+The [published 5.0.1 guide and tools](https://github.com/kostysh/development-methodology/releases/tag/methodology-v5.0.1)
+passed independent installation, skill discovery and rollback on a copy
+of existing project documentation. [Consumer record](trials/5.0.1-cold.json)
 The [5.0.0 acceptance record](release-acceptance.md) identifies the earlier
 archives and the results observed in that particular clean project.
 The November 26 and December 3 pilot checkpoints were cancelled. They

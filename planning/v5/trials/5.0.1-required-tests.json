@@ -1,0 +1,8 @@
+{
+  "test": "deleted mandatory installed-CLI case and its inventory row together",
+  "case": "installed control command exposes help and version and rejects invalid invocations",
+  "candidate_exit": 1,
+  "observed_diagnostic": "Required test inventory differs from the release owner's approved inventory",
+  "approved_inventory_sha256": "54b94fb57901cffdb97ab251f86254f1c453e5044fcb02eeafc72664f599ecb8",
+  "modified_inventory_sha256": "1521850eafabae6e8711211ddb83bf08a89c8bffebb934395fd81023389762e5"
+}

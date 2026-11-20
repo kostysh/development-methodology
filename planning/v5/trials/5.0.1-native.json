@@ -1,0 +1,175 @@
+{
+  "native_clients": {
+    "schema_version": 1,
+    "stage": "frozen 5.0.1 archive",
+    "archive_sha256": "f2b59a5f888336e8f5febdc5f013cd260b432b2b2809beb9b7e96dc50198f58a",
+    "clients": {
+      "codex": {
+        "version": "codex-cli 0.171.0",
+        "doctor": {
+          "client": "codex",
+          "registered": true,
+          "command_available": true,
+          "session_selected": true,
+          "callback": "observed",
+          "last_observed_at": "2026-11-20T13:28:13.212Z"
+        },
+        "events": [
+          "activity.started",
+          "activity.finished",
+          "model.usage",
+          "model.usage",
+          "model.usage",
+          "context.compacted",
+          "activity.started",
+          "activity.finished",
+          "model.usage",
+          "model.usage"
+        ],
+        "sha256": "21f0a44d0cabf7769b2cbf0246c22e9def9c087649d656c613a0032f1bbccb19",
+        "foreign_unchanged": true,
+        "recovery_in_request": true,
+        "transport": "deterministic localhost",
+        "untrusted_project_visible_hooks": 0,
+        "after_project_trust_untrusted_hook_count": 8,
+        "individually_reviewed_hook_count": 8
+      },
+      "claude": {
+        "archive": "kostysh-development-methodology-tools-5.0.1.tgz",
+        "doctor": {
+          "callback": "observed",
+          "client": "claude",
+          "command_available": true,
+          "last_observed_at": "2026-11-20T13:28:53.785Z",
+          "registered": true,
+          "session_selected": true
+        },
+        "events": [
+          "activity.started",
+          "activity.finished",
+          "model.usage",
+          "model.usage",
+          "context.compacted",
+          "activity.started",
+          "activity.finished",
+          "model.usage",
+          "model.usage"
+        ],
+        "foreign_unchanged": true,
+        "recovery_in_request": true,
+        "sha256": "740437f8d1d8fbb2e75240faeb75bd0daa06c20543cc7fb54fdaf7508a21d311",
+        "transport": "deterministic localhost",
+        "version": "2.1.329 (Claude Code)"
+      }
+    }
+  },
+  "extension_panel": {
+    "schema_version": 1,
+    "stage": "frozen 5.0.1 archive",
+    "archive_sha256": "f2b59a5f888336e8f5febdc5f013cd260b432b2b2809beb9b7e96dc50198f58a",
+    "version": "5.0.1",
+    "client": "Anthropic Claude Code for VS Code 2.1.329",
+    "editor": "VS Code Insiders 1.148.0 a0be5bebd4de2e0f08408e135abd93881d7f00df",
+    "useTerminal": false,
+    "display": "private GNOME Wayland virtual monitor",
+    "exact_session_selected_from_graphical_status": true,
+    "graphical_working_folder_matched": true,
+    "setting_sources": [
+      "User settings",
+      "Project local settings"
+    ],
+    "observed_panel_tool_result": true,
+    "post_compact_recovery_marker_in_request": true,
+    "transport": "deterministic localhost",
+    "doctor_before": {
+      "client": "claude",
+      "registered": true,
+      "command_available": true,
+      "session_selected": true,
+      "callback": "unobserved",
+      "last_observed_at": null
+    },
+    "doctor_after": {
+      "client": "claude",
+      "registered": true,
+      "command_available": true,
+      "session_selected": true,
+      "callback": "observed",
+      "last_observed_at": "2026-11-20T13:32:27.935Z"
+    },
+    "event_counts": {
+      "model.usage": 6,
+      "activity.started": 2,
+      "activity.finished": 2,
+      "context.compacted": 1
+    },
+    "journal_sha256": "a43368b06500015b3977cd7c6fe888194b632211d00bf059a3e76a6042e63ecb",
+    "distinct_graphical_session_tool_result": true,
+    "foreign_journal_unchanged": true,
+    "foreign_callback_did_not_satisfy_fresh_probe": true,
+    "rollback_removed_generated_settings": true
+  },
+  "local_model": {
+    "schema_version": 1,
+    "stage": "frozen 5.0.1 archive",
+    "archive_sha256": "f2b59a5f888336e8f5febdc5f013cd260b432b2b2809beb9b7e96dc50198f58a",
+    "version": "5.0.1",
+    "client": "2.1.329 (Claude Code)",
+    "real_inference": true,
+    "provider": "local llama.cpp /v1/messages",
+    "model": "Qwen3.8-27B-Q8_0.gguf",
+    "model_blob": "f5c702d8820d36fb55985bb238fc83ee3a313e920f4b752a437c3a6a9e14e4c8",
+    "cpu_threads": 4,
+    "elapsed_seconds": 154.5,
+    "known_only_from_read_tool": true,
+    "returned_fixture_value": true,
+    "session_id_matched": true,
+    "exit": 0,
+    "doctor_before": {
+      "client": "claude",
+      "registered": true,
+      "command_available": true,
+      "session_selected": true,
+      "callback": "unobserved",
+      "last_observed_at": null
+    },
+    "doctor_after": {
+      "client": "claude",
+      "registered": true,
+      "command_available": true,
+      "session_selected": true,
+      "callback": "observed",
+      "last_observed_at": "2026-11-20T13:33:21.562Z"
+    },
+    "event_counts": {
+      "activity.started": 1,
+      "activity.finished": 1,
+      "model.usage": 2
+    },
+    "journal_sha256": "a86d8fc9d8880c6338ce8688b72912826c04fd4e67d05d15ae974d24add3e227",
+    "rollback_removed_generated_settings": true,
+    "provider_template_adjustment": {
+      "reason": "Stock Qwen template rejected a non-initial system-role message from Claude Code.",
+      "change": "Render later system messages with the same system delimiters in original sequence. All tool schemas, model weights, user messages and generated outputs remain native.",
+      "template_sha256": "233c63c377e248f08767a868b0a67b68796d48fff5213bf0a2a55885b2b1e691"
+    },
+    "fixture_client_options": {
+      "system_prompt": "short task-specific instruction",
+      "enabled_tools": [
+        "Read"
+      ],
+      "tool_approval": [
+        "Read"
+      ],
+      "hosted_credentials_used": false
+    },
+    "provider_generation_receipts": [
+      {
+        "output_tokens": 53
+      },
+      {
+        "output_tokens": 18
+      }
+    ]
+  }
+}

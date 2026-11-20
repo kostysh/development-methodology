@@ -16,7 +16,7 @@ import { importSpool } from "./metrics/spool.js";
 import { mark, runTest, gitRewrite } from "./metrics/operations.js";
 import { syncGithub } from "./metrics/github-sync.js";
 import { adaptGithub } from "./metrics/github.js";
-import { appendJournal, coverageGap, readJournal, type CoverageGap } from "./metrics/journal.js";
+import { appendJournal, appendNativeHookGap, coverageGap, readJournal, type CoverageGap } from "./metrics/journal.js";
 import { coverageFile, readProfile, type MetricsProfile, type MetricsSource } from "./metrics/profile.js";
 import { summarize } from "./metrics/report.js";
 
@@ -46,6 +46,10 @@ const maxBatchRows = 50_000;
 
 function warn(code: string) {
   console.error(`methodology-metrics: ${code}`);
+}
+
+function diagnostic(error: unknown) {
+  return error instanceof Error && safeErrors.has(error.message) ? error.message : "invalid_input";
 }
 
 async function readInput(input: AsyncIterable<Buffer>, limit: number) {
@@ -86,27 +90,28 @@ function ingest(
   source: MetricsSource | undefined,
   deferred = false,
   profilePath?: string,
-  fromClient = false,
+  clientWarning?: typeof warn,
 ) {
   const events: MetricsEvent[] = [];
   const gaps: CoverageGap[] = [];
+  let matchedNativeCallback = false;
   const observedAt = new Date().toISOString();
   const note = (code: string, gapSource = sourceId) => gaps.push(coverageGap(code, gapSource, observedAt));
   const scopedNativeHook = operation === "hook" && source?.task_id && source.kind.endsWith("_hook");
   // A malformed or truncated native callback has no verifiable task identity.
   // Surface the diagnostic on stderr without charging an unrelated session's task.
-  const inputFault = (code: string) => scopedNativeHook ? warn(code) : note(code);
+  const inputFault = (code: string) => scopedNativeHook ? (clientWarning ?? warn)(code) : note(code);
   let raw: string;
   try {
     raw = new TextDecoder("utf-8", { fatal: true }).decode(rawInput);
   } catch {
     inputFault("invalid_input");
-    return { events, gaps };
+    return { events, gaps, matchedNativeCallback };
   }
   const rows = operation === "hook" ? [raw] : raw.split("\n");
   if (rows.length > maxBatchRows) {
     note("line_limit");
-    return { events, gaps };
+    return { events, gaps, matchedNativeCallback };
   }
   const parsedRows: { line: number; payload: unknown }[] = [];
   for (const [index, line] of rows.entries()) {
@@ -155,12 +160,13 @@ function ingest(
         codexRollout,
       };
       const bound = operation === "hook" && source.kind.endsWith("_hook") && source.task_id
-        ? boundHook(profile, sourceId!, payload, fromClient, deferred) : source;
+        ? boundHook(profile, sourceId!, payload, !!clientWarning, deferred) : source;
       if (!bound) continue;
       if (bound.task_id && /^(?:claude|codex)_/u.test(source.kind)) {
         if (!bound.session_id) { note("session_binding_required"); continue; }
         if (sessionFor(source.kind, payload) !== bound.session_id) continue;
       }
+      if (scopedNativeHook) matchedNativeCallback = true;
       // Some hosts persist the compaction boundary only after the synchronous
       // callback returns. A detached, bounded reread survives noninteractive teardown.
       const native = recordObject(payload);
@@ -185,18 +191,21 @@ function ingest(
         ? adaptGithub(source.kind, payload, context)
         : adaptRecord(source.kind, payload, context);
       for (const row of adapted) events.push(normalizeEvent(row, profile));
-    } catch {
-      note("invalid_event");
+    } catch (error) {
+      if (clientWarning && scopedNativeHook && !matchedNativeCallback) clientWarning(diagnostic(error));
+      else note("invalid_event");
     }
   }
-  return { events, gaps };
+  return { events, gaps, matchedNativeCallback };
 }
 
-async function persist(profile: MetricsProfile, operation: string, sourceName?: string, profilePath?: string, callback?: Buffer): Promise<number> {
+async function persist(profile: MetricsProfile, operation: string, sourceName?: string, profilePath?: string,
+  callback?: { input: Buffer; report: typeof warn }): Promise<number> {
+  const report = callback?.report ?? warn;
   const source = sourceName && Object.hasOwn(profile.sources, sourceName) ? profile.sources[sourceName] : undefined;
   if (sourceName && !source) {
     appendJournal(profile, [], [coverageGap("source_unconfigured")]);
-    warn("source_unconfigured");
+    report("source_unconfigured");
     return 1;
   }
 
@@ -208,20 +217,20 @@ async function persist(profile: MetricsProfile, operation: string, sourceName?: 
   }
   let raw: Buffer;
   try {
-    raw = callback ?? await readInput(operation === "collect" ? readSource(profile, source!) : process.stdin, operation === "hook" ? maxRowBytes : maxBatchBytes);
+    raw = callback?.input ?? await readInput(operation === "collect" ? readSource(profile, source!) : process.stdin, operation === "hook" ? maxRowBytes : maxBatchBytes);
   } catch (error) {
     const code = error instanceof Error && (error.message === "line_limit" || error.message === "source_missing")
       ? error.message : operation === "collect" ? "source_unreadable" : "invalid_input";
     if (!(operation === "hook" && source?.task_id && source.kind.endsWith("_hook"))) {
       appendJournal(profile, [], [coverageGap(code, sourceName ?? null)]);
     }
-    warn(code);
+    report(code);
     return 1;
   }
   if (operation === "collect" && source?.content_sha256
       && createHash("sha256").update(raw).digest("hex") !== source.content_sha256) {
     appendJournal(profile, [], [coverageGap("source_changed", sourceName!)]);
-    warn("source_changed");
+    report("source_changed");
     return 1;
   }
 
@@ -230,16 +239,41 @@ async function persist(profile: MetricsProfile, operation: string, sourceName?: 
     if (!selectors || !["Stop", "PostCompact"].includes(String(selectors.hook_event_name)) ||
         Object.keys(selectors).some(k => !["hook_event_name", "session_id", "transcript_path"].includes(k))) throw new Error("invalid_arguments");
   }
-  const { events, gaps } = ingest(profile, operation, raw, sourceName ?? null, source, deferred, profilePath, !!callback);
+  const { events, gaps, matchedNativeCallback } = ingest(profile, operation, raw, sourceName ?? null, source, deferred, profilePath, callback?.report);
   if (operation === "hook" && !events.length && !gaps.length) return 0;
-  const result = appendJournal(profile, events, gaps);
+  let result;
+  try {
+    result = appendJournal(profile, events, gaps);
+  } catch (error) {
+    if ((callback || deferred) && matchedNativeCallback && sourceName) {
+      try { appendNativeHookGap(profile, sourceName); } catch { /* The coverage file can be unavailable too. */ }
+    }
+    throw error;
+  }
   if (operation !== "hook") {
     console.log(`Recorded ${result.appended} events, ${result.repeat} repeats, ${result.gaps} gaps.`);
   }
   if (result.gaps) {
-    warn("coverage_gap");
+    report("coverage_gap");
     return 1;
   }
+  return 0;
+}
+
+async function observeNative(client: "codex" | "claude") {
+  let warning: string | undefined;
+  const report = (code: string) => { warning ??= code; };
+  try {
+    const input = await readInput(process.stdin, maxRowBytes);
+    await dispatchNative(client, "metrics", input, async route => {
+      try { return await persist(readProfile(route.profile), "hook", route.source, route.profile, { input, report }); }
+      catch (error) { report(diagnostic(error)); return 0; }
+    });
+  } catch (error) {
+    report(diagnostic(error));
+  }
+  if (warning) warn(warning);
+  // These hooks observe the client. Collection cannot make a client decision.
   return 0;
 }
 
@@ -262,9 +296,9 @@ async function main(): Promise<number> {
       warn("arm-session_retired_use_bind-session_with_the_native_session_id_in_your_terminal");
       return 2;
     }
-    if (process.argv[2] === "dispatch-hook" && process.argv.length === 4) {
-      const input = await readInput(process.stdin, maxRowBytes);
-      return await dispatchNative(process.argv[3], "metrics", input, r => persist(readProfile(r.profile), "hook", r.source, r.profile, input));
+    const client = process.argv[3];
+    if (process.argv[2] === "dispatch-hook" && process.argv.length === 4 && (client === "codex" || client === "claude")) {
+      return await observeNative(client);
     }
     const { values, positionals } = readArguments();
     const reporting = positionals[0] === "summary" || positionals[0] === "compare";
@@ -364,7 +398,7 @@ async function main(): Promise<number> {
     }
     status = await persist(profile, operation, target, profilePath);
   } catch (error) {
-    warn(error instanceof Error && safeErrors.has(error.message) ? error.message : "invalid_input");
+    warn(diagnostic(error));
   }
   return passive ? 0 : status;
 }

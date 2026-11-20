@@ -8,7 +8,8 @@ import type { MetricsProfile } from "./profile.js";
 export type Client = "codex" | "claude";
 type Role = "metrics" | "recovery";
 export type Route = { role: Role; root: string; profile: string; source?: string; session?: string; installed: number };
-type Owner = { original: string | null; last: string | null; routes: Route[] };
+type Owner = { original: string | null; last: string | null; routes: Route[]; temporaryExclude?: string };
+const codexHookPath = ".codex/hooks.json";
 function bad(): never { throw new Error("unsafe_hook_settings"); }
 const parse = (bytes: string | null) => recordObject(JSON.parse(bytes ?? "{}")) ?? bad();
 const format = (config: object) => JSON.stringify(config, null, 2) + "\n";
@@ -23,35 +24,40 @@ function git(root: string, ...args: string[]) {
 function locations(root: string, client: Client) {
   const common = realpathSync(git(root, "rev-parse", "--path-format=absolute", "--git-common-dir"));
   let layer = root;
+  let primary: string | undefined;
   if (client === "codex") {
     const [main, ...fields] = git(root, "worktree", "list", "--porcelain", "-z").split("\0");
     if (!main.startsWith("worktree ") || fields[0] === "bare") bad();
-    layer = join(realpathSync(main.slice(9)), relative(git(root, "rev-parse", "--show-toplevel"), root));
+    const top = realpathSync(main.slice(9));
+    layer = join(top, relative(git(root, "rev-parse", "--show-toplevel"), root));
+    if (layer === top) primary = top;
   }
   const folder = client === "codex" ? ".codex" : ".claude";
   const file = join(layer, folder, client === "codex" ? "hooks.json" : "settings.local.json");
   const key = createHash("sha256").update(file).digest("hex");
-  return { file, local: join(root, folder), common, state: join(common, "methodology-hooks-" + key + ".json") };
+  return { file, local: join(root, folder), common, primary, state: join(common, "methodology-hooks-" + key + ".json") };
 }
 
-function bytes(path: string, privateFile = false): string | null {
+function bytes(path: string, privateFile = false, encoding: "utf8" | "latin1" = "utf8"): string | null {
   const info = lstatSync(path, { throwIfNoEntry: false });
   if (!info) return null;
   if (!info.isFile() || info.nlink !== 1 || info.size > (privateFile ? 16 : 1) * 1024 * 1024 ||
       (privateFile && (info.mode & 0o077) !== 0)) bad();
-  return new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(readFileSync(path));
+  const content = readFileSync(path);
+  return encoding === "latin1" ? content.toString(encoding)
+    : new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(content);
 }
 
-function replace(path: string, before: string | null, after: string | null, privateFile = false) {
+function replace(path: string, before: string | null, after: string | null, privateFile = false, encoding: "utf8" | "latin1" = "utf8") {
   function checkCurrent() {
-    if (bytes(path, privateFile) !== before) throw new Error("hook_settings_changed");
+    if (bytes(path, privateFile, encoding) !== before) throw new Error("hook_settings_changed");
   }
   checkCurrent();
   if (before === after) return;
   if (after === null) { unlinkSync(path); return; }
   const tmp = join(dirname(path), ".methodology-" + randomUUID());
   try {
-    writeFileSync(tmp, after, { flag: "wx", mode: lstatSync(path, { throwIfNoEntry: false })?.mode ?? 0o600 });
+    writeFileSync(tmp, after, { encoding, flag: "wx", mode: lstatSync(path, { throwIfNoEntry: false })?.mode ?? 0o600 });
     checkCurrent();
     renameSync(tmp, path);
   } finally { if (existsSync(tmp)) unlinkSync(tmp); }
@@ -60,6 +66,30 @@ function replace(path: string, before: string | null, after: string | null, priv
 function ensureDirectory(path: string) {
   if (!lstatSync(path, { throwIfNoEntry: false })) mkdirSync(path, { mode: 0o700 });
   if (realpathSync(path) !== path || !lstatSync(path).isDirectory()) bad();
+}
+
+function needsTemporaryExclude(primary: string) {
+  if (git(primary, "ls-files", "--", codexHookPath)) return false;
+  const result = spawnSync("git", ["-C", primary, "check-ignore", "--quiet", "--", codexHookPath], { timeout: 5000 });
+  if (result.status !== 0 && result.status !== 1) throw new Error("hook_project_requires_git");
+  return result.status === 1;
+}
+
+function updateTemporaryExclude(common: string, id: string, install: boolean) {
+  const info = join(common, "info");
+  if (!install && !existsSync(info)) return;
+  ensureDirectory(info);
+  const file = join(info, "exclude");
+  // Keep Git's ignore syntax and arbitrary bytes outside the owned block.
+  const prior = bytes(file, false, "latin1");
+  const block = "# Temporary Codex hooks managed by methodology " + id + "\n/" + codexHookPath + "\n";
+  // Prepend so deleting the owned block also preserves an unterminated last line.
+  if (install && !prior?.includes(block)) {
+    const text = prior ?? "";
+    const bom = text.startsWith("\xEF\xBB\xBF") ? 3 : 0;
+    replace(file, prior, text.slice(0, bom) + block + text.slice(bom), false, "latin1");
+  }
+  if (!install && prior?.includes(block)) replace(file, prior, prior.replace(block, ""), false, "latin1");
 }
 
 function events(role: Role, client: Client) {
@@ -113,11 +143,17 @@ function currentOwner(raw: string | null, current: string | null): Owner {
   return JSON.parse(raw) as Owner;
 }
 
-export function configureNative(root: string, client: Client, role: Role, profile: string, install: boolean, source?: string, session?: string) {
-  const loc = locations(root, client);
-  const lock = openSync(loc.common, "r");
+export function withHookRepositoryLock<T>(common: string, action: () => T) {
+  const lock = openSync(common, "r");
   try {
     if (spawnSync("flock", ["-x", "-w", "2", "3"], { stdio: ["ignore", "ignore", "ignore", lock] }).status !== 0) bad();
+    return action();
+  } finally { closeSync(lock); }
+}
+
+export function configureNative(root: string, client: Client, role: Role, profile: string, install: boolean, source?: string, session?: string) {
+  const loc = locations(root, client);
+  withHookRepositoryLock(loc.common, () => {
     if (install) {
       ensureDirectory(loc.local);
       ensureDirectory(dirname(loc.file));
@@ -151,10 +187,19 @@ export function configureNative(root: string, client: Client, role: Role, profil
     owner.last = current;
     // Register the route before exposing a command. Remove its command before
     // discarding rollback state. A retry reconciles both files.
-    if (install) replace(loc.state, raw, format(owner), true);
+    if (install) {
+      if (loc.primary && !owner.temporaryExclude && prior === null && owner.original === null && needsTemporaryExclude(loc.primary)) {
+        owner.temporaryExclude = randomUUID();
+      }
+      replace(loc.state, raw, format(owner), true);
+      if (owner.temporaryExclude) updateTemporaryExclude(loc.common, owner.temporaryExclude, true);
+    }
     replace(loc.file, prior, current);
-    if (!install && raw !== null) replace(loc.state, raw, owner.routes.length ? format(owner) : null, true);
-  } finally { closeSync(lock); }
+    if (!install && raw !== null) {
+      if (!owner.routes.length && owner.temporaryExclude) updateTemporaryExclude(loc.common, owner.temporaryExclude, false);
+      replace(loc.state, raw, owner.routes.length ? format(owner) : null, true);
+    }
+  });
 }
 
 export function metricClient(profile: MetricsProfile, id: string): Client {

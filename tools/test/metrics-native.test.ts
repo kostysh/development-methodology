@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { appendFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, rmdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { test, type TestContext } from "node:test";
@@ -33,7 +33,7 @@ function fixture(t: TestContext, provider = "codex") {
 
 for (const provider of ["codex", "claude"]) {
   test(provider + " installed hooks collect only the operator-selected session, check fresh callbacks and restore exact settings", t => {
-    const { root, project, journal, transcript, run } = fixture(t, provider);
+    const { root, project, journal, path, transcript, run } = fixture(t, provider);
     assert.equal(spawnSync("git", ["init", "-q", project]).status, 0);
     const bin = join(root, "bin");
     mkdirSync(bin);
@@ -58,12 +58,15 @@ for (const provider of ["codex", "claude"]) {
     assert.equal(run(["doctor", "host"], "", env).status, 1);
     assert.equal(run(["arm-session", "host"]).status, 2);
     assert.equal(run(["bind-session", "host", "approved"]).status, 0);
-    function dispatch(phase: string, session: string, fields: Record<string, unknown> = {}) {
+    function dispatch(phase: string, session: string, fields: Record<string, unknown> = {}, diagnostic = "") {
       const command = hooks[phase].at(-1).hooks[0].command;
       const child = spawnSync("/bin/sh", ["-c", command], { cwd: project, encoding: "utf8", env,
         input: JSON.stringify({ hook_event_name: phase, cwd: project, session_id: session, transcript_path: transcript,
           prompt: "private-message", tool_input: { command: "private-command" }, ...fields }) });
-      assert.equal(child.status, 0); assert.equal(child.stdout, ""); assert.equal(child.stderr, "");
+      assert.ifError(child.error);
+      assert.equal(child.status, 0, phase);
+      assert.equal(child.stdout, "", phase);
+      assert.equal(child.stderr, diagnostic, phase);
     }
     writeFileSync(transcript, "old-private-content-outside-authorized-range\n");
     dispatch("UserPromptSubmit", "foreign", { prompt: "another" });
@@ -83,6 +86,23 @@ for (const provider of ["codex", "claude"]) {
       : { type: "system", subtype: "compact_boundary", sessionId: "approved", uuid: "unique-id", timestamp: stamp,
         compactMetadata: { trigger: "manual" } };
     appendFileSync(transcript, JSON.stringify(boundary) + "\n");
+    const savedJournal = journal + ".saved";
+    const coverage = journal + ".coverage.jsonl";
+    const broken = "methodology-metrics: journal_unavailable\n";
+    renameSync(journal, savedJournal);
+    mkdirSync(journal);
+    const flush = (session: string) => run(["flush-hook", "host"], JSON.stringify({
+      hook_event_name: "PostCompact", session_id: session, transcript_path: transcript,
+    }));
+    assert.equal(flush("foreign").status, 0);
+    assert.equal(readFileSync(coverage, "utf8"), "");
+    const deferred = flush("approved");
+    assert.equal(deferred.status, 2);
+    assert.equal(deferred.stderr, broken);
+    const deferredGaps = readFileSync(coverage, "utf8").split("\n").filter(Boolean).map(line => JSON.parse(line));
+    assert.deepEqual(deferredGaps.map(gap => [gap.source_id, gap.code]), [["host", "native_hook_collection_failed"]]);
+    rmdirSync(journal);
+    renameSync(savedJournal, journal);
     dispatch("PostCompact", "approved", { compact_summary: "private-summary" });
     const first = readFileSync(journal, "utf8");
     assert.deepEqual(first.trim().split("\n").map(line => JSON.parse(line).event_type),
@@ -92,6 +112,46 @@ for (const provider of ["codex", "claude"]) {
     dispatch("PostToolUse", "approved", tool); dispatch("PostToolUse", "foreign", tool);
     dispatch("PostCompact", "foreign");
     assert.equal(readFileSync(journal, "utf8"), first);
+
+    const savedProfile = path + ".saved";
+    renameSync(path, savedProfile);
+    for (const phase of Object.keys(hooks)) {
+      dispatch(phase, "approved", tool, "methodology-metrics: invalid_profile\n");
+    }
+    assert.equal(run(["doctor", "host"], "", env).status, 2);
+    assert.equal(run(["install-hooks", "host"]).status, 2);
+    assert.equal(run(["summary", "T"]).status, 2);
+    renameSync(savedProfile, path);
+
+    // A directory is unwritable as a journal even when the test runs as root.
+    renameSync(journal, savedJournal);
+    mkdirSync(journal);
+    dispatch("SessionStart", "approved");
+    dispatch("UserPromptSubmit", "approved");
+    dispatch("PreToolUse", "foreign", tool);
+    for (const phase of Object.keys(hooks).filter(name => name !== "SessionStart" && name !== "UserPromptSubmit")) {
+      dispatch(phase, "approved", { ...tool, stop_hook_active: true }, broken);
+    }
+    const savedCoverage = coverage + ".saved";
+    renameSync(coverage, savedCoverage);
+    mkdirSync(coverage);
+    dispatch("PreToolUse", "approved", tool, broken);
+    rmdirSync(coverage);
+    renameSync(savedCoverage, coverage);
+    const manual = run(["mark", "ops", "task.started", "failure"], "{}");
+    assert.equal(manual.status, 2);
+    assert.equal(manual.stderr, broken);
+    assert.equal(run(["summary", "T"]).status, 2);
+    rmdirSync(journal);
+    renameSync(savedJournal, journal);
+    const reported = JSON.parse(run(["summary", "T"]).stdout);
+    const nativeGaps = reported.coverage.gaps.filter((gap: {source_id: string; code: string}) =>
+      gap.source_id === "host" && gap.code === "native_hook_collection_failed");
+    assert.ok(nativeGaps.length >= Object.keys(hooks).length - 1);
+    assert.equal(readFileSync(journal, "utf8"), first);
+    dispatch("PreToolUse", "approved", { ...tool, tool_use_id: "after-recovery" });
+    assert.equal(JSON.parse(readFileSync(journal, "utf8").trimEnd().split("\n").at(-1)!).event_type, "activity.started");
+
     assert.equal(run(["uninstall-hooks", "host"]).status, 0);
     assert.equal(readFileSync(settings, "utf8"), original);
     assert.equal(run(["doctor", "host"], "", env).status, 1);

@@ -19,7 +19,7 @@ conflicts. Keep its current owners. Do not replace the existing `AGENTS.md`,
 
 ## 2. Place and configure
 
-From the primary checkout, use an operator shell with Node.js 24.12–24.x on Linux, npm, Git, GitHub CLI (including `gh attestation verify`) and GNU coreutils. Choose a durable `METHODOLOGY_RELEASES` path outside agent-writable roots or use the project-specific default below. The installer places the [5.0.3 release](https://github.com/kostysh/development-methodology/releases/tag/methodology-v5.0.3) in a fresh version directory. Use your existing project instructions and filled profile in their current locations. For a first installation, copy the blank profile to a new project-owned file outside the release directory.
+From the primary checkout, use an operator shell with Node.js 24.12–24.x on Linux, npm, Git, GitHub CLI (including `gh attestation verify`) and GNU coreutils. Choose a durable `METHODOLOGY_RELEASES` path outside agent-writable roots or use the project-specific default below. The installer places the [5.0.4 release](https://github.com/kostysh/development-methodology/releases/tag/methodology-v5.0.4) in a fresh version directory. Use your existing project instructions and filled profile in their current locations. For a first installation, copy the blank profile to a new project-owned file outside the release directory.
 
 ```sh
 (
@@ -27,7 +27,7 @@ From the primary checkout, use an operator shell with Node.js 24.12–24.x on Li
   project=$(git rev-parse --show-toplevel)
   root=${METHODOLOGY_RELEASES:-"${XDG_DATA_HOME:-$HOME/.local/share}/development-methodology/$(basename "$project")/releases"}
   case "$root" in /*) ;; *) echo "Choose an absolute release path" >&2; exit 1 ;; esac
-  version=5.0.3
+  version=5.0.4
   tag="methodology-v$version"
   repo=kostysh/development-methodology
   dest="$root/$version"
@@ -285,7 +285,7 @@ Set the target branch, writer App, independent reviewer and trusted fast
 checks. A single GitHub user can author all PRs through their usual
 `gh`. The coordinator can publish the independent verdict through the
 existing App. Exercise the seven train cases on a disposable target.
-Configure a [Codex scheduled project task](defaults/merge-train.md#schedule-with-codex).
+Configure the [Codex schedule and its fixed command](defaults/merge-train.md#schedule-with-codex).
 If the built-in scheduler is unavailable, use the opt-in
 [Linux host schedule](defaults/merge-train.md#schedule-on-a-linux-host).
 Enable one scheduler for the branch. Verify an actual start without operator

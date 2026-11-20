@@ -10,7 +10,7 @@ import { appendJournal, readJournal } from "../metrics/journal.js";
 import { mark } from "../metrics/operations.js";
 import { readProfile } from "../metrics/profile.js";
 import { summarize } from "../metrics/report.js";
-import { configureNative, type Client } from "../metrics/setup.js";
+import { configureNative, withHookRepositoryLock, type Client } from "../metrics/setup.js";
 import { importSpool, withSpool } from "../metrics/spool.js";
 import { gitRoot, readProfile as recoveryProfile } from "../recovery/state.js";
 import { prepareSkills, type Skills } from "./skills.js";
@@ -77,7 +77,7 @@ function doctor(profile: string, client: Client, probe: boolean): Doctor {
 }
 
 const nextAction: Record<Client, string> = {
-  codex: "Open the assigned Codex session in the trusted checkout. Inspect and trust the registered commands in /hooks (desktop: Settings > Hooks), then perform a tool action.",
+  codex: "In the trusted checkout, review and trust the registered commands in /hooks (desktop: Settings > Hooks) and perform a tool action. If an already-open chat still has no callback, restart the client, resume that chat and retry.",
   claude: "Approve folder trust in the assigned Claude Code session. In VS Code also trust the workspace and confirm Project local settings in /status. Perform a tool action.",
 };
 
@@ -141,7 +141,7 @@ export function begin(home: string, settings: Setup, task: string, worktree?: st
   const recovery = join(dir, recoveryName);
   const profile = readProfile(path);
   if (settings.recovery) recoveryProfile(recovery);
-  exclusions(settings.repository, settings.recovery);
+  withHookRepositoryLock(settings.repository, () => exclusions(settings.repository, settings.recovery));
   if (settings.recovery) git(state.root, "check-ignore", "--quiet", "--", ".methodology/task-state/" + task + ".md");
   if (!state.started) withSpool(profile, "ops", true, storage => appendJournal(storage, [], []));
   for (const client of settings.clients) {

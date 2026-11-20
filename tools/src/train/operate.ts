@@ -27,7 +27,7 @@ function ordinary(c: Config, deadline: number): Environment {
     objects: dir => new Objects(dir,"https://github.com/" + c.repository + ".git",c.branch,deadline,token),
     suite:runSuite,cleanup:cleanupContainer};
 }
-type Dispatch = { pr?: number; docs?: boolean; scheduled?: boolean };
+type Dispatch = { pr?: number; docs?: boolean; scheduled?: boolean; slot?: string };
 function matches(path: string, list: string[]) { return list.some(p => path === p || (p.endsWith("/") && path.startsWith(p))); }
 // Include open submissions and merged history on this target. A closed,
 // unmerged PR is a returned attempt, even if its protected branch still exists.
@@ -108,9 +108,12 @@ export async function operate(c: Config, options: Dispatch, supplied?: Environme
   if (options.scheduled) {
     const hour = new Date(started);
     hour.setUTCMinutes(0,0,0);
+    const slot = hour.toISOString();
+    if (options.slot !== undefined && options.slot !== slot.replace(".000Z","Z"))
+      throw new Error("Requested slot must match the current UTC hour in YYYY-MM-DDTHH:00:00Z format");
     if (!c.schedule || !c.schedule.hoursUtc.includes(hour.getUTCHours()) ||
         started >= hour.getTime() + c.schedule.graceMinutes * 60000) throw new Error("No identifiable open scheduled slot");
-    r.slot = hour.toISOString();
+    r.slot = slot;
   }
   mkdirSync(join(c.stateDir,"runs"), {recursive:true, mode:0o700});
   const release = lock(join(c.stateDir,"train.lock"));

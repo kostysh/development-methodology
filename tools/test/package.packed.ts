@@ -56,6 +56,7 @@ test("packs once and invokes the installed commands with isolated local data", {
   const triggers = dispatcher.match(/^on:\n([\s\S]*?)^permissions:/m)?.[1] ?? "";
   assert.deepEqual([...triggers.matchAll(/^  (\w+):/gm)].map(match => match[1]), ["workflow_dispatch"]);
   for (const binding of [
+    "DISPATCH_REF: ${{ github.ref }}", "DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}",
     "SCHEDULED: ${{ toJSON(inputs.scheduled) }}", "DOCS: ${{ toJSON(inputs.docs) }}", "PR: ${{ inputs.pr }}", "SLOT: ${{ inputs.slot }}",
   ]) {
     assert.ok(dispatcher.includes(binding), binding);
@@ -69,21 +70,17 @@ test("packs once and invokes the installed commands with isolated local data", {
   writeFileSync(recorder, '#!/usr/bin/env node\nconsole.log(JSON.stringify(process.argv.slice(2)))\n', { mode: 0o700 });
   const script = scripts[1].replaceAll(train, '"$DISPATCH_RECORDER"');
   const currentSlot = "2026-11-20T04:00:00Z";
-  writeFileSync(join(root, "date"), `#!/bin/sh
-test "$1" = -u && test "$2" = +%Y-%m-%dT%H:00:00Z || exit 91
-echo ${currentSlot}
-`, { mode: 0o700 });
-  function dispatch(scheduled: boolean, slot: string, pr: string, docs: boolean) {
+  function dispatch(scheduled: boolean, slot: string, pr: string, docs: boolean, ref = "refs/heads/Main") {
     return spawnSync("bash", ["-eu", "-o", "pipefail", "-c", script], {
       encoding: "utf8",
       env: {
-        PATH: root + ":" + process.env.PATH, SCHEDULED: String(scheduled), SLOT: slot,
+        PATH: process.env.PATH, DISPATCH_REF: ref, DEFAULT_BRANCH: "Main", SCHEDULED: String(scheduled), SLOT: slot,
         PR: pr, DOCS: String(docs), DISPATCH_RECORDER: recorder,
       },
     });
   }
   for (const [scheduled, slot, pr, docs, args] of [
-    [true, currentSlot, "", false, ["--scheduled"]],
+    [true, currentSlot, "", false, ["--scheduled", "--slot", currentSlot]],
     [false, "", "", false, []],
     [false, "", "17", false, ["--pr", "17"]],
     [false, "", "17", true, ["--pr", "17", "--docs"]],
@@ -97,9 +94,7 @@ echo ${currentSlot}
     [true, currentSlot, "", true, /cannot select/],
     [true, currentSlot, "17", true, /cannot select/],
     [true, "", "", false, /current UTC slot/],
-    [true, "2026-11-20T02:00:00Z", "", false, /current UTC slot/],
     [true, "2026-11-20T04:00:00.000Z", "", false, /current UTC slot/],
-    [true, "2026-11-20T06:00:00Z", "", false, /current UTC slot/],
     [false, currentSlot, "", false, /Only a scheduled run/],
     [false, currentSlot, "17", false, /Only a scheduled run/],
     [false, currentSlot, "17", true, /Only a scheduled run/],
@@ -110,6 +105,12 @@ echo ${currentSlot}
     assert.equal(result.status, 2);
     assert.equal(result.stdout, "");
     assert.match(result.stderr, message);
+  }
+  for (const ref of ["refs/heads/main", "refs/tags/Main"]) {
+    const declined = dispatch(true, currentSlot, "", false, ref);
+    assert.equal(declined.status, 2);
+    assert.equal(declined.stdout, "");
+    assert.match(declined.stderr, /exact trusted default branch/);
   }
   function installedBin(command: keyof typeof packageInfo.bin) {
     const bin = join(install, "node_modules", ".bin", command);

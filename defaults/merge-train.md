@@ -241,8 +241,10 @@ all applicable fast checks, affected tests, baseline and audit verdict.
    trusted host. GitHub requires repository Actions write permission for
    dispatch. Keep that credential behind the fixed trigger if it would grant
    broader access to the chat. For a co-located runner, use an approved fixed
-   local entry point that starts the installed train with `--scheduled` and
-   the trusted profile. Keep its privileged execution outside Codex. Test
+   local entry point that passes the trusted profile and
+   `--scheduled --slot UTC_HOUR` to the installed train. Capture the UTC
+   hour when Codex submits the request. Keep privileged execution on the
+   runner. Test
    the selected trigger with the scheduled task's actual permissions. Give
    the task its command, target repository and branch, expected effects, and
    a readable way to verify the receiver and find the run receipt. The
@@ -266,8 +268,8 @@ all applicable fast checks, affected tests, baseline and audit verdict.
    ```
 
 The dispatch binds the request to the UTC hour when Codex submits it. The
-receiver rejects a request delivered in a later hour. The train checks the
-configured grace period and whether the slot already has a receipt. A late
+train checks that hour, the configured grace period and existing receipts
+when it starts. A request delivered in a later hour is rejected. A late
 desktop start can count only for the open slot it actually reaches. An
 earlier missed slot stays visible in the morning report.
 

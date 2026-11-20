@@ -8,14 +8,14 @@ import { operate } from "./train/operate.js";
 import { morning, observe } from "./train/report.js";
 import { history } from "./train/state.js";
 
-const usage = "Usage: methodology-train run PROFILE [--scheduled | --pr NUMBER [--docs]]\n" +
+const usage = "Usage: methodology-train run PROFILE [--scheduled [--slot UTC_HOUR] | --pr NUMBER [--docs]]\n" +
   "       methodology-train report PROFILE FROM_UTC THROUGH_UTC\n" +
   "       methodology-train observations PROFILE\n" +
   "       methodology-train identity|export-checks|admission POLICY PR HEAD REF\n" +
   "       methodology-train publish-review POLICY PR HEAD REF VERDICT [--owner-message REFERENCE]";
 try {
   const { values, positionals } = parseArgs({allowPositionals:true, options:{help:{type:"boolean"},version:{type:"boolean"},
-    "owner-message":{type:"string"},scheduled:{type:"boolean"},pr:{type:"string"},docs:{type:"boolean"}}});
+    "owner-message":{type:"string"},scheduled:{type:"boolean"},slot:{type:"string"},pr:{type:"string"},docs:{type:"boolean"}}});
   if (process.argv.length === 3 && values.help) console.log(usage);
   else if (process.argv.length === 3 && values.version) console.log(packageInfo.version);
   else if (["identity","export-checks","admission"].includes(positionals[0]) && positionals.length === 5 && !Object.keys(values).length) {
@@ -29,7 +29,7 @@ try {
     if (values["owner-message"] !== undefined || !path || !["run","report","observations"].includes(op) || values.help || values.version ||
       positionals.length !== (op === "report" ? 4 : 2) ||
       (op !== "run" && Object.keys(values).length) || (values.docs && !values.pr) ||
-      (values.scheduled && values.pr) || (values.pr !== undefined && (!/^[1-9]\d*$/.test(values.pr) || !Number.isSafeInteger(Number(values.pr)))))
+      (values.slot !== undefined && !values.scheduled) || (values.scheduled && values.pr) || (values.pr !== undefined && (!/^[1-9]\d*$/.test(values.pr) || !Number.isSafeInteger(Number(values.pr)))))
       throw new Error(usage);
     const c = readConfig(path);
     if (op === "report") console.log(JSON.stringify(morning(c,from,through),null,2));
@@ -37,7 +37,7 @@ try {
       if (!c.metrics) throw new Error("Missing bound metrics profile");
       for (const r of history(c)) observe(c,r);
     } else {
-      const r = await operate(c,{pr: values.pr ? Number(values.pr):undefined, docs:values.docs, scheduled:values.scheduled});
+      const r = await operate(c,{pr: values.pr ? Number(values.pr):undefined, docs:values.docs, scheduled:values.scheduled, slot:values.slot});
       console.log(JSON.stringify(r,null,2));
       if (r.retryable) process.exitCode = 75;
       else if (r.incidents.length || r.decisions.length) process.exitCode = 1;

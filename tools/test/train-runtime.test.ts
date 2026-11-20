@@ -121,12 +121,30 @@ test("SIGKILL during verification and after push releases the lock, reaps owned 
 
 test("overlap immediately skips urgent and documentation trains; documentation uses fresh gates and the shared writer",async t=>{
   const {root,c,base}=setup(t); add(root,1,"docs/guide"); const {lock}=await mod("state");
+  const bin=process.env.METHODOLOGY_TRAIN_BIN ?? fileURLToPath(new URL("../dist/train.js",import.meta.url));
+  const clock=join(root,"admission-clock.mjs"), profile=join(root,"scheduled.json");
+  writeFileSync(clock,'import {mock} from "node:test"; mock.timers.enable({apis:["Date"], now:Date.parse("2026-11-20T04:00:00Z")});');
+  writeFileSync(profile,JSON.stringify({...c,schedule:{hoursUtc:[3,4,5],graceMinutes:10}}),{mode:0o600});
+  const scheduled=(...args:string[])=>spawnSync(process.execPath,["--import",clock,bin,"run",profile,...args],{encoding:"utf8"});
+  // A dispatch for 03:00 arrives just as another valid slot opens. Neither
+  // a delayed delivery nor a caller-supplied future hour may claim 04:00.
+  for (const slot of ["2026-11-20T03:00:00Z","2026-11-20T05:00:00Z","2026-11-20T04:00:00.000Z",""]) {
+    const declined=scheduled("--scheduled","--slot",slot);
+    assert.equal(declined.status,2); assert.match(declined.stderr,/Requested slot must match/);
+  }
+  assert.equal(scheduled("--slot","2026-11-20T04:00:00Z").status,2);
+  assert.deepEqual(readdirSync(c.stateDir),[]);
   const release=lock(join(c.stateDir,"train.lock"));
   const env=makeEnv(root,pass);
   try {
+    for (const args of [["--scheduled","--slot","2026-11-20T04:00:00Z"],["--scheduled"]]) {
+      const current=scheduled(...args);
+      assert.equal(current.status,0,current.stderr);
+      const receipt=JSON.parse(current.stdout);
+      assert.equal(receipt.slot,"2026-11-20T04:00:00.000Z"); assert.equal(receipt.result,"skipped");
+    }
     assert.equal((await operate(c,{pr:1},env)).result,"skipped");
     assert.equal((await operate(c,{pr:1,docs:true},env)).result,"skipped");
-    const bin=process.env.METHODOLOGY_TRAIN_BIN ?? fileURLToPath(new URL("../dist/train.js",import.meta.url));
     const cli=spawnSync(process.execPath,[bin,"run",join(root,"train.json"),"--pr","1","--docs"],{encoding:"utf8"});
     assert.equal(cli.status,0,cli.stderr); assert.equal(JSON.parse(cli.stdout).result,"skipped"); assert.equal(revision(root),base);
   } finally {release();}

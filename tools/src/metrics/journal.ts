@@ -25,7 +25,7 @@ const coordinatorLock = "/usr/bin/flock";
 
 const gapCodes = new Set([
   "test_coverage_gap", "git_rewrite_unverified", "github_sync_failed", "session_binding_required", "tool_occurrence_identity_missing", "adapter_gap", "conflicting_event", "invalid_event", "invalid_input",
-  "journal_invalid", "coverage_invalid", "journal_missing", "line_limit",
+  "journal_invalid", "coverage_invalid", "journal_missing", "line_limit", "native_hook_collection_failed",
   "source_missing", "source_unreadable", "source_unconfigured", "source_changed",
   "usage_response_identity_missing", "usage_counts_partial", "compaction_occurrence_identity_missing",
   "compaction_outcome_missing", "guardian_review_identity_missing",
@@ -220,6 +220,7 @@ function withJournal<T>(profile: MetricsProfile, write: boolean, act: (state: Op
     enforceLock(fd, write, lockCommand);
     try {
       coverageFd = openPrivate(coverageFile(profile.journal), write);
+      enforceLock(coverageFd, write, lockCommand);
     } catch (error) {
       if (write || systemCode(error) !== "ENOENT") throw error;
     }
@@ -232,6 +233,17 @@ function withJournal<T>(profile: MetricsProfile, write: boolean, act: (state: Op
     if (coverageFd !== undefined) closeSync(coverageFd);
     if (fd !== undefined) closeSync(fd);
   }
+}
+
+// A matched native callback can still report a gap if the event journal fails.
+// Ordinary access takes the same coverage lock after taking the event lock.
+export function appendNativeHookGap(profile: MetricsProfile, sourceId: string): void {
+  const fd = openPrivate(coverageFile(profile.journal), true);
+  try {
+    enforceLock(fd, true, "flock");
+    const gap = readGap(coverageGap("native_hook_collection_failed", sourceId), profile);
+    appendLines(fd, boundedRead(fd, profile.spoolByteLimit), [gap], profile.spoolByteLimit);
+  } finally { closeSync(fd); }
 }
 
 export function spoolReceipts(profile: MetricsProfile) {

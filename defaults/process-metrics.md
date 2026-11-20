@@ -233,9 +233,16 @@ methodology-task begin T1 "$worktree" "codex=$codex_session_id" "claude=$claude_
 ```
 
 Begin prints profile paths and each client's next action. Review project and
-hook trust, perform a normal action in each assigned session, then run
+hook trust, perform a tool action in each assigned session, then run
 `methodology-task begin T1` to check the callbacks. Exit 1 means evidence is
-pending. Repeating begin preserves existing bindings and observations. Use
+pending. If Codex opened the chat before installation and its callback is
+still pending after hook approval, restart the client and resume the same
+chat ID. Perform a tool action and run `begin T1` again. Repeating begin
+preserves existing bindings and observations. In an already trusted Claude
+Code panel, use the same tab where you obtained the ID. Check that
+`/status` shows **Project local settings**, then have the agent read a
+harmless fixture file using a tool. A text-only reply can leave the probe
+pending. Use
 the reported metrics profile and source `ops` for [task operations](#record-at-the-operation).
 Begin records `task.started`. Use the reported recovery profile when
 [writing actual task state](task-recovery.md). Concurrent tasks use separate
@@ -289,10 +296,14 @@ operation can derive fresh task-scoped IDs as described below.
    trusted PATH. Run `methodology-metrics install-hooks PROFILE SOURCE` for the
    selected Git worktree. It merges a portable command into the Codex project
    layer or Claude Code's local project settings. The private routes and
-   rollback bytes live in Git's administrative directory. The Codex layer can
-   be in the main checkout for a linked worktree. Review the project settings
-   diff. Keep an untracked settings file local using the repository's Git
-   exclusions if that is its intended scope.
+   rollback bytes live in Git's administrative directory. For a linked
+   worktree, Codex reads its hooks from the primary checkout. When the tool
+   creates that file, it adds a temporary local Git exclusion and removes its
+   entry after the last registration ends. Git shares that exclusion with the
+   linked worktrees. A project rule that explicitly includes the file can keep
+   it visible. An existing file in the primary checkout follows
+   the project's Git rules. Check the primary checkout's `git status` before
+   staging edits.
 2. Open the intended client in the trusted project. In Codex, review the
    registered commands in `/hooks` (desktop: Settings > Hooks) and trust
    their current definitions. In Claude Code, review the workspace trust
@@ -322,6 +333,11 @@ operation can derive fresh task-scoped IDs as described below.
    hook approval, settings scope and the **client process's** PATH, then
    repeat the probe. Doctor reports what the selected callback reached.
    Exercise each event needed for coverage.
+   The installed metrics hook returns success to the client if collection
+   fails. It emits one diagnostic on stderr and records a coverage gap when it
+   can identify the source and write the coverage file. If the profile or
+   coverage file is unavailable, the diagnostic may be the only evidence.
+   Fix the reported cause and repeat the probe before relying on the data.
 3. Run a small tool action, compact the conversation, and run another tool
    action. At the end of the turn, check the task summary. The hooks record
    the tool lifecycle by native call ID. The tool result for a supported

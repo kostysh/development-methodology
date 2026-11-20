@@ -223,11 +223,11 @@ all applicable fast checks, affected tests, baseline and audit verdict.
 
 ### Schedule with Codex
 
-1. Open **Scheduled** in the ChatGPT desktop app, or ask Codex to create a
-   standalone scheduled task for the trusted project. Select the project and
-   the local execution environment approved for the trigger. Each run starts
-   a new chat from the saved prompt. Keep the host powered on, the desktop
-   app running, and the selected project available on disk.
+1. To reuse the same chat, ask Codex to attach the schedule to the existing
+   trusted project chat. For a separate chat on each run, create a standalone
+   project task under **Scheduled**. Select the local execution environment
+   approved for the trigger. Keep the host powered on, the desktop app
+   running and the project available on disk.
    [OpenAI scheduled tasks](https://learn.chatgpt.com/docs/automations)
 2. Set the recurring times in the app to match the project's night window
    and time zone. Compare the displayed next runs in UTC with the trusted
@@ -244,11 +244,12 @@ all applicable fast checks, affected tests, baseline and audit verdict.
    local entry point that passes the trusted profile and
    `--scheduled --slot UTC_HOUR` to the installed train. Capture the UTC
    hour when Codex submits the request. Keep privileged execution on the
-   runner. Test
-   the selected trigger with the scheduled task's actual permissions. Give
-   the task its command, target repository and branch, expected effects, and
-   a readable way to verify the receiver and find the run receipt. The
-   ordinary dispatch must complete without an interactive approval.
+   runner. Verify that the scheduled environment can reach the chosen
+   receiver and run the fixed command without an approval prompt. A remote
+   receiver needs network access to GitHub. Give the chat the exact command,
+   target, expected effects and receipt location when configuring its schedule.
+   If the unattended trial asks for approval, record the missed start and
+   correct the permission for that trigger before enabling the night window.
    [GitHub CLI dispatch](https://cli.github.com/manual/gh_workflow_run)
    · [GitHub dispatch permissions](https://docs.github.com/en/rest/actions/workflows#create-a-workflow-dispatch-event)
 4. Save the prompt below after substituting the actual UTC hours, grace period,
@@ -301,8 +302,10 @@ starts. The shared writer lock also covers urgent runs.
 
 Commission a disposable target with one near-term clock slot. Before the
 slot, prepare an independently reviewed ordinary PR. Let the scheduler
-start the run without operator interaction. Match that run to its receiver
-and the installed train's receipt for that UTC slot. GitHub and the configured
+start the run without operator interaction. Record the scheduled and actual
+times, the selected receiver (local or GitHub Actions) and the installed
+train's receipt for that UTC slot. For a remote receiver, include the
+Actions run URL. GitHub and the configured
 test deployment must show the tested commit. Include a protected change
 without the owner's answer and a dependent PR. Confirm both stay open while
 independent work merges. Verify that a missing slot appears in the morning

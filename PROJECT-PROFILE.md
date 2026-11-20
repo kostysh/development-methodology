@@ -60,7 +60,7 @@ Use the [GitHub default](defaults/merge-train.md) when it fits the project.
 | Trusted check publisher, workflow revision and required jobs | Not set |
 | Trusted train package and version, runner, lock and status sources | Not set |
 | Expensive suite, approved temporary resource types and test environment, if applicable | Not set |
-| Codex scheduled project task or opt-in fallback, schedule owner and approved fixed trigger | Not set |
+| Scheduled Codex chat or opt-in fallback, owner, fixed command, receiver and unattended permissions | Not set |
 | Night window and time zone, configured UTC slots and grace period, evidence of an actual scheduled start | Not set |
 | Maximum run duration and how the trusted runner renews its access | Not set |
 | PR limit `N`, migration PR limit, and full-suite run budget | Not set |

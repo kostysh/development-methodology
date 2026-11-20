@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { execFile, spawnSync } from "node:child_process";
+import { appendFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { test, type TestContext } from "node:test";
@@ -35,6 +35,15 @@ function fixture(t: TestContext) {
     const output = run("methodology-task", args, expected);
     return output ? JSON.parse(output) : undefined;
   };
+  const beginInBackground = (args: string[]) => new Promise<void>((resolve, reject) => {
+    execFile("methodology-task", args, { cwd: project, env, timeout: 12000 }, (error, stdout, stderr) => {
+      try {
+        assert.equal(error?.code, 1, stderr + "\n" + stdout);
+        assert.equal(JSON.parse(stdout).status, "awaiting_callback");
+        resolve();
+      } catch (failure) { reject(failure); }
+    });
+  });
   const hooks = join(project, ".codex", "hooks.json");
   mkdirSync(dirname(hooks));
   const original = '{ "hooks": { "Stop": [{ "hooks": [{ "type": "command", "command": "true" }] }] } }\n';
@@ -48,11 +57,13 @@ function fixture(t: TestContext) {
       hook_event_name: event, source: "compact", cwd, session_id: session, transcript_path: transcript, tool_use_id: "call", tool_name: "Bash",
     }));
   }
-  return { root, project, linked, home, hooks, original, run, task, dispatch };
+  return { root, project, linked, home, hooks, original, run, task, dispatch, beginInBackground };
 }
 
 test("begins and finishes an installed task with a workspace spool and explicit acceptance", t => {
   const f = fixture(t);
+  f.run("git", ["add", "--force", ".codex/hooks.json"]);
+  f.run("git", ["-c", "user.name=Test", "-c", "user.email=t@example.invalid", "commit", "-qm", "tracked hooks"]);
   const setup = ["setup", "project", "--clients", "codex,claude", "--recovery"];
   const moved = join(f.root, "moved-checkout");
   mkdirSync(moved);
@@ -64,6 +75,7 @@ test("begins and finishes an installed task with a workspace spool and explicit 
   const begin = ["begin", "T1", f.linked, "codex=actual", "claude=panel"];
   const first = f.task(begin, 1);
   assert.equal(first.status, "awaiting_callback");
+  assert.equal(f.run("git", ["status", "--porcelain", "--untracked-files=all"]), " M .codex/hooks.json\n");
   assert.deepEqual(first.doctors.map((d: { callback: string }) => d.callback), ["unobserved", "unobserved"]);
   const profile = JSON.parse(readFileSync(first.metrics_profile, "utf8"));
   assert.equal(statSync(first.metrics_profile).mode & 0o777, 0o600);
@@ -84,6 +96,7 @@ test("begins and finishes an installed task with a workspace spool and explicit 
   assert.equal(finished.spool.appended, 2);
   assert.deepEqual(f.task(["finish", "T1", "--accepted"]), finished);
   assert.equal(readFileSync(f.hooks, "utf8"), f.original);
+  assert.equal(f.run("git", ["status", "--porcelain", "--untracked-files=all"]), "");
   assert.equal(existsSync(join(f.linked, ".claude/settings.local.json")), false);
   const events = readFileSync(join(dirname(first.metrics_profile), profile.journal), "utf8").trim().split("\n").map(line => JSON.parse(line));
   for (const type of ["task.started", "task.accepted", "test.started", "test.finished"]) assert.equal(events.filter(e => e.event_type === type).length, 1, type);
@@ -104,13 +117,29 @@ test("finish includes the selected session's deferred transcript observations be
   assert.deepEqual(f.task(["finish", "T1", "--accepted"]), finished);
 });
 
-test("isolates linked tasks and preserves a missing callback on finish", t => {
+test("isolates linked tasks and preserves a missing callback on finish", async t => {
   const f = fixture(t);
+  rmSync(dirname(f.hooks), { recursive: true });
+  const exclude = join(f.project, ".git/info/exclude");
+  const originalExcludes = "\xEF\xBB\xBF/user-only\n/.methodology/operation-spool-*\n/.methodology/task-state/\n# User's rule \xE9";
+  writeFileSync(exclude, originalExcludes, "latin1");
+  const status = () => f.run("git", ["status", "--porcelain", "--untracked-files=all"]);
   f.task(["setup", "project", "--clients", "codex", "--recovery"]);
-  f.task(["begin", "T1", f.project, "codex=one"], 1);
-  f.task(["begin", "T2", f.linked, "codex=one"], 2);
-  f.task(["begin", "T2", f.linked, "codex=two"], 1);
-  f.dispatch(f.linked, "one", "SessionStart");
+  f.task(["begin", "T1", f.linked, "codex=one"], 1);
+  assert.ok(existsSync(f.hooks));
+  assert.equal(status(), "");
+  assert.equal(f.run("git", ["check-ignore", "--", "user-only"]), "user-only\n");
+  f.task(["begin", "T2", f.project, "codex=one"], 2);
+  await Promise.all([
+    f.beginInBackground(["begin", "T1"]),
+    f.beginInBackground(["begin", "T2", f.project, "codex=two"]),
+  ]);
+  f.task(["begin", "T3", f.linked, "codex=two"], 2);
+  assert.equal(status(), "");
+  assert.equal(f.run("git", ["check-ignore", "--", ".codex/hooks.json"]), ".codex/hooks.json\n");
+  const newerUserRule = "\n/another-user-file\n";
+  appendFileSync(exclude, newerUserRule);
+  f.dispatch(f.project, "one", "SessionStart");
   assert.equal(f.task(["begin", "T2"], 1).doctors[0].callback, "unobserved");
   assert.equal(f.task(["begin", "T1"], 1).doctors[0].callback, "unobserved");
   const final = f.task(["finish", "T1"], 1);
@@ -120,16 +149,50 @@ test("isolates linked tasks and preserves a missing callback on finish", t => {
   assert.equal(final.summary.lead_time.end_at, null);
   assert.deepEqual(f.task(["finish", "T1"], 1), final);
   f.task(["finish", "T1", "--accepted"], 2);
-  f.dispatch(f.linked, "two", "SessionStart");
+  assert.ok(existsSync(f.hooks));
+  assert.equal(status(), "");
+  f.dispatch(f.project, "two", "SessionStart");
   assert.equal(f.task(["begin", "T2"]).status, "ready");
-  f.task(["finish", "T2"]);
-  assert.equal(readFileSync(f.hooks, "utf8"), f.original);
+  const last = f.task(["finish", "T2"]);
+  assert.deepEqual(f.task(["finish", "T2"]), last);
+  assert.equal(existsSync(f.hooks), false);
+  assert.equal(status(), "");
+  assert.equal(f.run("git", ["check-ignore", "--", ".codex/hooks.json"], 1), "");
+  assert.equal(readFileSync(exclude, "latin1"), originalExcludes + newerUserRule);
+
+  // An ignore rule already owned by the user survives task rollback.
+  const userIgnoresHooks = originalExcludes + newerUserRule + "/.codex/hooks.json\n";
+  writeFileSync(exclude, userIgnoresHooks, "latin1");
+  f.task(["begin", "T3", f.linked, "codex=three"], 1);
+  assert.equal(status(), "");
+  assert.equal(readFileSync(exclude, "latin1"), userIgnoresHooks);
+  f.task(["finish", "T3"], 1);
+  assert.equal(existsSync(f.hooks), false);
+  assert.equal(readFileSync(exclude, "latin1"), userIgnoresHooks);
+
+  const userWantsVisible = "!/.codex/hooks.json\n";
+  const originalRules = originalExcludes + newerUserRule;
+  for (const [task, rules, contents] of [
+    ["T4", exclude, originalRules + userWantsVisible],
+    ["T5", join(f.project, ".gitignore"), userWantsVisible],
+  ]) {
+    writeFileSync(exclude, originalRules, "latin1");
+    writeFileSync(rules, contents, "latin1");
+    f.task(["begin", task, f.linked, "codex=" + task], 1);
+    assert.equal(f.run("git", ["status", "--porcelain", "--untracked-files=all", "--", ".codex/hooks.json"]),
+      "?? .codex/hooks.json\n");
+    f.task(["finish", task], 1);
+    assert.equal(existsSync(f.hooks), false);
+    assert.equal(readFileSync(rules, "latin1"), contents);
+  }
+  assert.equal(readFileSync(exclude, "latin1"), originalRules);
 });
 
 test("retries a failed spool import without closing or accepting the task", t => {
   const f = fixture(t);
   f.task(["setup", "project", "--clients", "codex"]);
   const first = f.task(["begin", "T1", f.linked, "codex=one"], 1);
+  assert.equal(f.run("git", ["status", "--porcelain", "--untracked-files=all"]), "?? .codex/hooks.json\n");
   f.dispatch(f.linked, "one", "SessionStart");
   const dir = join(f.linked, ".methodology");
   const path = join(dir, readdirSync(dir).find(n => /^operation-spool-.+(?<!\.coverage)\.jsonl$/u.test(n))!);

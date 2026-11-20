@@ -4,6 +4,18 @@ These entries are for a project that updates its copy of the package
 ([update procedure](ADOPTION.md#updating-the-methodology)). Each version
 states what requires action in the adopting project.
 
+## 5.0.4
+
+- Install the new companion and put its binaries on the trusted client PATH.
+  A telemetry failure leaves the task running. Check the warning, restore
+  collection and repeat the callback probe before using its measurements.
+  For linked worktrees, check the primary checkout's Codex settings during
+  registration. [Client setup](defaults/process-metrics.md#connect-a-native-client)
+- When commissioning a train, record the scheduled chat, fixed command,
+  unattended access and receipt from the chosen local or remote receiver.
+  An existing Codex chat can run the schedule.
+  [Schedule with Codex](defaults/merge-train.md#schedule-with-codex)
+
 ## 5.0.3
 
 - Schedule the night train as a standalone project task in Codex. Give the

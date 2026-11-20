@@ -4,6 +4,17 @@ These entries are for a project that updates its copy of the package
 ([update procedure](ADOPTION.md#updating-the-methodology)). Each version
 states what requires action in the adopting project.
 
+## 5.0.3
+
+- Schedule the night train as a standalone project task in Codex. Give the
+  task access to the fixed train trigger. The protected runner retains the
+  App key and performs verification, integration and test deployment.
+  Check one clock-triggered receipt with the operator offline.
+- Replace an earlier recurring GitHub workflow or OS cron entry when enabling
+  the Codex schedule. The packaged GitHub dispatcher accepts a scheduled
+  request for the current UTC slot. Choose the optional system cron entry
+  only where Codex scheduling is unavailable. [Train setup](defaults/merge-train.md)
+
 ## 5.0.2
 
 - Install 5.0.2 in a fresh release directory. Keep the existing filled

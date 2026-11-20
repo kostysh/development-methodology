@@ -21,6 +21,8 @@ Deliver project-local hook setup for Codex and Claude Code and connect the provi
 
 Build the program in the existing tools package. Scheduled and on-demand runs share admission, lock, candidate construction, checks, bounded retries, exclusions, exact-commit branch update, crash recovery and reporting. Isolate candidate tests from the writer credentials.
 
+Use the built-in Codex scheduler for the nightly start. Use the optional system cron entry where that scheduler is unavailable. Commission one clock on the disposable branch and link its timed invocation to the observed train result.
+
 **Pass** when the installed train integrates two disposable GitHub PRs using its sole-writer identity. Read back the branch commit, tree, PRs and configured test deployment. Exercise all [seven failure scenarios](../../defaults/merge-train.md). A stale candidate cannot update the branch. The report names each exclusion. Check access to a disposable GitHub repository, branch rules and a test writer at kickoff.
 
 ## 3. Enforce the selected controls

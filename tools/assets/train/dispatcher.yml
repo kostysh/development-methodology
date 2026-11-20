@@ -1,9 +1,14 @@
 name: Methodology train
 on:
-  schedule:
-    - cron: '0 0,2,4 * * *'
   workflow_dispatch:
     inputs:
+      scheduled:
+        description: Run within the configured schedule slot
+        type: boolean
+        default: false
+      slot:
+        description: Expected UTC hour for a scheduled run (YYYY-MM-DDTHH:00:00Z)
+        type: string
       pr:
         description: Optional urgent PR number
         type: string
@@ -14,7 +19,7 @@ on:
 permissions: {}
 jobs:
   dispatch:
-    if: github.ref_name == github.event.repository.default_branch
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
     environment: methodology-train
     runs-on:
       group: methodology-train
@@ -24,19 +29,40 @@ jobs:
       TRAIN_INSTALLATION_ID: ${{ vars.TRAIN_INSTALLATION_ID }}
       TRAIN_APP_KEY_FILE: /etc/methodology/train-app.pem
     steps:
-      - name: Start scheduled train
-        if: github.event_name == 'schedule'
-        run: /opt/methodology/bin/methodology-train run /etc/methodology/train.json --scheduled
-      - name: Start on demand
-        if: github.event_name == 'workflow_dispatch' && !inputs.pr && !inputs.docs
-        run: /opt/methodology/bin/methodology-train run /etc/methodology/train.json
-      - name: Start urgent train
-        if: github.event_name == 'workflow_dispatch' && inputs.pr && !inputs.docs
+      - name: Start requested train
+        shell: bash
         env:
+          SCHEDULED: ${{ toJSON(inputs.scheduled) }}
+          SLOT: ${{ inputs.slot }}
           PR: ${{ inputs.pr }}
-        run: /opt/methodology/bin/methodology-train run /etc/methodology/train.json --pr "$PR"
-      - name: Start documentation train
-        if: github.event_name == 'workflow_dispatch' && inputs.docs
-        env:
-          PR: ${{ inputs.pr }}
-        run: /opt/methodology/bin/methodology-train run /etc/methodology/train.json --pr "$PR" --docs
+          DOCS: ${{ toJSON(inputs.docs) }}
+        run: |
+          args=(run /etc/methodology/train.json)
+          if [[ "$SCHEDULED" == true ]]; then
+            if [[ -n "$PR" || "$DOCS" == true ]]; then
+              echo "A scheduled run cannot select a PR or documentation mode." >&2
+              exit 2
+            fi
+            current_slot=$(date -u +%Y-%m-%dT%H:00:00Z)
+            if [[ "$SLOT" != "$current_slot" ]]; then
+              echo "A scheduled run requires the current UTC slot in YYYY-MM-DDTHH:00:00Z format." >&2
+              exit 2
+            fi
+            args+=(--scheduled)
+          elif [[ -n "$SLOT" ]]; then
+            echo "Only a scheduled run accepts a slot." >&2
+            exit 2
+          elif [[ -n "$PR" ]]; then
+            if [[ ! "$PR" =~ ^[1-9][0-9]*$ ]]; then
+              echo "Supply a positive PR number." >&2
+              exit 2
+            fi
+            args+=(--pr "$PR")
+            if [[ "$DOCS" == true ]]; then
+              args+=(--docs)
+            fi
+          elif [[ "$DOCS" == true ]]; then
+            echo "Documentation mode requires a PR number." >&2
+            exit 2
+          fi
+          exec /opt/methodology/bin/methodology-train "${args[@]}"

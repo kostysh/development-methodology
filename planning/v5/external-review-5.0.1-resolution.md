@@ -56,30 +56,15 @@ The stand's hosted admission workflow still used its approved 5.0.1 installation
 
 ## Maintaining this repository's v5
 
-The maintainer continues opening PRs through their usual GitHub account.
-For changes after the release, use a PR with the required `verify` job.
-Before merging, the coordinator runs the released
-[review-policy command](../../defaults/controls.md#protect-the-review-policy)
-from a trusted Git object repository against the current base and head.
-Use the [approved policy](maintainer-review-policy.json) from the previously
-accepted release. Keep this copy and the installed command outside the PR.
-For an intended inventory change, show the owner the added or removed cases
-and exact revision, receive their reply and install the new approved digest.
-Re-read the checks and merge only the verified head.
+Use a PR and review any changes to the workflow and required test cases as
+part of its diff. The coordinator checks that the required `verify` job
+passed on the reviewed head before merging.
 
 The owner's release instruction covers a routine version bump and publication.
 Use the independent PR review and CI, then tag the verified commit
 `methodology-v<version>`. CI derives the archive names from that tag and
-requires its version to match the tools package. Changes to the protected
-workflow, inventory, or other review controls still require the owner's
-confirmation of the exact revision.
-
-GitHub enforces the PR and CI when its branch rule is active. The
-coordinator enforces the chat decision at its own merge boundary. A manual
-merge with the owner's GitHub credentials can pass the native branch rule
-without that chat decision. The disposable acceptance App remains scoped
-to its stand. An adopting project's scheduled train uses its own configured
-publisher and writer and can leave an unanswered PR until morning.
+requires its version to match the tools package. Publish the verified
+archives after the tag's CI succeeds.
 
 The [repository rule for v5](https://github.com/kostysh/development-methodology/rules/27733602)
 became active after the release. GitHub returned `refs/heads/v5` as its

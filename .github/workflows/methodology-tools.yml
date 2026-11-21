@@ -40,15 +40,15 @@ jobs:
         run: |
           set -euo pipefail
           release="$RUNNER_TEMP/methodology-release"
-          git archive --format=tar.gz --output="$release/methodology-guide-5.3.1.tar.gz" "$GITHUB_SHA" -- README.md ADOPTION.md CHANGELOG.md GLOSSARY.md PROJECT-PROFILE.md WORKFLOW.md method defaults templates
+          git archive --format=tar.gz --output="$release/methodology-guide-5.3.2.tar.gz" "$GITHUB_SHA" -- README.md ADOPTION.md CHANGELOG.md GLOSSARY.md PROJECT-PROFILE.md WORKFLOW.md method defaults templates
           mkdir "$RUNNER_TEMP/adopted-guide"
-          tar -xzf "$release/methodology-guide-5.3.1.tar.gz" -C "$RUNNER_TEMP/adopted-guide"
+          tar -xzf "$release/methodology-guide-5.3.2.tar.gz" -C "$RUNNER_TEMP/adopted-guide"
           test ! -e "$RUNNER_TEMP/adopted-guide/AGENTS.md"
           node tools/dist/check-links.js "$RUNNER_TEMP/adopted-guide"
           cd "$release"
           printf '%s\n' "$GITHUB_SHA" > source-commit.txt
-          sha256sum --check kostysh-development-methodology-tools-5.3.1.tgz.sha256
-          sha256sum methodology-guide-5.3.1.tar.gz kostysh-development-methodology-tools-5.3.1.tgz source-commit.txt > SHA256SUMS
+          sha256sum --check kostysh-development-methodology-tools-5.3.2.tgz.sha256
+          sha256sum methodology-guide-5.3.2.tar.gz kostysh-development-methodology-tools-5.3.2.tgz source-commit.txt > SHA256SUMS
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: methodology-v5-${{ github.sha }}
@@ -56,7 +56,7 @@ jobs:
           if-no-files-found: error
 
   release-provenance:
-    if: github.ref == 'refs/tags/methodology-v5.3.1'
+    if: github.ref == 'refs/tags/methodology-v5.3.2'
     needs: verify
     runs-on: ubuntu-latest
     permissions:

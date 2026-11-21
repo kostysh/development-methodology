@@ -19,7 +19,7 @@ conflicts. Keep its current owners. Do not replace the existing `AGENTS.md`,
 
 ## 2. Place and configure
 
-From the primary checkout, use an operator shell with Node.js 24.12–24.x on Linux, npm, Git, GitHub CLI (including `gh attestation verify`) and GNU coreutils. Choose a durable `METHODOLOGY_RELEASES` path outside agent-writable roots or use the project-specific default below. The installer places the [5.3.1 release](https://github.com/kostysh/development-methodology/releases/tag/methodology-v5.3.1) in a fresh version directory. Use your existing project instructions and filled profile in their current locations. For a first installation, copy the blank profile to a new project-owned file outside the release directory.
+From the primary checkout, use an operator shell with Node.js 24.12–24.x on Linux, npm, Git, GitHub CLI (including `gh attestation verify`) and GNU coreutils. Choose a durable `METHODOLOGY_RELEASES` path outside agent-writable roots or use the project-specific default below. The installer places the [5.3.2 release](https://github.com/kostysh/development-methodology/releases/tag/methodology-v5.3.2) in a fresh version directory. Use your existing project instructions and filled profile in their current locations. For a first installation, copy the blank profile to a new project-owned file outside the release directory.
 
 ```sh
 (
@@ -27,7 +27,7 @@ From the primary checkout, use an operator shell with Node.js 24.12–24.x on Li
   project=$(git rev-parse --show-toplevel)
   root=${METHODOLOGY_RELEASES:-"${XDG_DATA_HOME:-$HOME/.local/share}/development-methodology/$(basename "$project")/releases"}
   case "$root" in /*) ;; *) echo "Choose an absolute release path" >&2; exit 1 ;; esac
-  version=5.3.1
+  version=5.3.2
   tag="methodology-v$version"
   repo=kostysh/development-methodology
   dest="$root/$version"
@@ -198,7 +198,7 @@ in place and preserve instructions outside it.
   project=$(git rev-parse --show-toplevel)
   cd -- "$project"
   root=${METHODOLOGY_RELEASES:-"${XDG_DATA_HOME:-$HOME/.local/share}/development-methodology/$(basename "$project")/releases"}
-  release="$root/5.3.1"
+  release="$root/5.3.2"
   "$release/tools/node_modules/.bin/methodology-controls" sync-skill-rule "$release/guide"
 )
 ```

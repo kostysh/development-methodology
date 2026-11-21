@@ -27,7 +27,7 @@ Terms the methodology uses without explanation in the chapter text.
 | Hard stop | A checkpoint at which the executor stops until the owner decides | [Planning](method/03-planning.md#checkpoint-execution) |
 | Living documentation | Documentation of the system's current state: READMEs, runbooks, API reference, user documentation | [Documentation](method/13-artifacts-and-communication.md#living-documentation) |
 | Material delta | A change to behavior, contract, permissions, data, provider, release, or acceptance boundary | [Sources](method/01-authority-and-scope.md#materiality-and-rigor) |
-| Merge train | An enabled integration route that batches ready PRs, checks the combined candidate and fast-forwards a protected branch to the tested commit | [Integration](method/07-integration.md#merge-train) |
+| Merge train | An enabled integration route that batches ready PRs, checks the combined candidate and fast-forwards the authorized integration branch to the tested commit | [Integration](method/07-integration.md#merge-train) |
 | Mode `solo` / `team` | The team composition that determines the rules for acceptance, deputies, and disputes | [Agents](method/12-agents.md#team-composition) |
 | Non-goals | What is explicitly excluded from scope so that it is not added by default | [Sources](method/01-authority-and-scope.md#outcome-and-authority) |
 | `not_applicable` | A deliberate non-application with a basis. An empty field is not this | [README](README.md#how-to-read-the-requirements) |

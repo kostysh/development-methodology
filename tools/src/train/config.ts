@@ -24,7 +24,7 @@ function need(condition: unknown, detail: string): asserts condition {
 function positive(value: unknown): value is number {
   return typeof value === "number" && Number.isSafeInteger(value) && value > 0;
 }
-function gates(value: unknown, required: boolean): value is Gate[] {
+export function gates(value: unknown, required: boolean): value is Gate[] {
   if (!Array.isArray(value) || (required && !value.length)) return false;
   return value.every(g => {
     if (!g || typeof g.name !== "string" || !g.name.trim() || !positive(g.appId)) return false;

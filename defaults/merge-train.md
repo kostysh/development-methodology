@@ -1,11 +1,18 @@
 # GitHub default for the merge train
 
 Use this design when the project selects the [train](../method/07-integration.md#merge-train).
-Install the versioned companion. The project supplies a trusted
-runner, suite image, admission authorities and the settings in the [profile](../PROJECT-PROFILE.md#merge-train). Verify the built train
-with the project's [package checks](controls.md#common-checks).
+Install the versioned companion and record the selected writer in the
+[profile](../PROJECT-PROFILE.md#merge-train). For a local Codex schedule using
+the already signed-in owner, follow [Run the train with the owner’s GitHub CLI](owner-gh-train.md).
+That procedure describes all the setup for this mode, including independent review and candidate CI.
+
+For a service identity, follow the App instructions below. Supply the trusted
+runner, suite image and admission authorities for that mode. Verify the built
+train with the project's [package checks](controls.md#common-checks).
 
 ## Choose the branch policy
+
+For the App writer, select one of the following policies. The [owner-session writer](owner-gh-train.md) has its own fixed target and profile.
 
 The default `rulesets` policy verifies server-enforced restrictions on the
 target and submitted refs. A missing rule or denied API call stops the run.

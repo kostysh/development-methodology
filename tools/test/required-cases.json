@@ -126,6 +126,10 @@
     "reconstructs the first conflicting receipt after reversed delivery",
     "retains an earlier observed receipt delivered after an exact later replay"
   ],
+  "owner-train.test.ts": [
+    "owner train exercises preparation, CI, diagnosis and exact publication through the CLI",
+    "owner train holds unsafe or changed admission before publication"
+  ],
   "recovery-contract.test.ts": [
     "the public recovery entry point reports its version and rejects invalid invocations",
     "the writer preserves private UTF-8 bytes, exact LF and CRLF bounds, refs and index",
@@ -173,6 +177,13 @@
     "an estimated acceptance time cannot establish a complete count",
     "a disputed acceptance cannot extend the train window through the report cutoff",
     "a rejected train receipt from a second pilot source prevents a verified zero"
+  ],
+  "train-owner-ci.test.ts": [
+    "accepts successful required jobs and steps for the exact push and links the verified attempt",
+    "waits for the candidate run and holds changed workflows, unrelated or ambiguous runs",
+    "a successful workflow cannot substitute for a missing, skipped, ambiguous or stale job or step",
+    "only an observed required step failure produces a diagnosable failure",
+    "rejects incomplete or ambiguous workflow authorities"
   ],
   "train-private-free.test.ts": [
     "private-free requires explicit configuration and ruleset failures keep strict profiles closed",

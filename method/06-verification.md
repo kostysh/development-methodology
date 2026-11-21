@@ -17,7 +17,7 @@ checks are defined by the profile and by the owners of the changed areas.
 5. [Resolve review findings](#closing-review-findings) in one batch. After
    review passes, run the expensive checks once on the same stable candidate.
    With the merge train enabled, keep the per-task gates and run the expensive
-   suite [on the train](#verification-for-a-merge-train).
+   suite [on its exact combined candidate](#verification-for-a-merge-train).
 6. Record the results with revision and locator. A red or unknown mandatory
    result blocks the transition.
 7. For the target environment, reconcile the deployed revision, run the matrix
@@ -137,10 +137,20 @@ owner; the executor does not replace a mandatory result with weaker evidence.
 For admission, require passing format, lint, types, build, package tests,
 affected end-to-end scenarios, and the applicable task baseline tests on the
 current PR head. Require clean migration replay when a PR changes migrations.
-Close the applicable audit and publish its passing verdict as a status on
-that same head. The [train](07-integration.md#merge-train) runs the full
+Obtain an independent passing verdict for the reviewed base and head. Keep
+the review in the project's trusted review channel or publish it as a status
+through its authorized publisher. The coordinator verifies the source when it
+collects the verdict. The [train](07-integration.md#merge-train) runs the full
 expensive suite from the profile on the combined candidate. Serialize
 checks that share a mutable resource or give them isolated environments.
+
+When using existing project CI, verify the run on the combined revision and
+require successful execution of each applicable job and step. After exclusion,
+run the checks on the rebuilt revision. Attribute a failed check only when
+the observed runs identify the failing PR or combination. Missing evidence
+holds the batch. Follow the [candidate CI procedure](../defaults/owner-gh-train.md#process-one-scheduled-run).
+
+For a train with targeted test replay, use the following budget and diagnosis:
 
 1. Run the full suite on `C0`. Allow one infrastructure retry per train.
    A second infrastructure failure stops integration and adds an environment

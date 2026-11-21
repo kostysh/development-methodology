@@ -8,7 +8,7 @@ profile records the set actually installed.
 ## Source
 
 Repository: [`kostysh/skills`](https://github.com/kostysh/skills).
-For methodology 5.2.0, use the [skills-v5.0.0 assets](https://github.com/kostysh/skills/releases/tag/skills-v5.0.0).
+For methodology 5.3.0, use the [skills-v5.0.0 assets](https://github.com/kostysh/skills/releases/tag/skills-v5.0.0).
 The catalog lists each skill's version, filename in its URL, and SHA-256.
 
 ## Stages and skills

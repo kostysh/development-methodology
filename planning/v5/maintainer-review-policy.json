@@ -9,7 +9,7 @@
     ],
     "inventory": {
       "path": "tools/test/required-cases.json",
-      "sha256": "25fd2fe9f2dad89d8226282248233bc4b275959e406d6273434d603684f8c5d9"
+      "sha256": "524425b620dd164c267e4937abcee27a672ecc77122bcaac9e220eb6fa0d23d4"
     }
   }
 }

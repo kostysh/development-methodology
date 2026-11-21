@@ -151,6 +151,11 @@
     "classifies only the PR's protected changes using committed objects in a bare repository",
     "holds changed or removed inventory until its exact contents and owner decision are approved"
   ],
+  "skill-rule.test.ts": [
+    "skill rule sync installs, adopts and updates the effective root instructions",
+    "skill rule sync preserves local conflicts and rejects malformed guides and links",
+    "skill rule sync targets the invoked worktree and protects concurrent project edits"
+  ],
   "solo-contract.test.ts": [
     "holds excluded, ambiguous, over-cap and unapproved merges and applies a batch to the exact decision",
     "one account records the chat answer and correction while legacy receipts and shared files keep publication held"

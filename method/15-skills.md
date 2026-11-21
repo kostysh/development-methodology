@@ -13,10 +13,11 @@ does not replace a mandatory gate, and does not make a result accepted.
 
 1. During adoption, choose the set, obtain the owner's permission to install,
    and install the skills into the project directory.
-2. Verify in a new session that the agent sees the skills; record the set and
-   version in the profile.
-3. In the work, choose a skill by the stage and the aspect of the task, read
-   its `SKILL.md`, and apply it within the permitted boundary.
+2. Connect the project instructions during [adoption](../ADOPTION.md#5-connect-the-instructions).
+   If the project uses skills, verify discovery and loading in a fresh session.
+   Record the selected set and version or the replacement in the profile.
+3. Choose a skill by the stage and the aspect of the task. Follow the
+   [skill loading rule](#use-in-the-work) before applying it.
 4. Name the skill used in the handoff.
 5. Update skills as a tool: with a review of the changes and a record of the version.
 
@@ -49,11 +50,28 @@ Installation changes the agent's configuration and is done with the project
 owner's permission, only into the permitted location. Installation into the
 project directory is preferred: all participants have one set and one version.
 
-Installation counts as done when, in a new session, the agent sees the
-required skills and loads at least one of them on direct request. Files on
-disk do not prove this. The profile records the method, location, version,
-set, and date of the check. For a stage without a skill, the profile names
-the replacement.
+After connecting the project instructions, start a fresh chat from the project
+root. Check that the startup context includes the complete rule from the root
+instructions. A long file can exceed the client's instruction size limit.
+If the rule was cut off, shorten the entry point with its owner and check again
+in a fresh chat.
+
+If the project uses skills, check that its selected set appears in the
+catalog. Give the agent an ordinary task that fits one installed skill's
+description. Describe the result you need without naming the skill or asking
+the agent to read it. For a project without installed skills, record the
+[replacement](#working-without-skills) and skip the skill-use check.
+
+Inspect the session trace. Identify the selected skill and compare its
+catalog source with the tool output. Check that the complete file was
+available before the first reference or application of the skill. For a
+tool read, verify that the output contained only that file, including its
+middle and end. If output was cut off, verify that subsequent reads covered
+every missing section in order. If the agent reused a complete copy already
+in context, identify that copy. Record instruction discovery and observed
+skill use separately. Record the installation method, location, version,
+set, and check date in the profile. For a stage without a skill, name the
+replacement.
 
 ## Updating
 
@@ -66,10 +84,15 @@ version is recorded in the profile.
 
 ## Use in the work
 
-A skill is chosen by the aspect of the work, not by the name of a role. The
-agent reads the current `SKILL.md`, applies it within the permitted boundary,
-and states in the handoff which skill was used. The availability of a skill
-does not require a separate agent or an additional audit ([agents](12-agents.md)).
+Choose a skill by the aspect of the work.
+
+<!-- skill-loading:start -->
+Once you select a skill, including by its description, read its entire `SKILL.md` from the source named in the current catalog before choosing references or applying the skill. Reuse a copy already in context when you know it is complete. For tool reads, return the file on its own. If the output is truncated or coverage is uncertain, read consecutive smaller sections until the full text is available. Then read the references or sections the skill requires for this task. Recover any missing text within those sections.
+<!-- skill-loading:end -->
+
+Apply the skill within the permitted boundary and name it in the handoff.
+The availability of a skill does not require a separate agent or an
+additional audit ([agents](12-agents.md)).
 
 A review skill provides evidence only for its own subject and the area it
 read. Its PASS does not replace mandatory checks of another subject, runtime

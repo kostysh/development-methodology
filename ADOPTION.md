@@ -19,7 +19,7 @@ conflicts. Keep its current owners. Do not replace the existing `AGENTS.md`,
 
 ## 2. Place and configure
 
-From the primary checkout, use an operator shell with Node.js 24.12–24.x on Linux, npm, Git, GitHub CLI (including `gh attestation verify`) and GNU coreutils. Choose a durable `METHODOLOGY_RELEASES` path outside agent-writable roots or use the project-specific default below. The installer places the [5.2.0 release](https://github.com/kostysh/development-methodology/releases/tag/methodology-v5.2.0) in a fresh version directory. Use your existing project instructions and filled profile in their current locations. For a first installation, copy the blank profile to a new project-owned file outside the release directory.
+From the primary checkout, use an operator shell with Node.js 24.12–24.x on Linux, npm, Git, GitHub CLI (including `gh attestation verify`) and GNU coreutils. Choose a durable `METHODOLOGY_RELEASES` path outside agent-writable roots or use the project-specific default below. The installer places the [5.3.0 release](https://github.com/kostysh/development-methodology/releases/tag/methodology-v5.3.0) in a fresh version directory. Use your existing project instructions and filled profile in their current locations. For a first installation, copy the blank profile to a new project-owned file outside the release directory.
 
 ```sh
 (
@@ -27,7 +27,7 @@ From the primary checkout, use an operator shell with Node.js 24.12–24.x on Li
   project=$(git rev-parse --show-toplevel)
   root=${METHODOLOGY_RELEASES:-"${XDG_DATA_HOME:-$HOME/.local/share}/development-methodology/$(basename "$project")/releases"}
   case "$root" in /*) ;; *) echo "Choose an absolute release path" >&2; exit 1 ;; esac
-  version=5.2.0
+  version=5.3.0
   tag="methodology-v$version"
   repo=kostysh/development-methodology
   dest="$root/$version"
@@ -92,8 +92,9 @@ owner's permission to install and choose the location: the project directory
 
 Install the approved [versioned v5 skill archives](defaults/skills.md#install-the-v5-release)
 following the [rules of chapter 15](method/15-skills.md#installation).
-Verify in a new session that the agent sees and loads the skills. Record the
-method, location, release tag, and set in the [profile](PROJECT-PROFILE.md#skills).
+Record the method, location, release tag, and set in the
+[profile](PROJECT-PROFILE.md#skills). Verify discovery and loading after
+connecting the project instructions in step 5.
 For a stage without a skill, name the replacement: a person, another tool, or
 manually following the template from the skills repository.
 
@@ -176,6 +177,37 @@ in the adopting checkout after merging the entry points. Follow the rendered
 links from each entry point to confirm the guide, project-owned profile, and
 any section anchors resolve as intended.
 
+### Activate the skill loading rule
+
+For either guide location, run the following block from the primary checkout
+as part of connecting the instructions. Use the same `METHODOLOGY_RELEASES`
+setting as in step 2. Existing skill selections, including those installed
+through the skills CLI, carry over. Run the command while nobody else is
+editing the root instructions. It reads the rule from [chapter 15](method/15-skills.md#use-in-the-work)
+of the verified guide. It uses the root `AGENTS.override.md` if present,
+even when empty or whitespace-only. Otherwise it uses the root `AGENTS.md`.
+It appends a marked block when the rule is new. If the exact rule is already
+a standalone instruction paragraph, the command marks it in place. Subsequent runs update the block
+in place and preserve instructions outside it.
+
+```sh
+(
+  set -eu
+  project=$(git rev-parse --show-toplevel)
+  cd -- "$project"
+  root=${METHODOLOGY_RELEASES:-"${XDG_DATA_HOME:-$HOME/.local/share}/development-methodology/$(basename "$project")/releases"}
+  release="$root/5.3.0"
+  "$release/tools/node_modules/.bin/methodology-controls" sync-skill-rule "$release/guide"
+)
+```
+
+Keep the resulting entry point with the project's other instructions and
+retain the activation diff for rollback. The command can be repeated. If it reports
+a conflict, preserve the current file and resolve the reported difference
+with its owner before activating the release. Check the startup instructions
+and, if the project uses skills, the skill read in a
+[fresh chat](method/15-skills.md#installation).
+
 ## 6. Configure documentation
 
 Fill in the profile section ["Documentation and artifacts"](PROJECT-PROFILE.md#documentation-and-artifacts):
@@ -245,7 +277,9 @@ the intended completion. Verify that the executor:
 
 1. Finds the source and the next step without consulting the originating project.
 2. Distinguishes a safe technical choice from a decision of the requirements owner.
-3. Chooses the stage's skill and names it in the handoff.
+3. If the project uses a skill for this stage, chooses it by its description, follows the
+   [skill loading rule](method/15-skills.md#use-in-the-work), and names the
+   skill in the handoff. Otherwise uses the replacement recorded in the profile.
 4. Creates a persistent artifact only under the persistence rules, in the right
    place, with an ID, metadata, and the status `draft`; leaves acceptance to the owner.
 5. Updates living documentation or explicitly notes that it is not affected.
@@ -306,8 +340,10 @@ in the profile. [Verify the scheduled start](defaults/merge-train.md#verify-the-
 
 - [ ] The profile is accepted by the owner; `unknown` fields are resolved or
       restrict only the named actions.
-- [ ] The skill set is installed, the agent sees it in a new session, and the
-      profile contains the release tag and replacements.
+- [ ] A fresh project chat showed the complete root rule. If the project uses
+      skills, an ordinary task described without the skill's name led to a
+      verified read. The profile records the installed set and release tag
+      where applicable and the replacements for stages without a skill.
 - [ ] The documentation scheme is confirmed; the accepting owners and the
       locations of living documentation are named.
 - [ ] The root `AGENTS.md`, `CONTRIBUTING.md`, and, if needed, `PLANS.md`
@@ -335,7 +371,21 @@ checks. The measurement method is in the
 
 ## Updating the methodology
 
-Read the [changelog](CHANGELOG.md). Install the new version alongside the old one using [step 2](#2-place-and-configure). Compare the new guide and blank profile with your previous release, then merge applicable fields into your existing filled profile and retain project-specific chapters and entry points. For example, run `diff -ru -- "$old_release/guide" "$new_release/guide"` with the two recorded paths. Exit 1 reports differences. Switch client and runner paths only after the new installation passes the selected project checks. Keep the prior paths and profile for rollback.
+Read the [changelog](CHANGELOG.md). Install the new version alongside the old
+one using [step 2](#2-place-and-configure). The installation stages the guide
+and tools. The project's current instructions still apply. Compare the new
+guide and blank profile with your previous release, then merge applicable
+fields into your existing filled profile and retain project-specific chapters
+and entry points. For example, run `diff -ru -- "$old_release/guide" "$new_release/guide"`
+with the two recorded paths. Exit 1 reports differences.
+
+Once the new installation passes the selected project checks, activate the
+version. Run the [step 5 command](#activate-the-skill-loading-rule) from the
+primary checkout using this release's guide and companion. Review the
+resulting change to the root instructions. Keep its diff with the prior
+paths and profile for rollback. Switch the client and runner paths after
+the command succeeds. Verify the rule and, where skills are installed, its use in a
+[fresh project chat](method/15-skills.md#installation).
 
 ### Roll back a release
 
@@ -346,7 +396,13 @@ Read the [changelog](CHANGELOG.md). Install the new version alongside the old on
    available. For metrics use `methodology-metrics uninstall-hooks PROFILE SOURCE`.
    For recovery use `methodology-recovery uninstall-hook PROFILE --client CLIENT`.
    Compare the affected settings with the saved working copy.
-3. Switch the paths you changed back to the previous installation. Restore
+3. Reverse only the skill-rule change recorded at activation. If the command
+   updated a block, restore its previous version. If it marked an existing
+   paragraph, remove only the marker lines and keep the original paragraph.
+   If it added a new block, remove the addition shown in the diff. Remove a
+   newly created entry point only if it still contains just that addition.
+   Keep subsequent project edits. Switch the paths you changed back to the
+   previous installation. Restore
    any changed profile, skill, lockfile or CI configuration from the saved
    copy. Verify a clean check succeeds and the same known violation fails.
    If a skill changed, verify it in a fresh session.

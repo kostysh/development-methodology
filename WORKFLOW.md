@@ -5,6 +5,9 @@ describes its conditions and constraints. The risk level is chosen according
 to [chapter 01](method/01-authority-and-scope.md#materiality-and-rigor);
 risk triggers can move a task to a stricter route at any time.
 
+When a task calls for a skill, follow the [skill loading rule](method/15-skills.md#use-in-the-work)
+before using its references or applying its instructions.
+
 In solo mode, act on the [choices already delegated](method/12-agents.md#team-composition). For choices outside that authority, present the alternatives and consequences and record the owner's reply from the project conversation. Apply the project's existing approval for publication where required. Correct a returned train submission on the editable branch and submit its new revision under the [integration procedure](method/07-integration.md#merge-train).
 
 At night the scheduled train processes ready submissions without a live

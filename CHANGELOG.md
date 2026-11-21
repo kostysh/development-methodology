@@ -4,6 +4,16 @@ These entries are for a project that updates its copy of the package
 ([update procedure](ADOPTION.md#updating-the-methodology)). Each version
 states what requires action in the adopting project.
 
+## 5.3.0
+
+- On adoption and when activating this update, run the
+  [instruction activation command](ADOPTION.md#activate-the-skill-loading-rule).
+  It synchronizes the release's skill loading rule into the project's active
+  root instructions. Use the [fresh-chat check](method/15-skills.md#installation)
+  to confirm the rule appears at startup. Where skills are installed, verify
+  that an ordinary task leads to skill selection and a complete read from
+  the catalog source.
+
 ## 5.2.0
 
 - Projects using a local Codex schedule can select the owner's signed-in

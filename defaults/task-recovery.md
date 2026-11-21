@@ -40,6 +40,15 @@ The [chapter 12 steps](../method/12-agents.md#context-recovery) govern its use.
    [Codex hooks](https://learn.chatgpt.com/docs/hooks#sessionstart) ·
    [Claude Code hooks](https://code.claude.com/docs/en/hooks#sessionstart).
 
+For a [helper assigned a recovery note](../method/12-agents.md#delegation-package),
+choose a separate file in an existing private, ignored directory writable
+by the helper. For example, give it the resolved absolute path to
+`.methodology/task-state/helpers/<task_id>-<helper_id>.md` in its worktree.
+For a read-only review, use an approved private scratch path outside the
+reviewed files. The helper writes ordinary text and keeps it available until
+the coordinator accepts the result. The configured writer and hook still
+serve the coordinator's task state.
+
 ## Manual recovery
 
 If the hook is unavailable, start with `methodology-recovery recover PROFILE`.

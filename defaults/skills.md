@@ -8,7 +8,9 @@ profile records the set actually installed.
 ## Source
 
 Repository: [`kostysh/skills`](https://github.com/kostysh/skills).
-For methodology 5.3.0, use the [skills-v5.0.0 assets](https://github.com/kostysh/skills/releases/tag/skills-v5.0.0).
+Use [skills-20261121-3](https://github.com/kostysh/skills/releases/tag/skills-20261121-3)
+for `orchestrator` 0.1.2. All other skills use the
+[skills-v5.0.0 assets](https://github.com/kostysh/skills/releases/tag/skills-v5.0.0).
 The catalog lists each skill's version, filename in its URL, and SHA-256.
 
 ## Stages and skills
@@ -20,6 +22,7 @@ The catalog lists each skill's version, filename in its URL, and SHA-256.
 | Architecture | `architecture-engineer` | Architecture brief, delta, PD, ADR, and other architecture artifacts |
 | Delivery | `delivery-planner` | Delivery plan, task brief, backlog audit |
 | Specification | `spec-engineer` | Implementation-ready SPEC and verification map |
+| Coordinating a complex task or a batch with several contributors | `orchestrator` | Ready assignments, handoffs tied to the agreed inputs, and a checked combined result |
 | Protected baseline, where applicable | An independent test author with the accepted specification and a way to exercise the public boundary | Assertions traced to the specification. Send gaps to its owner before freezing. |
 | Implementation | `implementation-discipline`, `error-fixer`, `git-engineer`, `gh-utility`, and stack skills | Change, tests, living documentation |
 | Review | `code-reviewer`, `spec-conformance-reviewer`, `concept-conformance-reviewer`, `security-reviewer`, `web-ui-reviewer`, `gdpr-compliance` | Verdict and findings within the subject |
@@ -52,6 +55,7 @@ new inspection on gaps in the demonstrated operation and transport.
 | Set | Skills | When |
 | --- | --- | --- |
 | Base | `prd-engineer`, `architecture-engineer`, `delivery-planner`, `spec-engineer`, `implementation-discipline`, `code-reviewer`, `spec-conformance-reviewer`, `documentation`, `git-engineer`, `retrospective-analysis` | Any project with the full lifecycle route |
+| Coordination | `orchestrator` | A complex task or batch needs separate contributions, dependent handoffs, or an independent check. Handle short self-contained work directly. |
 | Requirements owner outside the team | `requirements-approval` | A customer or another external owner makes the decisions |
 | Security and data | `security-reviewer`, `gdpr-compliance` | Permissions, secrets, trust boundary; personal data |
 | UI | `web-ux-engineer`, `frontend-design`, `web-ui-reviewer` | User interface |
@@ -65,24 +69,40 @@ mapping: `review` → `draft` under review, `baselined` → `accepted`, `updated
 
 ## Install the v5 release
 
+Use the same procedure during adoption and when adding an approved set on update.
+For example, set `export SKILL_NAME=orchestrator` to install the coordination
+skill. It uses the agent facilities already available. If delegation is
+unavailable, the executor can do the authorized work directly and leave any
+required independent decision with its owner.
+
 Download the exact catalog and the selected built archives into an empty
 staging directory. This example installs one selected skill for Codex.
 Repeat for the set in the project profile. Install in the checkout from which the agent runs. A linked worktree has its own untracked files. Start a fresh client there and verify the selected skill loads from that checkout. For a project-wide selection, use its existing tracked skills policy or repeat this installation in each task checkout. Use `.claude/skills` for Claude
-Code or `.agents/skills` for Codex. The example uses GitHub CLI, jq and GNU
+Code (set `SKILL_TARGET=.claude/skills`) or the default `.agents/skills` for Codex. The example uses GitHub CLI, jq and GNU
 coreutils. Run each step only after the previous one succeeds.
 
 ```sh
 (
 set -eu
-skill_name=code-reviewer
-stage_dir="$PWD/.methodology/releases/skills-v5.0.0"
-target_dir="$PWD/.agents/skills"
+skill_name=${SKILL_NAME:-code-reviewer}
+case "$skill_name" in
+  orchestrator)
+    skill_tag=skills-20261121-3
+    catalog_digest=f06ac6bbff228a544f119eaf534b0825d28a99ca4096f873d2f35e16505917cf
+    ;;
+  *)
+    skill_tag=skills-v5.0.0
+    catalog_digest=060fd26552e556bfd6def86a3b82e399e18e884ca22afc7b22734aca146045ed
+    ;;
+esac
+stage_dir="$PWD/.methodology/releases/$skill_tag"
+target_dir="$PWD/${SKILL_TARGET:-.agents/skills}"
 mkdir -p "$stage_dir" "$target_dir"
-gh release download skills-v5.0.0 --repo kostysh/skills --dir "$stage_dir" --pattern catalog.json --skip-existing
-(cd "$stage_dir" && printf '%s  catalog.json\n' 060fd26552e556bfd6def86a3b82e399e18e884ca22afc7b22734aca146045ed | sha256sum --strict --check)
+gh release download "$skill_tag" --repo kostysh/skills --dir "$stage_dir" --pattern catalog.json --skip-existing
+(cd "$stage_dir" && printf '%s  catalog.json\n' "$catalog_digest" | sha256sum --strict --check)
 skill_asset=$(jq -er --arg name "$skill_name" '.skills[] | select(.name==$name) | .url | split("/") | last' "$stage_dir/catalog.json")
 skill_digest=$(jq -er --arg name "$skill_name" '.skills[] | select(.name==$name) | .sha256' "$stage_dir/catalog.json")
-gh release download skills-v5.0.0 --repo kostysh/skills --dir "$stage_dir" --pattern "$skill_asset" --skip-existing
+gh release download "$skill_tag" --repo kostysh/skills --dir "$stage_dir" --pattern "$skill_asset" --skip-existing
 (cd "$stage_dir" && printf '%s  %s\n' "$skill_digest" "$skill_asset" | sha256sum --check)
 skill_stage=$(mktemp -d "$target_dir/.new-XXXXXXXX")
 tar -xzf "$stage_dir/$skill_asset" -C "$skill_stage"
@@ -99,17 +119,21 @@ local edits and resolve differences with the owner. Move the previous
 verified directory into a private backup before switching. Verify the skill
 in a fresh agent session. To roll back, restore that directory, restart the
 agent and verify the earlier skill version. An unqualified stable-catalog
-installation selects the conventional stable release. Pin the v5 tag above
-for this methodology.
+installation selects the latest stable skills release. Use the pins above
+to reproduce the selected set.
 
 ## Installation via CLI
 
-The CLI downloads skills from a stable release, verifies SHA-256, and installs
-only the runtime files.
+For projects that follow the stable catalog, the CLI downloads the selected
+skills, verifies SHA-256, and installs the runtime files. To reproduce the
+methodology pins, use the [release procedure](#install-the-v5-release).
 
 ```sh
 # interactive selection
 npx @kostysh/skills
+
+# coordination in the Codex project
+npx @kostysh/skills install orchestrator --target custom --path .agents/skills
 
 # base set into the project
 npx @kostysh/skills install prd-engineer architecture-engineer delivery-planner \

@@ -33,6 +33,10 @@ used it. The availability of a skill does not require a separate agent or an
 additional audit. A conflict with a direct assignment is resolved by the
 instruction hierarchy, not by the executor's convenience.
 
+For complex development or a group of related tasks, use the profile's
+coordination skill when the work needs help with sequencing, delegation or
+integration.
+
 ## Team composition
 
 The working mode is set in the [profile](../PROJECT-PROFILE.md#roles-and-independence).
@@ -86,6 +90,24 @@ Do not copy secrets, mail, or unnecessary data. An independent auditor does
 not inherit the author's reasoning history; the auditor reads the primary
 sources independently. Passing on the author's full chat is not an
 independent review.
+
+If a subtask will take a long time or would be costly to repeat, include
+the exact, stable path to a short, private local note in the delegation package.
+The coordinator keeps the assignment and path in the existing task record
+or its own task state so it can resend them if needed. Grant the helper
+write access to the note within its assigned scope. The helper is its sole
+writer. For a short subtask that is cheap to repeat, the usual reply is
+sufficient. If it grows, agree on the path before starting the costly step.
+
+At the start, the helper records where to begin. Update the note after a
+material step and before a long operation. Record the last verified result
+with its revision or evidence link, any pending operation, where to check
+its outcome, and the next permitted step. After compaction or interruption, the helper takes the path
+from the retained package, reads the note and checks its facts against the
+worktree or operation record. Resume from the verified result. Check the
+outcome of a pending run before deciding whether a retry is needed. If the
+note is missing or stale, recover what can be verified and ask the coordinator about
+any remaining gap before taking a step that depends on it.
 
 ## Ownership and parallelism
 
@@ -145,7 +167,9 @@ agent, honestly record the observed terminal state and the limitations.
    a long run, arrange to retain its identity, revision, output and exit
    status across a session loss. Move completed checks to the development log
    and accepted decisions to their [owning document](13-artifacts-and-communication.md).
-2. Keep one compact file per task outside task commits. Use the
+2. Keep one compact task state file outside task commits. When work is
+   delegated, the coordinator is its sole writer. A helper assigned a
+   [local note](#delegation-package) uses it to resume its own work. For the shared task state, use the
    [configured writer, line and byte limits](../defaults/task-recovery.md). If the
    write is too large, move closed items to their owners and retry. A session
    normally follows one task. On a switch save the old state, load the new

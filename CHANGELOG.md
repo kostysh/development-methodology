@@ -4,6 +4,15 @@ These entries are for a project that updates its copy of the package
 ([update procedure](ADOPTION.md#updating-the-methodology)). Each version
 states what requires action in the adopting project.
 
+## Unreleased
+
+- For a long delegated task or one that would be costly to repeat, include the
+  helper's private recovery note path in its [assignment](method/12-agents.md#delegation-package).
+  Short, inexpensive assignments use the usual reply.
+- For complex work or task packages that need several contributors, select
+  `orchestrator` from the [conditional skill sets](defaults/skills.md#sets)
+  and record the installed version in the project profile.
+
 ## 5.3.0
 
 - On adoption and when activating this update, run the

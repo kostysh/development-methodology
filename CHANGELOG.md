@@ -4,7 +4,7 @@ These entries are for a project that updates its copy of the package
 ([update procedure](ADOPTION.md#updating-the-methodology)). Each version
 states what requires action in the adopting project.
 
-## Unreleased
+## 5.3.1
 
 - For a long delegated task or one that would be costly to repeat, include the
   helper's private recovery note path in its [assignment](method/12-agents.md#delegation-package).

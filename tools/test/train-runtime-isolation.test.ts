@@ -70,7 +70,31 @@ test("the packaged verifier exercises fresh PostgreSQL on full and targeted runs
   assert.deepEqual(runSuite(c,obj,id,"full",sha,[]),{result:"pass"});
   writeFileSync(join(edit,"products.csv"),"id,price_cents\n1,999\n");git(edit,"add","products.csv");git(edit,"commit","-m","different observed value");
   git(edit,"push",obj.remote,"HEAD:main");
-  assert.deepEqual(runSuite(c,obj,id,"targeted",obj.base(),["postgres-roundtrip"]),{result:"fail",tests:["postgres-roundtrip"]});
+  // The final postmaster can exist before its socket accepts connections. Make
+  // its first real pg_isready probe use a missing socket, then probe normally.
+  const probeContext=join(root,"postgres-readiness");mkdirSync(probeContext);
+  writeFileSync(join(probeContext,"Dockerfile"),`FROM ${base}
+COPY --chmod=0555 pg_isready /test-probe/pg_isready
+ENV PATH="/test-probe:\${PATH}"
+`);
+  writeFileSync(join(probeContext,"pg_isready"),`#!/bin/sh
+PATH=\${PATH#/test-probe:}
+log=/socket/readiness-codes
+if [ ! -e "$log" ]; then
+  set -- -q -h /socket/absent -U postgres
+fi
+pg_isready "$@"
+status=$?
+printf '%s %s\\n' "$(cat /proc/1/comm)" "$status" >> "$log"
+exit "$status"
+`);
+  const probeImage=docker("build","--network=none","--label","methodology.test="+id,"-q",probeContext);
+  t.after(()=>docker("image","rm",probeImage));
+  const targeted=runSuite({...c,postgresImage:probeImage},obj,id,"targeted",obj.base(),["postgres-roundtrip"]);
+  const probes=readFileSync(join(root,"run","db-socket","readiness-codes"),"utf8").trim().split("\n");
+  assert.equal(probes[0],"postgres 2");
+  assert.deepEqual(targeted,{result:"fail",tests:["postgres-roundtrip"]},`PostgreSQL readiness probes: ${probes.join(", ")}`);
+  assert.equal(probes.at(-1),"postgres 0");
   assert.deepEqual(runSuite(c,obj,id,"docs",sha,[]),{result:"pass"});
   // The trusted oracle contacts the separately running candidate over
   // loopback and observes the bytes served from the exact selected tree.

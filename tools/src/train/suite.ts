@@ -34,10 +34,11 @@ function startServices(c: Config, id: string, dir:string, mounts: string[], limi
       c.postgresImage,"postgres","-c","listen_addresses=","-c","unix_socket_directories=/socket,/var/run/postgresql"],{deadline});
     // The entrypoint first runs a temporary init server. Wait for the final
     // postmaster, otherwise a successful readiness check can precede shutdown.
+    // The final server can reject connections (1) or have no socket response yet (2).
     const readyBy = Math.min(deadline,Date.now()+60000);
     for (;;) {
       const probe = command("docker",["exec",name+"-db","sh","-c",
-        'test "$(cat /proc/1/comm)" = postgres && pg_isready -q -h /socket -U postgres'],{deadline:readyBy,allowed:[0,1]});
+        'test "$(cat /proc/1/comm)" = postgres && pg_isready -q -h /socket -U postgres'],{deadline:readyBy,allowed:[0,1,2]});
       if (probe.code === 0) break;
       if (command("docker",["inspect","--format","{{.State.Running}}",name+"-db"],{deadline:readyBy}).out !== "true")
         throw new Error("Disposable database exited during startup");

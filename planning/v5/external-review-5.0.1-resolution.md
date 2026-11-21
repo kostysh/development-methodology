@@ -67,6 +67,13 @@ For an intended inventory change, show the owner the added or removed cases
 and exact revision, receive their reply and install the new approved digest.
 Re-read the checks and merge only the verified head.
 
+The owner's release instruction covers a routine version bump and publication.
+Use the independent PR review and CI, then tag the verified commit
+`methodology-v<version>`. CI derives the archive names from that tag and
+requires its version to match the tools package. Changes to the protected
+workflow, inventory, or other review controls still require the owner's
+confirmation of the exact revision.
+
 GitHub enforces the PR and CI when its branch rule is active. The
 coordinator enforces the chat decision at its own merge boundary. A manual
 merge with the owner's GitHub credentials can pass the native branch rule

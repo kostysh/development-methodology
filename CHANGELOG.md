@@ -4,6 +4,17 @@ These entries are for a project that updates its copy of the package
 ([update procedure](ADOPTION.md#updating-the-methodology)). Each version
 states what requires action in the adopting project.
 
+## 5.2.0
+
+- Projects using a local Codex schedule can select the owner's signed-in
+  GitHub CLI as the writer. Install the new companion, pin the CI and
+  deployment controls, identify the independent review channel, and
+  commission a scheduled run against the test branch. Check the combined
+  revision, the test deployment and the morning report.
+  [Owner-session setup and acceptance](defaults/owner-gh-train.md)
+- Projects retaining the App writer can install the new package with their
+  existing train profile. [Update procedure](ADOPTION.md#updating-the-methodology)
+
 ## 5.1.0
 
 - Projects commissioning the train on a private GitHub Free repository can

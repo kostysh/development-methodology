@@ -19,7 +19,7 @@ conflicts. Keep its current owners. Do not replace the existing `AGENTS.md`,
 
 ## 2. Place and configure
 
-From the primary checkout, use an operator shell with Node.js 24.12–24.x on Linux, npm, Git, GitHub CLI (including `gh attestation verify`) and GNU coreutils. Choose a durable `METHODOLOGY_RELEASES` path outside agent-writable roots or use the project-specific default below. The installer places the [5.1.0 release](https://github.com/kostysh/development-methodology/releases/tag/methodology-v5.1.0) in a fresh version directory. Use your existing project instructions and filled profile in their current locations. For a first installation, copy the blank profile to a new project-owned file outside the release directory.
+From the primary checkout, use an operator shell with Node.js 24.12–24.x on Linux, npm, Git, GitHub CLI (including `gh attestation verify`) and GNU coreutils. Choose a durable `METHODOLOGY_RELEASES` path outside agent-writable roots or use the project-specific default below. The installer places the [5.2.0 release](https://github.com/kostysh/development-methodology/releases/tag/methodology-v5.2.0) in a fresh version directory. Use your existing project instructions and filled profile in their current locations. For a first installation, copy the blank profile to a new project-owned file outside the release directory.
 
 ```sh
 (
@@ -27,7 +27,7 @@ From the primary checkout, use an operator shell with Node.js 24.12–24.x on Li
   project=$(git rev-parse --show-toplevel)
   root=${METHODOLOGY_RELEASES:-"${XDG_DATA_HOME:-$HOME/.local/share}/development-methodology/$(basename "$project")/releases"}
   case "$root" in /*) ;; *) echo "Choose an absolute release path" >&2; exit 1 ;; esac
-  version=5.1.0
+  version=5.2.0
   tag="methodology-v$version"
   repo=kostysh/development-methodology
   dest="$root/$version"
@@ -281,7 +281,13 @@ Keep the checkpoint report in the task or PR for its reader.
 
 ### Commission the merge train
 
-Select the integration branch and its [writer policy](defaults/merge-train.md#choose-the-branch-policy).
+Choose the writer before commissioning the train. For an owner-operated desktop,
+follow [Run the train with the owner’s GitHub CLI](defaults/owner-gh-train.md).
+Exercise one actual built-in scheduled start with independent review, candidate
+CI, a test deployment and the morning report. Record the observed time window
+and the production references checked in it.
+
+For the App writer, select the integration branch and its [writer policy](defaults/merge-train.md#choose-the-branch-policy).
 For a private repository on GitHub Free, record the owner-approved starting
 commit and who will reconcile an unexpected branch update. Configure the
 writer App, independent reviewer and trusted fast checks. A single GitHub user can author all PRs through their usual

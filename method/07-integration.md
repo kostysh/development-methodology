@@ -16,7 +16,7 @@ explicitly, not as its PASS.
 6. Use the integration route in the profile. If the [merge train](#merge-train)
    is enabled, submit the exact reviewed revision of the editable task branch. Correct
    a returned revision on that task branch and obtain fresh admission. A
-   scheduled train processes independently ready work while an owner decision
+   scheduled train verifies the combined candidate with the selected writer and test environment. It processes independently ready work while an owner decision
    is pending. Re-read the PR, final commit,
    and branches after integration.
 7. After deploy, check the actually deployed revision.
@@ -94,23 +94,27 @@ repeated rebases and expensive checks are reasons to select it. Record the
 owner's basis in the profile. Follow the [commissioning checks](../ADOPTION.md#commission-the-merge-train)
 before enabling the writer. Other projects use the [integration queue](#integration-queue).
 
-Use the train's service account to update the integration branch. Select
-server-enforced exclusive writes when available. Where the host cannot
+Use the identity authorized in the profile. A service identity can limit
+provider permissions. A project may instead commission an existing owner
+session for a scheduled test integration. The provider records its actions
+as the owner. Constrain the command, triggers and test environment to the
+authorized target, and keep the owner's credentials away from candidate code.
+Select server-enforced exclusive writes when available. Where the host cannot
 enforce them, the owner may assign writes to the train by convention.
 Record this choice and the independently verified starting revision. On
 every run compare the observed branch with the last verified revision.
 An unexpected change stops integration and deployment for investigation.
 Accounts with repository write access can still change the branch directly.
 
-Agents submit the exact reviewed revision. The same service account handles a
-documentation-only PR through fast checks when its entire delta matches the
-profile's approved paths. It waits for an active train to finish, then takes
+Agents submit the exact reviewed revision. If the profile enables a
+documentation-only route, the same writer uses fast checks for a PR whose
+entire delta matches the approved paths. It waits for an active train to finish, then takes
 the same lock. It reconciles any unresolved write and rechecks the current
 base, PR head, and applicable gates before integrating.
 
-1. **Admit.** The train alone manages the queue label. Require
+1. **Admit.** The train owns the queue. If the project uses a queue label, the train manages it. Require
    [per-task verification](06-verification.md#verification-for-a-merge-train),
-   including the published audit verdict on the current PR head, and check
+   including the independent audit verdict on the current PR base and head, and check
    that the PR integrates without conflicts. Pin admission to the submitted commit.
    Use immutable submission refs when the host enforces them. Otherwise
    check the ref against the reviewed commit again before publication and

@@ -4,6 +4,7 @@ import packageInfo from "../package.json" with {type:"json"};
 import { readConfig } from "./train/config.js";
 import { evidence } from "./train/evidence.js";
 import { publishReview } from "./train/publish-review.js";
+import { ownerTrain } from "./train/owner.js";
 import { operate } from "./train/operate.js";
 import { morning, observe } from "./train/report.js";
 import { history } from "./train/state.js";
@@ -11,6 +12,8 @@ import { history } from "./train/state.js";
 const usage = "Usage: methodology-train run PROFILE [--scheduled [--slot UTC_HOUR] | --pr NUMBER [--docs]]\n" +
   "       methodology-train report PROFILE FROM_UTC THROUGH_UTC\n" +
   "       methodology-train observations PROFILE\n" +
+  "       methodology-train owner-prepare PROFILE BATCH\n" +
+  "       methodology-train owner-check|owner-publish PROFILE BATCH CANDIDATE\n" +
   "       methodology-train identity|export-checks|admission POLICY PR HEAD REF\n" +
   "       methodology-train publish-review POLICY PR HEAD REF VERDICT [--owner-message REFERENCE]";
 try {
@@ -18,6 +21,14 @@ try {
     "owner-message":{type:"string"},scheduled:{type:"boolean"},slot:{type:"string"},pr:{type:"string"},docs:{type:"boolean"}}});
   if (process.argv.length === 3 && values.help) console.log(usage);
   else if (process.argv.length === 3 && values.version) console.log(packageInfo.version);
+  else if (positionals[0] === "owner-prepare" || positionals[0] === "owner-check" || positionals[0] === "owner-publish") {
+    const op = positionals[0];
+    if (Object.keys(values).length || positionals.length !== (op === "owner-prepare" ? 3 : 4)) throw new Error(usage);
+    const result = await ownerTrain(op, positionals[1], positionals[2], positionals[3]);
+    console.log(JSON.stringify(result));
+    if (result.status === "pending") process.exitCode = 75;
+    if (result.status === "fail" || result.status === "hold") process.exitCode = 1;
+  }
   else if (["identity","export-checks","admission"].includes(positionals[0]) && positionals.length === 5 && !Object.keys(values).length) {
     const [op,path,pr,head,ref] = positionals;
     console.log(JSON.stringify(evidence(op,path,pr,head,ref)));

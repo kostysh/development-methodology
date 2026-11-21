@@ -132,9 +132,12 @@ read writer credentials from the host, filesystem or service.
 
 The integration owner chooses the files that govern CI, the inventory of
 mandatory tests and its approval policy. Keep the approved policy on the
-coordinator outside the PR. For example, add this object to the train's
-trusted admission policy, using the digest of the inventory the owner
-actually reviewed.
+coordinator outside the PR. For the [owner-session writer](owner-gh-train.md),
+include these files in the protected paths and handle changes to controls
+before commissioning their new revisions.
+
+For the App writer, add the following object to its trusted admission policy,
+using the digest of the inventory the owner actually reviewed.
 
 ```json
 {

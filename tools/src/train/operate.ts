@@ -82,7 +82,7 @@ function deploy(c: Config, sha: string, d: number, writerLock?: number) {
   if (result !== sha) throw new Error("Test deployment revision differs");
   return result;
 }
-function verifyUnselectedHead(git: Objects, pull: Pull, candidate: string) {
+export function verifyUnselectedHead(git: Objects, pull: Pull, candidate: string) {
   const head = git.fetch("refs/pull/" + pull.number + "/head");
   if (head !== pull.head) throw new Error("Unselected PR head changed during verification: #" + pull.number);
   if (git.git(["merge-base","--is-ancestor",head,candidate],[0,1]).code === 0)

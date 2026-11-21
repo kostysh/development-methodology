@@ -15,7 +15,7 @@ const stamp = "2026-11-19T10:00:00Z";
 test("packs once and invokes the installed commands with isolated local data", { timeout: 480_000 }, (t) => {
   const inventoryBytes = readFileSync(join(tools, "test", "required-cases.json"));
   // The release owner supplies the same digest independently to the Actions verification step.
-  const approvedInventory = process.env.METHODOLOGY_APPROVED_INVENTORY_SHA256 ?? "1b06de72a604a101c5e77c2642ee1994a767489b3eccbf8201021f80d90bc010";
+  const approvedInventory = process.env.METHODOLOGY_APPROVED_INVENTORY_SHA256 ?? "25fd2fe9f2dad89d8226282248233bc4b275959e406d6273434d603684f8c5d9";
   assert.equal(createHash("sha256").update(inventoryBytes).digest("hex"), approvedInventory,
     "Required test inventory differs from the release owner's approved inventory");
   const inventory: Record<string, string[]> = JSON.parse(inventoryBytes.toString("utf8"));

@@ -54,19 +54,21 @@ Use the [GitHub default](defaults/merge-train.md) when it fits the project.
 | Setting | Project value |
 | --- | --- |
 | Activation decision, owner and reason, including measured demand where available | Not set |
-| Integration branch, writer App and branch policy. For enforced writes, record the ruleset evidence. For a private Free repository, record the approved initial commit, owner accepting direct-write risk and incident recovery owner. | Not set |
+| Integration branch, writer identity and branch policy. For enforced writes, record the ruleset evidence. For a private Free repository, record the approved initial commit, owner accepting direct-write risk and incident recovery owner. | Not set |
 | Exact revision submission branch pattern, task keys, dependencies and retention of closed refs | Not set |
 | Expected PR author ID if restricted, independent reviewer, App bot user ID or human review publisher | Not set |
-| Trusted check publisher, workflow revision and required jobs | Not set |
+| Independent review channel and source of dependency records used by the scheduled agent | Not set |
+| Trusted check publishers, approved control revisions for integration and default branches, candidate workflow IDs, Git blobs, required jobs and steps | Not set |
+| Owner-session login, private operator directory, protected paths, authorized test deployment trigger and production isolation evidence, if selected | Not set |
 | Trusted train package and version, runner, lock and status sources | Not set |
 | Expensive suite, approved temporary resource types and test environment, if applicable | Not set |
-| Scheduled Codex chat or opt-in fallback, owner, fixed command, receiver and unattended permissions | Not set |
+| Scheduled Codex chat or opt-in fallback, owner, allowed commands, receiver if used, and unattended permissions | Not set |
 | Night window and time zone, configured UTC slots and grace period, evidence of an actual scheduled start | Not set |
 | Maximum run duration and how the trusted runner renews its access | Not set |
 | PR limit `N`, migration PR limit, and full-suite run budget | Not set |
 | Recurrence window `M` in days | Not set |
 | Paths eligible for the documentation-only route | Not set |
-| Dry-run evidence, metrics source and report location | Not set |
+| Commissioning evidence, dry-run evidence where supported, metrics source and report location | Not set |
 
 ## Documentation and artifacts
 

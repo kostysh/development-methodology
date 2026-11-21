@@ -98,7 +98,7 @@ restrictions.
 
 With a [merge train](07-integration.md#merge-train), the coordinator submits
 ready PRs for admission and reconciles the integration readback. The train
-owns updates to the queue and protected branch. A diagnostic agent reads
+owns updates to the queue and authorized integration branch. A diagnostic agent reads
 failed-test and log summaries and writes its causal analysis for the report.
 It may suggest which PR to check first. Test results determine any exclusion.
 

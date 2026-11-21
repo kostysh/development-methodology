@@ -4,6 +4,13 @@ These entries are for a project that updates its copy of the package
 ([update procedure](ADOPTION.md#updating-the-methodology)). Each version
 states what requires action in the adopting project.
 
+## 5.3.4
+
+- Add or keep the skill loading paragraph in the active root instructions
+  using the [adoption step](ADOPTION.md#activate-the-skill-loading-rule).
+  Update any local adoption procedure that still calls the former command
+  to follow this step.
+
 ## 5.3.3
 
 - Install the new guide and tools using the [update procedure](ADOPTION.md#updating-the-methodology).
@@ -28,10 +35,8 @@ states what requires action in the adopting project.
 
 ## 5.3.0
 
-- On adoption and when activating this update, run the
-  [instruction activation command](ADOPTION.md#activate-the-skill-loading-rule).
-  It synchronizes the release's skill loading rule into the project's active
-  root instructions. Use the [fresh-chat check](method/15-skills.md#installation)
+- This release introduced the skill loading rule in the active root
+  instructions. Use the [fresh-chat check](method/15-skills.md#installation)
   to confirm the rule appears at startup. Where skills are installed, verify
   that an ordinary task leads to skill selection and a complete read from
   the catalog source.

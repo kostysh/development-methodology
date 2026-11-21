@@ -84,11 +84,9 @@ version is recorded in the profile.
 
 ## Use in the work
 
-Choose a skill by the aspect of the work.
-
-<!-- skill-loading:start -->
-Once you select a skill, including by its description, read its entire `SKILL.md` from the source named in the current catalog before choosing references or applying the skill. Reuse a copy already in context when you know it is complete. For tool reads, return the file on its own. If the output is truncated or coverage is uncertain, read consecutive smaller sections until the full text is available. Then read the references or sections the skill requires for this task. Recover any missing text within those sections.
-<!-- skill-loading:end -->
+Choose a skill by the aspect of the work. Follow the
+[skill loading rule](../ADOPTION.md#activate-the-skill-loading-rule) in the
+project's root instructions.
 
 Apply the skill within the permitted boundary and name it in the handoff.
 The availability of a skill does not require a separate agent or an

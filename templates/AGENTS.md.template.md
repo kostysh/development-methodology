@@ -4,8 +4,8 @@ Replace placeholders and merge this navigation into the existing project
 instructions. Do not overwrite established rules. This template is not active
 until adopted by the project owner.
 
-After merging this navigation, run the [activation command](../ADOPTION.md#activate-the-skill-loading-rule)
-to include the release's skill loading rule in the active root instructions.
+After merging this navigation, follow the
+[adoption step for the skill loading rule](../ADOPTION.md#activate-the-skill-loading-rule).
 
 ```markdown
 # AGENTS.md

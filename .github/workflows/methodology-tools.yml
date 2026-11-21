@@ -22,7 +22,7 @@ jobs:
           persist-credentials: false
       - name: Verify the independently approved mandatory test inventory
         env:
-          APPROVED_SHA256: ${{ vars.METHODOLOGY_V5_3_0_INVENTORY_SHA256 }}
+          APPROVED_SHA256: ${{ vars.METHODOLOGY_APPROVED_INVENTORY_SHA256 }}
         run: |
           printf '%s  test/required-cases.json\n' "$APPROVED_SHA256" | sha256sum --strict --check
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
@@ -54,7 +54,7 @@ jobs:
       - run: npm test
       - run: npm run test:packed
         env:
-          METHODOLOGY_APPROVED_INVENTORY_SHA256: ${{ vars.METHODOLOGY_V5_3_0_INVENTORY_SHA256 }}
+          METHODOLOGY_APPROVED_INVENTORY_SHA256: ${{ vars.METHODOLOGY_APPROVED_INVENTORY_SHA256 }}
           METHODOLOGY_RELEASE_DIR: ${{ runner.temp }}/methodology-release
       - run: npm run check:links -- ..
       - name: Verify the portable guide and record its source

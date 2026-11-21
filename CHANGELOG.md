@@ -4,6 +4,13 @@ These entries are for a project that updates its copy of the package
 ([update procedure](ADOPTION.md#updating-the-methodology)). Each version
 states what requires action in the adopting project.
 
+## 5.3.2
+
+- Update the tools using the [update procedure](ADOPTION.md#updating-the-methodology).
+  When the train starts a disposable PostgreSQL service, it now waits within
+  the existing startup deadline if the Unix socket has not responded yet.
+  Keep your existing train profile and schedule.
+
 ## 5.3.1
 
 - For a long delegated task or one that would be costly to repeat, include the

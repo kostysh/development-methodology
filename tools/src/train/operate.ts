@@ -82,21 +82,40 @@ function deploy(c: Config, sha: string, d: number, writerLock?: number) {
   if (result !== sha) throw new Error("Test deployment revision differs");
   return result;
 }
+function verifyUnselectedHead(git: Objects, pull: Pull, candidate: string) {
+  const head = git.fetch("refs/pull/" + pull.number + "/head");
+  if (head !== pull.head) throw new Error("Unselected PR head changed during verification: #" + pull.number);
+  if (git.git(["merge-base","--is-ancestor",head,candidate],[0,1]).code === 0)
+    throw new Error("Candidate includes an unselected PR #" + pull.number);
+}
 async function readback(c: Config, gh: Host, git: Objects, p: Pending, r: Receipt, d: number) {
-  r.branchReadback = git.base();
-  r.treeReadback = git.tree(r.branchReadback);
-  if (r.branchReadback !== p.candidate || r.treeReadback !== p.tree) throw new Error("Integration ref/tree differs from tested candidate");
+  function verifyTarget() {
+    r.branchReadback = git.base();
+    r.treeReadback = git.tree(r.branchReadback);
+    if (r.branchReadback !== p.candidate || r.treeReadback !== p.tree)
+      throw new Error("Integration ref/tree differs from tested candidate " + p.candidate + "; observed " + r.branchReadback);
+  }
+  verifyTarget();
   for (const entry of p.included) {
     let pr = gh.get(entry.pr);
     // GitHub indirect-merge recognition can follow the ref update.
     for (let n = 0; !pr.merged && n < 4 && Date.now() + 1000 < d; n++) { await sleep(1000); pr = gh.get(entry.pr); }
-    if (!pr.merged || pr.open || pr.head !== entry.head || pr.target !== c.branch)
-      throw new Error("Integrated PR readback differs: #" + entry.pr);
+    if (!pr.merged || pr.open || pr.head !== entry.head || pr.target !== c.branch ||
+        (c.branchPolicy === "private-free" && (!pr.sameRepo || pr.ref !== entry.ref)))
+      throw new Error("Integrated PR readback differs: #" + entry.pr + " expected merged head " + entry.head +
+        ", observed " + pr.head + " (merged=" + pr.merged + ", open=" + pr.open + ")");
   }
-  for (const n of p.excluded) if (gh.get(n).merged) throw new Error("Excluded PR unexpectedly merged: #" + n);
+  for (const n of p.excluded) {
+    const other = gh.get(n);
+    if (other.merged) throw new Error("Excluded PR unexpectedly merged: #" + n);
+    if (c.branchPolicy === "private-free" && other.open && other.target === c.branch)
+      verifyUnselectedHead(git,other,p.candidate);
+  }
+  if (c.branchPolicy === "private-free") verifyTarget();
   r.integrated = p.included.map(x => x.pr);
   if ((c.deployment ?? null) !== p.deployment) throw new Error("Deployment configuration changed during recovery");
   r.deployed = deploy(c,p.candidate,d,git.writerLock);
+  if (c.branchPolicy === "private-free" && c.deployment) verifyTarget();
 }
 
 export async function operate(c: Config, options: Dispatch, supplied?: Environment) {
@@ -134,12 +153,24 @@ export async function operate(c: Config, options: Dispatch, supplied?: Environme
     const s = load(c);
     const checkpoint = () => save(join(c.stateDir,"state.json"), s);
     const gh = env.host(c,d);
-    gh.verifyWriter();
+    const privateFree = c.branchPolicy === "private-free";
+    const expected = s.expectedBase ?? c.initialBase;
+    function verifyKnownBase(tip: string | void) {
+      if (!privateFree) return;
+      if (!tip || !expected || (s.pending && s.pending.base !== expected) ||
+          (tip !== expected && tip !== s.pending?.candidate))
+        throw new Error("Unexpected integration tip; expected " + expected + ", observed " + tip + ". Reconcile the external change.");
+    }
+    const tip = gh.verifyWriter();
+    if (privateFree && tip) r.base = tip;
     if (s.resource) {
       env.cleanup(s.resource,d);
       rmSync(work(c,s.resource),{recursive:true,force:true});
       r.recovery.push("Cleaned run-owned resources " + s.resource); delete s.resource; checkpoint();
     }
+    if (s.pending && (s.pending.branchPolicy ?? "rulesets") !== r.branchPolicy)
+      throw new Error("Reconcile pending publication under its original branchPolicy");
+    verifyKnownBase(tip);
     const usesTaskKeys = Object.keys(c.taskDependencies ?? {}).length > 0;
     const listed = gh.list(usesTaskKeys ? "all" : "open");
     const tasks = usesTaskKeys ? taskIndex(listed,c.branch) : undefined;
@@ -165,13 +196,15 @@ export async function operate(c: Config, options: Dispatch, supplied?: Environme
     const dir = join(work(c,r.id),"git"); mkdirSync(dir, {recursive:true, mode:0o700});
     const git = env.objects(dir,c,d); git.writerLock = release.fd; git.init();
     r.base = git.base();
+    verifyKnownBase(r.base);
     if (s.pending) {
       const p = s.pending;
-      if (r.base === p.base) r.recovery.push("Prior write absent on branch; candidate requires new verification");
+      if (r.base === p.base && !(privateFree && p.published)) r.recovery.push("Prior write absent on branch; candidate requires new verification");
       else {
         if (c.mode !== "enabled") throw new Error("Reconcile pending publication in enabled mode");
         const old = read<Receipt>(join(c.stateDir,"runs", p.run + ".json"));
         await readback(c,gh,git,p,old,d);
+        if (privateFree) s.expectedBase = p.candidate;
         old.recovery.push("Reconciled by " + r.id); save(old.log,old);
         r.recovery.push("Verified previous merge and test deployment " + p.candidate);
       }
@@ -227,7 +260,7 @@ export async function operate(c: Config, options: Dispatch, supplied?: Environme
         gh.mark(p,false); delete s.admitted[p.number]; continue;
       }
       if (controls && (!p.sameRepo || p.draft || !submissionTask(p))) {
-        if (old || options.pr) exclude(r,p,"other","No eligible immutable submission");
+        if (old || options.pr) exclude(r,p,"other","No eligible submission matching the exact PR head");
         gh.mark(p,false); delete s.admitted[p.number]; continue;
       }
       if (!gh.gates(p,c.checks,protectedChanges.has(p.number)) || blockedState(c,p,d)) {
@@ -300,22 +333,49 @@ export async function operate(c: Config, options: Dispatch, supplied?: Environme
           if (c.immutableSources) gh.verifyImmutable(e.pull.ref);
           const p = gh.get(e.pull.number);
           const required = e.migration ? [...c.checks,...c.migrationChecks] : c.checks;
-          if (p.head !== e.pull.head || p.ref !== e.pull.ref || !gh.gates(p,required,protectedChanges.has(p.number)) || blockedState(c,p,d)) {
+          if (p.head !== e.pull.head || p.ref !== e.pull.ref || (privateFree && p.baseSha !== r.base) ||
+              !gh.gates(p,required,protectedChanges.has(p.number)) || blockedState(c,p,d)) {
             exclude(r,p,"other","Final PR head, admission checks or permission changed");
             throw new Error("Final admission rejected PR #" + p.number);
           }
         }
+        const excluded = new Set(r.excluded.map(e => e.pr));
+        if (privateFree) {
+          // GitHub can mark an unselected PR merged when its head becomes
+          // reachable from the target. Recheck even PRs opened during the suite.
+          for (const p of pulls) if (!r.proposed.includes(p.number)) excluded.add(p.number);
+          for (const p of gh.list("open")) {
+            if (r.proposed.includes(p.number)) continue;
+            excluded.add(p.number);
+            verifyUnselectedHead(git,p,candidate);
+          }
+        }
+        if (c.mode === "enabled" || privateFree) {
+          const current = gh.verifyWriter();
+          if (privateFree) {
+            if (current !== r.base) throw new Error("Integration base changed; rejecting stale candidate");
+            for (const {pull} of included) {
+              const ref = "refs/heads/" + pull.ref;
+              let actual: string;
+              try { actual = git.fetch(ref); }
+              catch (error) { throw new Error("Cannot verify " + ref + " for PR #" + pull.number + ": " + (error as Error).message); }
+              if (actual !== pull.head)
+                throw new Error("Ready source changed before publication for PR #" + pull.number + ": expected " + pull.head + ", observed " + actual);
+            }
+          }
+        }
         if (c.mode === "enabled") {
-          gh.verifyWriter();
-          s.pending = { run:r.id, base:r.base, candidate, tree:r.tree,
-            included:included.map(e => ({pr:e.pull.number,head:e.pull.head})), excluded:r.excluded.map(e => e.pr), deployment:c.deployment ?? null };
+          s.pending = { run:r.id, base:r.base, candidate, tree:r.tree, branchPolicy:r.branchPolicy,
+            included:included.map(e => ({pr:e.pull.number,head:e.pull.head,ref:e.pull.ref})), excluded:[...excluded], deployment:c.deployment ?? null };
           checkpoint(); persist();
           try { git.publish(r.base,candidate); }
           catch (error) {
             if (error instanceof RejectedLease) { delete s.pending; checkpoint(); }
             throw error;
           }
+          if (privateFree) { s.pending.published = true; checkpoint(); }
           await readback(c,gh,git,s.pending,r,d); delete s.pending;
+          if (privateFree) s.expectedBase = candidate;
           for (const e of included) delete s.admitted[e.pull.number];
           checkpoint();
         }

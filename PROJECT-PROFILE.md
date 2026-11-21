@@ -54,8 +54,8 @@ Use the [GitHub default](defaults/merge-train.md) when it fits the project.
 | Setting | Project value |
 | --- | --- |
 | Activation decision, owner and reason, including measured demand where available | Not set |
-| Protected branch, sole writer identity, and protection evidence | Not set |
-| Immutable submission branch pattern, task keys and dependencies, ruleset and retention of closed refs | Not set |
+| Integration branch, writer App and branch policy. For enforced writes, record the ruleset evidence. For a private Free repository, record the approved initial commit, owner accepting direct-write risk and incident recovery owner. | Not set |
+| Exact revision submission branch pattern, task keys, dependencies and retention of closed refs | Not set |
 | Expected PR author ID if restricted, independent reviewer, App bot user ID or human review publisher | Not set |
 | Trusted check publisher, workflow revision and required jobs | Not set |
 | Trusted train package and version, runner, lock and status sources | Not set |

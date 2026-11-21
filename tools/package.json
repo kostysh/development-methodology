@@ -1,6 +1,6 @@
 {
   "name": "@kostysh/development-methodology-tools",
-  "version": "5.0.4",
+  "version": "5.1.0",
   "private": true,
   "description": "Project-local process metrics, decision gates, verification and integration tools",
   "type": "module",

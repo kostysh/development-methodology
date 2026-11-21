@@ -1,4 +1,4 @@
-import type { Config } from "./config.js";
+import type { BranchPolicy, Config } from "./config.js";
 import { submissionTask, type Pull } from "./github.js";
 
 export type Cause = "dependency" | "conflict" | "test" | "interaction" | "other" | "unknown";
@@ -25,6 +25,7 @@ export function activeOwnerHolds(rows: OwnerHold[]): OwnerHold[] {
   return holds;
 }
 export type Receipt = {
+  branchPolicy?: BranchPolicy;
   ownerHolds?: OwnerHold[]; requestedPr?: number;
   id: string; mode: "dry" | "enabled"; started: string; ended?: string; result: "running" | "completed" | "interrupted" | "skipped";
   retryable?: boolean; interruptionTimeUnknown?: boolean; slot?: string; base?: string; c0?: string; c1?: string; candidate?: string; tree?: string; branchReadback?: string; treeReadback?: string;

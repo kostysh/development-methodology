@@ -4,6 +4,18 @@ These entries are for a project that updates its copy of the package
 ([update procedure](ADOPTION.md#updating-the-methodology)). Each version
 states what requires action in the adopting project.
 
+## 5.1.0
+
+- Projects commissioning the train on a private GitHub Free repository can
+  select the private branch policy. Record the approved starting commit,
+  use an installation token minted for that repository, and keep the train
+  state across runs. An external change to the integration tip holds the
+  train for reconciliation. Other repository writers retain direct write
+  access on this plan. Exercise the scheduled start and verify the resulting
+  commit, PRs and test deployment. [Branch policies](defaults/merge-train.md#choose-the-branch-policy)
+- Existing train profiles use the ruleset policy by default. To upgrade,
+  install the new package through the [adoption guide](ADOPTION.md).
+
 ## 5.0.4
 
 - Install the new companion and put its binaries on the trusted client PATH.

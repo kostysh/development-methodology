@@ -19,7 +19,7 @@ conflicts. Keep its current owners. Do not replace the existing `AGENTS.md`,
 
 ## 2. Place and configure
 
-From the primary checkout, use an operator shell with Node.js 24.12–24.x on Linux, npm, Git, GitHub CLI (including `gh attestation verify`) and GNU coreutils. Choose a durable `METHODOLOGY_RELEASES` path outside agent-writable roots or use the project-specific default below. The installer places the [5.0.4 release](https://github.com/kostysh/development-methodology/releases/tag/methodology-v5.0.4) in a fresh version directory. Use your existing project instructions and filled profile in their current locations. For a first installation, copy the blank profile to a new project-owned file outside the release directory.
+From the primary checkout, use an operator shell with Node.js 24.12–24.x on Linux, npm, Git, GitHub CLI (including `gh attestation verify`) and GNU coreutils. Choose a durable `METHODOLOGY_RELEASES` path outside agent-writable roots or use the project-specific default below. The installer places the [5.1.0 release](https://github.com/kostysh/development-methodology/releases/tag/methodology-v5.1.0) in a fresh version directory. Use your existing project instructions and filled profile in their current locations. For a first installation, copy the blank profile to a new project-owned file outside the release directory.
 
 ```sh
 (
@@ -27,7 +27,7 @@ From the primary checkout, use an operator shell with Node.js 24.12–24.x on Li
   project=$(git rev-parse --show-toplevel)
   root=${METHODOLOGY_RELEASES:-"${XDG_DATA_HOME:-$HOME/.local/share}/development-methodology/$(basename "$project")/releases"}
   case "$root" in /*) ;; *) echo "Choose an absolute release path" >&2; exit 1 ;; esac
-  version=5.0.4
+  version=5.1.0
   tag="methodology-v$version"
   repo=kostysh/development-methodology
   dest="$root/$version"
@@ -281,8 +281,10 @@ Keep the checkpoint report in the task or PR for its reader.
 
 ### Commission the merge train
 
-Set the target branch, writer App, independent reviewer and trusted fast
-checks. A single GitHub user can author all PRs through their usual
+Select the integration branch and its [writer policy](defaults/merge-train.md#choose-the-branch-policy).
+For a private repository on GitHub Free, record the owner-approved starting
+commit and who will reconcile an unexpected branch update. Configure the
+writer App, independent reviewer and trusted fast checks. A single GitHub user can author all PRs through their usual
 `gh`. The coordinator can publish the independent verdict through the
 existing App. Exercise the seven train cases on a disposable target.
 Configure the [Codex schedule and its fixed command](defaults/merge-train.md#schedule-with-codex).
@@ -331,7 +333,7 @@ Read the [changelog](CHANGELOG.md). Install the new version alongside the old on
 
 ### Roll back a release
 
-1. If a train is active, pause its dispatcher, keep the target protected
+1. If a train is active, pause its dispatcher, pause other target writers
    and reconcile its last write and deployment. Preserve any journal and
    decision ledger with their profile and access permissions.
 2. Remove each hook added by the new release while its executable is
@@ -343,5 +345,5 @@ Read the [changelog](CHANGELOG.md). Install the new version alongside the old on
    copy. Verify a clean check succeeds and the same known violation fails.
    If a skill changed, verify it in a fresh session.
 4. If collection was active on the earlier release, observe a positive
-   hook record. Before restarting a train, verify its branch protection,
-   writer and deployed revision. Record the results for the components used.
+   hook record. Before restarting a train, verify its selected branch policy,
+   expected integration revision, writer and deployed revision. Record the results for the components used.

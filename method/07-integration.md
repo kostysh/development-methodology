@@ -14,7 +14,7 @@ explicitly, not as its PASS.
 5. Before merge, check base, head, conflicts, checks, findings, approvals,
    and the uniqueness of new IDs.
 6. Use the integration route in the profile. If the [merge train](#merge-train)
-   is enabled, submit an immutable revision of the editable task branch. Correct
+   is enabled, submit the exact reviewed revision of the editable task branch. Correct
    a returned revision on that task branch and obtain fresh admission. A
    scheduled train processes independently ready work while an owner decision
    is pending. Re-read the PR, final commit,
@@ -94,8 +94,15 @@ repeated rebases and expensive checks are reasons to select it. Record the
 owner's basis in the profile. Follow the [commissioning checks](../ADOPTION.md#commission-the-merge-train)
 before enabling the writer. Other projects use the [integration queue](#integration-queue).
 
-Protect the integration branch so only the train's service account can
-update it. Agents submit PRs and cannot merge. The same account handles a
+Use the train's service account to update the integration branch. Select
+server-enforced exclusive writes when available. Where the host cannot
+enforce them, the owner may assign writes to the train by convention.
+Record this choice and the independently verified starting revision. On
+every run compare the observed branch with the last verified revision.
+An unexpected change stops integration and deployment for investigation.
+Accounts with repository write access can still change the branch directly.
+
+Agents submit the exact reviewed revision. The same service account handles a
 documentation-only PR through fast checks when its entire delta matches the
 profile's approved paths. It waits for an active train to finish, then takes
 the same lock. It reconciles any unresolved write and rechecks the current
@@ -104,9 +111,10 @@ base, PR head, and applicable gates before integrating.
 1. **Admit.** The train alone manages the queue label. Require
    [per-task verification](06-verification.md#verification-for-a-merge-train),
    including the published audit verdict on the current PR head, and check
-   that the PR integrates without conflicts. Keep the submitted head immutable
-   during enabled publication. If the head changes on a dry run, remove the
-   label and require fresh evidence.
+   that the PR integrates without conflicts. Pin admission to the submitted commit.
+   Use immutable submission refs when the host enforces them. Otherwise
+   check the ref against the reviewed commit again before publication and
+   read back the PR after publication. A changed head requires fresh evidence.
    For a change to protected verification or approval rules, collect the
    owner's decision for that revision in advance. If the decision is pending,
    hold that PR and its dependants. The scheduled run continues with the other
@@ -115,8 +123,8 @@ base, PR head, and applicable gates before integrating.
    overlap as a skip and exit. An urgent single-PR run needs operator
    authorization and takes the same lock. After acquiring it, reconcile
    any interrupted run, clean up its owned resources, and, if a prior
-   merge left the configured test environment behind, deploy the current
-   integration revision and read it back before proceeding. On an empty
+   merge left the configured test environment behind, deploy the verified
+   candidate and read it back before proceeding. On an empty
    queue, exit before allocating run resources. Enforce the profile timeout
    across the run, including diagnosis, and record a timeout as an incident.
 3. **Assemble.** Take ready PRs in queue order up to the profile's limits
@@ -129,7 +137,7 @@ base, PR head, and applicable gates before integrating.
    Integrate only an accepted candidate. Return an excluded PR with the
    reason, failed test when applicable, run ID and log locator. A fix
    goes on the editable task branch. Close the returned submission, create a
-   fresh immutable submission for the same task and repeat admission on its
+   fresh exact-revision submission for the same task and repeat admission on its
    new head. Preserve dependencies by task identity. Update a dependent
    submission when its code changes or its project uses PR-number dependencies. The fix
    follows the [type (a) route](06-verification.md#closing-review-findings)

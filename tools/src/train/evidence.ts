@@ -25,9 +25,9 @@ export function readPull(path: string, pr: string, expectedHead: string, expecte
 export function evidence(op: string, path: string, pr: string, expectedHead: string, expectedRef: string) {
   const {gh,pull,policy} = readPull(path,pr,expectedHead,expectedRef,op !== "export-checks");
   if (op !== "export-checks") {
-    if (!submissionTask(pull)) throw new Error("Missing immutable submission ref for this head");
+    if (!submissionTask(pull)) throw new Error("Missing ready ref matching the exact PR head");
     if (op === "identity") return {pr:pull.number,head:pull.head,authorId:pull.authorId,reviewerId:policy.reviewerId};
-    if (!gh.audit(pull,policy)) throw new Error("Missing independent audit on this immutable submission");
+    if (!gh.audit(pull,policy)) throw new Error("Missing independent audit on this submission head");
   }
   const results = gh.results(pull,policy.required).map((r,i)=>({id:policy.required[i].id,...r}));
   if (op === "export-checks") return {results};

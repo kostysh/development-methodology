@@ -4,10 +4,12 @@ import { reviewControls, type ReviewControls } from "./review-policy.js";
 
 export type WorkflowAuthority = {id: number; path: string; blob: string; publicRead?: boolean; event?: "push" | "workflow_dispatch"};
 export type Gate = { name: string; appId: number; workflow?: WorkflowAuthority };
+export type BranchPolicy = "rulesets" | "private-free";
 export type Admission = {repository:string; branch:string; reviewerId:number; submitterId?:number; required:(Gate & {id:string; minimum?:number})[];
   reviewControls?: ReviewControls; baseline?: {commit:string; manifest:string}};
 export type Config = {
   repository: string; branch: string; writerAppId: number; stateDir: string; mode: "dry" | "enabled";
+  branchPolicy?: BranchPolicy; initialBase?: string;
   admissionPolicy?: string; admission?: Admission; checks: Gate[]; migrationChecks: Gate[]; queueLabel: string; suiteImage: string; postgresImage?: string; serviceImage?: string;
   timeoutSeconds: number; maxPrs: number; maxMigrations: number; fullBudget: number;
   flakeDays: number; flakeOwner: string; migrationPaths: string[]; docsPaths: string[];
@@ -108,7 +110,15 @@ export function readConfig(path: string): Config {
   need(!c.stateDir.includes(","), "stateDir must be a Docker mount path");
   need(!(lstatSync(c.stateDir).mode & 0o077), "stateDir must be private");
   need(c.immutableSources === undefined || typeof c.immutableSources === "boolean", "immutableSources");
-  need(c.mode !== "enabled" || c.immutableSources === true, "immutableSources must be true for enabled publication");
+  need(c.branchPolicy === undefined || c.branchPolicy === "rulesets" || c.branchPolicy === "private-free", "branchPolicy");
+  if (c.branchPolicy === "private-free") {
+    need(c.admission && typeof c.initialBase === "string" && /^[a-f0-9]{40}$/.test(c.initialBase),
+      "private-free requires admissionPolicy and the owner-approved initialBase commit");
+    need(c.immutableSources !== true && c.ruleEvidence === undefined, "private-free does not verify ruleset evidence or immutable sources");
+  } else {
+    need(c.initialBase === undefined, "initialBase requires private-free branchPolicy");
+    need(c.mode !== "enabled" || c.immutableSources === true, "immutableSources must be true for enabled publication");
+  }
   if (c.mergeGate !== undefined) {
     const argv = Array.isArray(c.mergeGate) ? c.mergeGate : [c.mergeGate];
     need(argv.length > 0 && argv.every(a => typeof a === "string" && a.length > 0), "mergeGate argv");

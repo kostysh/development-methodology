@@ -5,6 +5,50 @@ Install the versioned companion. The project supplies a trusted
 runner, suite image, admission authorities and the settings in the [profile](../PROJECT-PROFILE.md#merge-train). Verify the built train
 with the project's [package checks](controls.md#common-checks).
 
+## Choose the branch policy
+
+The default `rulesets` policy verifies server-enforced restrictions on the
+target and submitted refs. A missing rule or denied API call stops the run.
+For a **private repository on GitHub Free**, the owner can explicitly choose
+`private-free`. GitHub allows other accounts with write access to change these
+refs. Use this policy when the team can reserve integration writes for the
+train by agreement and can investigate a direct write. [GitHub plan availability](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches)
+
+1. Choose the exact repository and integration branch. Review their current
+   state, including the deployed revision. Read the branch commit with
+   `gh api "repos/$repo/git/ref/heads/$branch" --jq .object.sha`. Record the
+   approved 40-character commit in the project profile. Supply it as
+   `initialBase` in the protected train configuration below.
+2. Follow the common GitHub App, admission, isolated runner and scheduler
+   setup below. In the example profile add `"branchPolicy":"private-free"`
+   and `"initialBase":"<approved commit>"`. Remove `immutableSources` and
+   `ruleEvidence`. Configure `admissionPolicy`, the independent review
+   publisher, pinned workflow and required jobs. Grant the App Actions read
+   for private workflow results. Use the runner's protected App key and
+   installation ID. The runner requests a token scoped to this repository
+   and verifies the repository is private. Skip the ruleset creation and export.
+3. Submit an exact `ready/<task>-<commit>` revision. Each correction gets
+   a new submission and a review bound to the current base and head. After a
+   successful batch, obtain fresh reviews against the new base for any
+   remaining ready PRs before their next admission. The
+   train rechecks admission and the source refs, then fast-forwards using
+   a lease on the expected target commit. It reads back the target, tree,
+   included PRs and configured test deployment. The lease covers the target
+   update. A writer can still race a source-ref check or change either ref
+   later. Keep production credentials and deployment separate.
+4. Keep the private state directory across runs. After the first successful
+   integration the stored candidate becomes the expected target. An unexpected
+   tip produces an incident even when the queue is empty. The next run checks
+   the tip again. If someone restores the expected commit, it can proceed.
+   A change restored between observations is invisible to the train. To keep
+   the train on hold during an investigation, pause the scheduler,
+   compare the reported commits, PRs and actual test deployment, and have
+   the integration owner reconcile the change. Preserve receipts and pending
+   state. If the owner adopts an external revision as a new baseline, first
+   reconcile pending writes and effects, archive the state, then recommission
+   with a fresh state directory and the explicitly approved commit. Run the
+   dry checks and the scheduled commissioning case again.
+
 ## GitHub setup
 
 1. Run the pinned train on a trusted runner with access to the approved
@@ -29,7 +73,7 @@ with the project's [package checks](controls.md#common-checks).
    shared equivalent with the same semantics. A runner that queues the
    invocation until the active train ends cannot supply an immediate skip.
    [GitHub workflow concurrency][concurrency]
-4. Configure a dedicated GitHub App identity as the sole writer to the
+4. Configure a dedicated GitHub App identity as the designated writer to the
    exact integration branch. Starting with only the owner's GitHub account,
    open **Settings → Developer settings → GitHub Apps → New GitHub App**.
    Register a private App, use the repository URL as its homepage, disable
@@ -40,14 +84,14 @@ with the project's [package checks](controls.md#common-checks).
    slug, numeric App ID and installation ID (shown in the installation's
    settings URL). An existing train installation needs no new registration.
    [Register a GitHub App](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/registering-a-github-app).
-   Scope each token to the repository and the required permissions. Apply an active branch ruleset with
+   Scope each token to the repository and the required permissions. For the default ruleset policy, apply an active branch ruleset with
    **Restrict updates** and the App as its only bypass actor. Put permanent
    protections such as blocking force pushes and deletion in a separate
    ruleset the App cannot bypass. Verify the combined rules and retain
    the project's required gates. Keep installation credentials and
    write-capable code in the trusted runner. Isolate PR checkout and test
    execution from write credentials. Read the verdict and checks from their
-   configured trusted sources. Verify that agents and ordinary identities
+   configured trusted sources. With the ruleset policy, verify that agents and ordinary identities
    cannot update the branch.
    [Available rules][rules] · [Combined rulesets][combined] · [App authentication][app]
 5. Verify the write and readback on the selected branch. Assemble candidates
@@ -92,13 +136,13 @@ to one repository, contents write, pull requests write (labels and comments)
 and checks read. Private Actions workflow readback also requests Actions read.
 A new token is minted before a remote Git or API operation if the previous
 token expires within two minutes. Candidate execution receives neither token
-nor key. A short manual run can still supply an already minted installation
+nor key. A short manual run under the ruleset policy can supply an already minted installation
 token via `GH_TOKEN`; it cannot renew that token. Keep the profile timeout
 inside the dispatcher's 180-minute job timeout with time for cleanup. For two
 40-minute suites allow time for diagnosis and publication, for example 150
 minutes in total. Raise both limits together if the actual measured budget
 requires it. [Installation tokens](https://docs.github.com/en/rest/apps/apps#create-an-installation-access-token-for-an-app).
-The train reads protections and fails closed if it cannot verify them.
+Under the default ruleset policy, the train reads the effective branch protections and stops if it cannot verify them.
 [GitHub branch rules and rulesets](https://docs.github.com/en/rest/repos/rules)
 
 Store the profile outside all candidate worktrees, on paths controlled by
@@ -161,13 +205,13 @@ all applicable fast checks, affected tests, baseline and audit verdict.
   operator decides whether work may continue. After that decision, map the
   stable task key (or a legacy PR number) to the reviewed exclusion run
   UUID in `disposition`.
-- Enabled publication requires `immutableSources: true`. Create one active
+- Enabled publication under the default ruleset policy requires `immutableSources: true`. Create one active
   repository branch ruleset with include `refs/heads/ready/*`, no excludes,
   `update` and `deletion` rules, and an empty bypass list. Allow branch creation.
   The server resolves this pattern for each actual ref. The writer confirms
   its effective active restrictions before final readback. A dry run may use
   mutable sources with a project-specific admission gate.
-- GitHub can omit `bypass_actors` from the installation's read. Once during
+- For the ruleset policy, GitHub can omit `bypass_actors` from the installation's read. Once during
   setup, export the rulesets using a separate authorized account. Given the
   repository and its three active rule IDs (target update, permanent target
   protections, ready refs), run this in the owner's protected configuration
@@ -338,8 +382,8 @@ gh pr create --repo "$repo" --base "$base" --head "$ready" --title "$title" --bo
 
 Keep a single open submission for this work. On return, use its run ID,
 failed tests and evidence to correct the editable task branch. Close the
-returned PR with `gh pr close "$old_pr" --repo "$repo"` and leave its protected
-ref intact. Repeat the commands with the corrected commit and the same task
+returned PR with `gh pr close "$old_pr" --repo "$repo"` and retain its
+submitted ref. Repeat the commands with the corrected commit and the same task
 identifier. For a legacy PR-number dependency, update the affected
 number. Task-key dependencies carry forward. Obtain fresh results and an
 independent review on the replacement.
@@ -354,7 +398,8 @@ receipt. Preserve the submitted Git object in the project's archive if its
 reproducibility policy requires it. A correction or exclusion alone does
 not authorize deletion.
 
-For deletion, pause the dispatcher and submissions, acquire the writer lock
+For the private Free policy, retain the refs when the operator cannot exclude concurrent writers.
+For deletion under the ruleset policy, pause the dispatcher and submissions, acquire the writer lock
 and reconcile pending publication. Proceed only when the owner can prevent
 PR creation and reopening during maintenance. Verify that every PR for
 each exact ref is closed, no queue or pending write references it, and its
@@ -443,7 +488,7 @@ Use this route when one human GitHub account authors PRs. Set up the train
 App and its protected host once as described above. Only the trusted
 orchestrator can invoke the review publisher with the App's key or token.
 The same publisher can attest an ordinary, editable PR in a project that
-uses PR-based integration. The train admits only immutable submissions.
+uses PR-based integration. The train admits the exact reviewed commit from a ready submission.
 The implementing agent and the reviewing agent both work without these
 credentials or access to the orchestrator's private directory, executable
 search path and Git configuration. Give the reviewer a separate, read-only
@@ -589,7 +634,7 @@ deployment and record what the train would have done.
 | Conflict and stale evidence | Introduce a base conflict after admission. In separate runs update a queued PR head and move the disposable base to a different ancestor of the candidate between verification and update. | Return the conflict and its dependant for owner action. A changed head loses admission. A changed base rejects the pending write. Neither stale candidate is integrated. |
 | Runner failure | Cause a runner or environment failure, then fail its one retry. Also exercise an empty queue. | No failed run integrates. The report names the environment action. The empty run allocates no temporary environment. |
 | Interruption | Terminate a run with owned branches and test resources. Repeat after a disposable branch update and before test deployment. | The next run can acquire the lock and reconciles leftovers. It reads the real branch and catches the test deployment up without replaying the merge. A timeout is recorded as an incident. |
-| Overlap and sole writer | Hold an active train while a scheduled or urgent start and an eligible documentation PR arrive. Attempt a branch update as an agent. | The second train records an immediate skip and never starts later. The branch rejects the agent write. The App processes the documentation PR after the lock is available, with fresh checks against the new base. |
+| Overlap and competing writer | Hold an active train while a scheduled or urgent start and an eligible documentation PR arrive. Attempt a branch update as an agent. | The second train records an immediate skip and never starts later. Under rulesets GitHub rejects the agent write. Under private Free, change the disposable target as another writer. The train reports the unexpected tip and holds integration and deployment, including on the next empty-queue run. After reconciliation, the App can process the documentation PR with fresh checks against the approved base. |
 
 Also verify a clean batch with passing tests, fresh approvals, the
 expected final ref and PR states, and the test revision when configured.

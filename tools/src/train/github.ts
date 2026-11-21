@@ -28,7 +28,7 @@ export function submissionIdentityIssue(p: Pull, policy: Admission) {
 }
 
 export class GitHub {
-  constructor(readonly c: Pick<Config,"repository"|"branch"> & Partial<Pick<Config,"admission"|"mode"|"writerAppId"|"queueLabel"|"ruleEvidence">>, readonly token: Credential, readonly deadline: number) {}
+  constructor(readonly c: Pick<Config,"repository"|"branch"> & Partial<Pick<Config,"admission"|"mode"|"branchPolicy"|"writerAppId"|"queueLabel"|"ruleEvidence">>, readonly token: Credential, readonly deadline: number) {}
   api<T>(path: string, method = "GET", data?: object): T {
     const args = ["api", "--hostname", "github.com", "-X", method, path];
     if (data) args.push("--input", "-");
@@ -110,7 +110,7 @@ export class GitHub {
     const currentBase = bases.length === 1 && !!p.baseSha && /^[a-f0-9]{40}$/.test(p.baseSha) &&
       bases[0] === "Review base: " + p.baseSha;
     return latest?.state === "APPROVED" && latest.commit_id === p.head && lines.includes("Methodology audit: PASS") &&
-      (currentBase || (bases.length === 0 && !a.reviewControls)) &&
+      (currentBase || (bases.length === 0 && !a.reviewControls && this.c.branchPolicy !== "private-free")) &&
       (!ownerRequired || lines.filter(l => l.startsWith("Owner confirmation:")).length === 1 &&
         lines.some(l => /^Owner confirmation: [^\x00-\x1f\x7f]{1,512}$/u.test(l) && l.slice(20).trim().length > 0));
   }
@@ -150,9 +150,18 @@ export class GitHub {
       !isDeepStrictEqual(prior.conditions,s.conditions) || !isDeepStrictEqual(prior.rules,s.rules)) return;
     return prior.bypass_actors;
   }
-  verifyWriter() {
+  verifyWriter(): string | void {
     // Requires an installation token. A personal token cannot establish this installation boundary.
-    this.api("/installation/repositories?per_page=1");
+    const installation = this.api<{total_count:number; repositories:{full_name:string; private:boolean}[]}>("/installation/repositories?per_page=1");
+    if (this.c.branchPolicy === "private-free") {
+      const target = installation.repositories?.[0];
+      if (installation.total_count !== 1 || target?.private !== true || target.full_name.toLowerCase() !== this.c.repository.toLowerCase())
+        throw new Error("private-free requires a writer App installation token scoped to the one private target repository");
+      const ref = this.api<{ref:string; object:{type:string; sha:string}}>(this.repo("git/ref/heads/" + this.c.branch));
+      if (ref.ref !== "refs/heads/" + this.c.branch || ref.object?.type !== "commit")
+        throw new Error("Integration ref differs from the private-free target branch");
+      return oid(ref.object.sha);
+    }
     const active = this.rules(this.c.branch);
     const repositoryRule = (r: Rule) => r.ruleset_source_type === "Repository" &&
       r.ruleset_source.toLowerCase() === this.c.repository.toLowerCase();

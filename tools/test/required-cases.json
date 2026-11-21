@@ -174,6 +174,12 @@
     "a disputed acceptance cannot extend the train window through the report cutoff",
     "a rejected train receipt from a second pilot source prevents a verified zero"
   ],
+  "train-private-free.test.ts": [
+    "private-free requires explicit configuration and ruleset failures keep strict profiles closed",
+    "private-free authenticates the configured App and checks private repository scope and target ref",
+    "a private-free train integrates the reviewed trees and detects an outside update on a later empty run",
+    "private-free rejects post-verification source, review and check changes and an intervening Git writer"
+  ],
   "train-runtime-isolation.test.ts": [
     "the actual OCI verifier sees the exact files without writer credentials, host Git data or writable candidate/authority",
     "the packaged verifier exercises fresh PostgreSQL on full and targeted runs and releases its resources"

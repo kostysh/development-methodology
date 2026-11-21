@@ -10,6 +10,8 @@ In solo mode, act on the [choices already delegated](method/12-agents.md#team-co
 At night the [scheduled train](defaults/merge-train.md#schedule-with-codex)
 processes ready submissions without a live operator. A pending owner decision
 holds the affected PR and its dependants.
+On a private Free repository, a different observed integration commit holds
+the run. The owner pauses the schedule while investigating the change.
 The [morning report](defaults/merge-train.md#morning-report) lists the outcome.
 
 ## Small change — low risk

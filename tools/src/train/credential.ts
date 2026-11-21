@@ -41,6 +41,8 @@ function scopedCredential(repository: string, appId: number, permissions: Record
 
 // Mint on demand so an expensive offline suite can span multiple installation tokens.
 export function writerCredential(c: Config, deadline: number): Credential {
+  if (c.branchPolicy === "private-free" && !process.env.TRAIN_APP_KEY_FILE)
+    throw new Error("private-free requires the configured writer App key and installation ID");
   const checks = [...c.checks,...c.migrationChecks,...(c.admission?.required ?? [])];
   return scopedCredential(c.repository,c.writerAppId,{contents:"write",pull_requests:"write",checks:"read",
     ...(checks.some(g => g.workflow && !g.workflow.publicRead) ? {actions:"read"} : {})},deadline);

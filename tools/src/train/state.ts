@@ -2,7 +2,7 @@ import { closeSync, constants, existsSync, fstatSync, fsyncSync, lstatSync, mkdi
 import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
-import type { Config } from "./config.js";
+import type { BranchPolicy, Config } from "./config.js";
 import type { Receipt } from "./engine.js";
 
 export function read<T>(path: string): T { return JSON.parse(readFileSync(path, "utf8")) as T; }
@@ -40,7 +40,7 @@ export function authorityLock(path: string, shared: boolean) {
 }
 export function receipt(config: Config): Receipt {
   const id = randomUUID();
-  return { id, started: new Date().toISOString(), result: "running", mode: config.mode, integrated: [], proposed: [],
+  return { id, started: new Date().toISOString(), result: "running", mode: config.mode, branchPolicy: config.branchPolicy ?? "rulesets", integrated: [], proposed: [],
     excluded: [], queue: [], queueWaitMs: 0, selected: [], incidents: [], decisions: [], flakes: [], attempts: [], recovery: [],
     log: join(config.stateDir, "runs", id + ".json") };
 }
@@ -50,10 +50,10 @@ export function history(config: Config): Receipt[] {
   return readdirSync(dir).filter(p => /^[a-f\d-]{36}\.json$/.test(p)).map(p => read<Receipt>(join(dir,p)))
     .sort((a,b) => a.started.localeCompare(b.started));
 }
-export type Pending = { run: string; base: string; candidate: string; tree: string;
-  included: {pr: number; head: string}[]; excluded: number[]; deployment: string | null };
+export type Pending = { run: string; base: string; candidate: string; tree: string; branchPolicy?: BranchPolicy; published?: boolean;
+  included: {pr: number; head: string; ref?: string}[]; excluded: number[]; deployment: string | null };
 export type State = { repository: string; branch: string; admitted: Record<string,{head: string; at: number}>;
-  pending?: Pending; resource?: string };
+  pending?: Pending; resource?: string; expectedBase?: string };
 export function load(c: Config): State {
   const path = join(c.stateDir, "state.json");
   const s = existsSync(path) ? read<State>(path) : { repository: c.repository, branch: c.branch, admitted: {} };

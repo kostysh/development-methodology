@@ -384,8 +384,14 @@ complex work, check the coordination entry in the [skill set](defaults/skills.md
 and apply [step 3](#3-install-skills) to that skill.
 
 Once the new installation passes the selected project checks, activate the
-version. Run the [step 5 command](#activate-the-skill-loading-rule) from the
-primary checkout using this release's guide and companion. Review the
+version. Update the existing guide links in the active root instructions
+(including a root override, if present) and the project profile. Use the
+verified release tag or its versioned offline copy. Follow the links from
+the root to the work routes and the delegation chapter, and check that they
+open the new version. Preserve project-owned instructions and profile values.
+
+Run the [step 5 command](#activate-the-skill-loading-rule) from the primary
+checkout using this release's guide and companion. Review the
 resulting change to the root instructions. Keep its diff with the prior
 paths and profile for rollback. Switch the client and runner paths after
 the command succeeds. Verify the rule and, where skills are installed, its use in a

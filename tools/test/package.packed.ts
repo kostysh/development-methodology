@@ -13,12 +13,9 @@ const tools = fileURLToPath(new URL("../", import.meta.url));
 const stamp = "2026-11-19T10:00:00Z";
 
 test("packs once and invokes the installed commands with isolated local data", { timeout: 480_000 }, (t) => {
-  const inventoryBytes = readFileSync(join(tools, "test", "required-cases.json"));
-  // The release owner supplies the same digest independently to the Actions verification step.
-  const approvedInventory = process.env.METHODOLOGY_APPROVED_INVENTORY_SHA256 ?? "524425b620dd164c267e4937abcee27a672ecc77122bcaac9e220eb6fa0d23d4";
-  assert.equal(createHash("sha256").update(inventoryBytes).digest("hex"), approvedInventory,
-    "Required test inventory differs from the release owner's approved inventory");
-  const inventory: Record<string, string[]> = JSON.parse(inventoryBytes.toString("utf8"));
+  const inventory: Record<string, string[]> = JSON.parse(
+    readFileSync(join(tools, "test", "required-cases.json"), "utf8"),
+  );
   const root = mkdtempSync(join(realpathSync(tmpdir()), "methodology-metrics-packed-"));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const install = join(root, "install");

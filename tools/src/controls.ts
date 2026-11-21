@@ -6,14 +6,12 @@ import { checkResults } from "./controls/checks.js";
 import { checkGit } from "./controls/git.js";
 import { config, Rejection, ResourceBusy } from "./controls/input.js";
 import { runControl, supervise } from "./controls/run.js";
-import { syncSkillRule } from "./controls/skill-rule.js";
 import { trustedPath } from "./train/config.js";
 import { checkReviewControls, reviewControls } from "./train/review-policy.js";
 
 const usage = "Usage: methodology-controls artifacts|git|run|reconcile <policy.json>\n"
   + "       methodology-controls checks <policy.json> <trusted-results.json>\n"
-  + "       methodology-controls review-policy POLICY BASE HEAD [--owner-message REFERENCE]\n"
-  + "       methodology-controls sync-skill-rule GUIDE";
+  + "       methodology-controls review-policy POLICY BASE HEAD [--owner-message REFERENCE]";
 
 async function worker(mode: string, path: string) {
   if (!process.connected || (mode !== "run" && mode !== "reconcile")) throw new Error("Invalid resource worker invocation");
@@ -43,10 +41,6 @@ async function run([command, ...args]: string[]): Promise<number> {
   if (command === "--resource-worker" && args.length === 2) return worker(args[0], args[1]);
   if ((command === "run" || command === "reconcile") && args.length === 1) {
     return supervise(fileURLToPath(import.meta.url), command, args[0]);
-  }
-  if (command === "sync-skill-rule" && args.length === 1 && !args[0].startsWith("-")) {
-    console.log(JSON.stringify(syncSkillRule(args[0])));
-    return 0;
   }
   if (command === "artifacts" && args.length === 1) {
     console.log(JSON.stringify(checkArtifacts(config(args[0]), process.cwd())));

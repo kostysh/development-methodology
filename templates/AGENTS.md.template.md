@@ -33,7 +33,7 @@ project authority.
 | Data, migrations, import, compatibility | [09-data-and-migrations.md](<{{METHOD_PATH}}/method/09-data-and-migrations.md>) |
 | Security, privacy, providers | [10-security-and-privacy.md](<{{METHOD_PATH}}/method/10-security-and-privacy.md>) |
 | UI, design, accessibility, text | [11-ui-and-design.md](<{{METHOD_PATH}}/method/11-ui-and-design.md>) |
-| Delegation and context recovery | [12-agents.md](<{{METHOD_PATH}}/method/12-agents.md>) |
+| Coordinating complex work or a group of tasks, delegating, or resuming after compaction | [Agents and coordination](<{{METHOD_PATH}}/method/12-agents.md>) and the [project skill selection](<{{PROJECT_PROFILE_PATH}}#skills>) |
 | Creating, changing, or accepting a persistent artifact: location, ID, metadata, status, module index | [13-artifacts-and-communication.md](<{{METHOD_PATH}}/method/13-artifacts-and-communication.md>) and the profile section [Documentation and artifacts](<{{PROJECT_PROFILE_PATH}}#documentation-and-artifacts>) |
 | Change affects commands, configuration, public contracts, user-visible behavior, or operations | [Living documentation](<{{METHOD_PATH}}/method/13-artifacts-and-communication.md#living-documentation>) |
 | Choosing, installing, updating, or replacing an agent skill | [15-skills.md](<{{METHOD_PATH}}/method/15-skills.md>), [skills.md](<{{METHOD_PATH}}/defaults/skills.md>), and the profile section [Skills](<{{PROJECT_PROFILE_PATH}}#skills>) |

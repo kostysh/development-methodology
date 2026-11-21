@@ -111,9 +111,9 @@ install commands are in [defaults/skills.md](defaults/skills.md).
 | Setting | Value |
 | --- | --- |
 | Source | `https://github.com/kostysh/skills` |
-| Installation method and catalog | Named v5 release archives, selection not set |
+| Installation method and catalog | Pinned release archives, selection not set |
 | Location: project directory (`.claude/skills`, `.agents/skills`) or global | Not set |
-| Release tag or commit | Not set |
+| Release tag or commit for each selected set | Not set |
 | Who authorizes installation and updates | Not set |
 | Date and method of verifying that the agent sees the skills | Not set |
 
@@ -124,6 +124,7 @@ install commands are in [defaults/skills.md](defaults/skills.md).
 | Architecture | `architecture-engineer` | Not set | Not set |
 | Delivery | `delivery-planner` | Not set | Not set |
 | Specification | `spec-engineer` | Not set | Not set |
+| Coordination of complex tasks and batches | `orchestrator` | Not set | Not set |
 | Implementation | `implementation-discipline`, `git-engineer`, stack skills | Not set | Not set |
 | Code and conformance review | `code-reviewer`, `spec-conformance-reviewer` | Not set | Not set |
 | Security and privacy review | `security-reviewer`, `gdpr-compliance` | Not set | Not set |

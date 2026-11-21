@@ -86,7 +86,9 @@ change is called small.
 ## 3. Install skills
 
 Choose the set from the [defaults](defaults/skills.md#sets): the base set plus
-the conditional sets the profile needs and the stack skills. Obtain the
+the conditional sets the profile needs and the stack skills. Include the
+coordination skill if agents will deliver complex work or related tasks
+together. Obtain the
 owner's permission to install and choose the location: the project directory
 (recommended) or the agent's global directory.
 
@@ -377,11 +379,19 @@ and tools. The project's current instructions still apply. Compare the new
 guide and blank profile with your previous release, then merge applicable
 fields into your existing filled profile and retain project-specific chapters
 and entry points. For example, run `diff -ru -- "$old_release/guide" "$new_release/guide"`
-with the two recorded paths. Exit 1 reports differences.
+with the two recorded paths. Exit 1 reports differences. If this project delegates
+complex work, check the coordination entry in the [skill set](defaults/skills.md#sets)
+and apply [step 3](#3-install-skills) to that skill.
 
 Once the new installation passes the selected project checks, activate the
-version. Run the [step 5 command](#activate-the-skill-loading-rule) from the
-primary checkout using this release's guide and companion. Review the
+version. Update the existing guide links in the active root instructions
+(including a root override, if present) and the project profile. Use the
+verified release tag or its versioned offline copy. Follow the links from
+the root to the work routes and the delegation chapter, and check that they
+open the new version. Preserve project-owned instructions and profile values.
+
+Run the [step 5 command](#activate-the-skill-loading-rule) from the primary
+checkout using this release's guide and companion. Review the
 resulting change to the root instructions. Keep its diff with the prior
 paths and profile for rollback. Switch the client and runner paths after
 the command succeeds. Verify the rule and, where skills are installed, its use in a

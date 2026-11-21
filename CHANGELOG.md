@@ -4,6 +4,12 @@ These entries are for a project that updates its copy of the package
 ([update procedure](ADOPTION.md#updating-the-methodology)). Each version
 states what requires action in the adopting project.
 
+## 5.3.3
+
+- Install the new guide and tools using the [update procedure](ADOPTION.md#updating-the-methodology).
+  The release check verifies that the tag and the tools package use the same
+  version before attesting the distribution.
+
 ## 5.3.2
 
 - Update the tools using the [update procedure](ADOPTION.md#updating-the-methodology).

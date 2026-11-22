@@ -181,7 +181,8 @@ export async function ownerTrain(op: Operation, profilePath: string, batchPath: 
       try { live = o.base(); }
       catch { throw new Error("Cannot read the integration branch; reconcile the remote ref and owner access"); }
       need(live === b.base && b.base === confirmed,
-        "Integration base moved or differs from the last confirmed tip; reconcile the branch and obtain fresh review");
+        legacy ? "Integration base moved or differs from the last confirmed tip; reconcile the branch and obtain fresh review"
+          : "Integration base moved during this batch; use the current default-branch tip and rebuild the batch");
     }
     verifyTip();
     function bindWorkflow<T extends { path: string; blob: string }>(w: T): T {

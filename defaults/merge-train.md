@@ -12,7 +12,7 @@ train with the project's [package checks](controls.md#common-checks).
 
 ## Choose the branch policy
 
-For the App writer, select one of the following policies. The [owner-session writer](owner-gh-train.md) has its own fixed target and profile.
+For the App writer, select one of the following policies. The [owner-session writer](owner-gh-train.md) uses the default branch and its own profile.
 
 The default `rulesets` policy verifies server-enforced restrictions on the
 target and submitted refs. A missing rule or denied API call stops the run.

@@ -10,7 +10,8 @@ const cli = process.env.METHODOLOGY_TRAIN_BIN ?? fileURLToPath(new URL("../dist/
 const repository = "example/disposable", branch = "integration/nightly", workflow = ".github/workflows/test.yml";
 const repoPath = "/repos/" + repository;
 
-function setup(t: TestContext) {
+function setup(t: TestContext, target = branch) {
+  const branch = target;
   const root = fixture();
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const bin = join(root, "bin"), remote = join(root, "remote.git"), edit = join(root, "author");
@@ -18,10 +19,12 @@ function setup(t: TestContext) {
   mkdirSync(join(edit, ".github/workflows"), { recursive: true });
   writeFileSync(join(edit, workflow), "fixture workflow bytes");
   git(edit, "add", "."); git(edit, "commit", "-m", "commission workflow");
-  git(edit, "push", remote, "HEAD:refs/heads/main", "HEAD:refs/heads/" + branch);
+  git(edit, "push", remote, ...[...new Set(["main", branch])].map(ref => "HEAD:refs/heads/" + ref));
   const base = git(edit, "rev-parse", "HEAD"), blob = git(edit, "rev-parse", base + ":" + workflow);
-  const profile = { repository, branch, ownerLogin: "fixture-owner", controlBase: base, defaultControlBase: base, protectedPaths: ["ops"],
-    checks: [{ name: "Required", appId: 808 }], workflows: [{ id: 12, path: workflow, blob,
+  const legacy = branch === "integration/nightly";
+  const profile = { repository, branch, ownerLogin: "fixture-owner",
+    ...(legacy ? {controlBase: base, defaultControlBase: base} : {}), protectedPaths: ["ops"],
+    checks: [{ name: "Required", appId: 808 }], workflows: [{ id: 12, path: workflow, ...(legacy ? {blob} : {}),
       jobs: [{ name: "Linux", steps: ["Stack"] }] }] };
   const endpoints: Record<string,unknown> = {
     "/user": {login: "fixture-owner"}, [repoPath]: {full_name: repository, default_branch: "main"},
@@ -30,12 +33,13 @@ function setup(t: TestContext) {
   function save(path: string, value: unknown) { writeFileSync(path, JSON.stringify(value), { mode: 0o600 }); }
   function pull(pr: number, path: string, dependencies: number[] = []) {
     const head = add(root, pr, path), ref = "work/" + pr;
+    const currentBase = git(remote, "rev-parse", branch);
     endpoints[repoPath + "/pulls/" + pr] = {number: pr, head: {sha: head, ref, repo: {full_name: repository}},
-      base: {ref: branch, sha: base}, labels: [], state: "open", merged: false, draft: false};
+      base: {ref: branch, sha: currentBase}, labels: [], state: "open", merged: false, draft: false};
     endpoints[repoPath + "/commits/" + head + "/check-runs?filter=all&per_page=100&page=1"] = {
       check_runs: [{id: pr * 10, name: "Required", head_sha: head, app: {id: 808}, status: "completed", conclusion: "success"}],
     };
-    return {pr, head, dependencies, review: {repository, branch, base, pr, head, ref, verdict: "PASS",
+    return {pr, head, dependencies, review: {repository, branch, base: currentBase, pr, head, ref, verdict: "PASS",
       reviewer: "fixture-independent-" + pr, evidence: "fixture-review-record-" + pr}};
   }
 
@@ -91,8 +95,8 @@ console.log(JSON.stringify(value));
       GH_TOKEN: "fixture-must-not-be-forwarded", GITHUB_TOKEN: "fixture-must-not-be-forwarded",
     }});
   }
-  function prepare(pulls: ReturnType<typeof pull>[]) {
-    const result = run("owner-prepare", pulls);
+  function prepare(pulls: ReturnType<typeof pull>[], currentBase = base) {
+    const result = run("owner-prepare", pulls, undefined, currentBase);
     assert.equal(result.status, 0, result.stderr);
     return JSON.parse(result.stdout).candidate as string;
   }
@@ -100,7 +104,9 @@ console.log(JSON.stringify(value));
     const name = "methodology-candidates/" + candidate;
     const url = repoPath + "/actions/workflows/12/runs?" + new URLSearchParams({ event:"push", branch:name, head_sha:candidate }) +
       "&per_page=100&page=1";
-    endpoints[repoPath + "/contents/" + workflow + "?ref=" + candidate] = {type:"file", sha:blob};
+    endpoints[repoPath + "/contents/" + workflow + "?ref=" + candidate] = {
+      type:"file", sha:git(remote, "rev-parse", candidate + ":" + workflow),
+    };
     endpoints[url] = { workflow_runs: outcome ? [{id: 100, run_attempt: 1, workflow_id: 12, path: workflow, event:"push",
       head_branch: name, head_sha: candidate, status:"completed", conclusion: outcome,
       repository:{full_name:repository}, head_repository:{full_name:repository}}] : [] };
@@ -153,8 +159,9 @@ test("owner train holds unsafe or changed admission before publication", t => {
   git(f.remote,"update-ref","refs/heads/main",f.base);
   const old = {...good, review:{...good.review, base:"1".repeat(40)}};
   assert.match(f.run("owner-prepare",[old]).stderr,/independent PASS/);
-  f.profile.branch = "main";
-  assert.match(f.run("owner-prepare",[good]).stderr,/integration\/nightly/);
+  f.profile.branch = "other";
+  assert.match(f.run("owner-prepare",[{...good, review:{...good.review, branch:"other"}}]).stderr,
+    /default branch or the legacy integration\/nightly/);
   f.profile.branch = branch;
   f.profile.ownerLogin = "other-owner";
   assert.match(f.run("owner-prepare",[good]).stderr,/Active gh login/);
@@ -201,4 +208,33 @@ test("owner train holds unsafe or changed admission before publication", t => {
   assert.match(f.run("owner-prepare",[good]).stderr, /Unconfirmed prior publication/);
   chmodSync(f.root,0o755);
   assert.match(f.run("owner-prepare",[good]).stderr,/private operator directories/);
+});
+
+test("owner train merges default-branch PRs after an ordinary advance without repinning workflows", t => {
+  const f = setup(t, "main");
+  writeFileSync(join(f.edit, workflow), "reviewed workflow update on the default branch");
+  git(f.edit,"add",workflow);
+  git(f.edit,"commit","-m","merge reviewed controls during the day");
+  git(f.edit,"push",f.remote,"HEAD:refs/heads/main");
+  const base = git(f.remote,"rev-parse","main");
+  const good = f.pull(1,"ordinary-change");
+  const control = f.pull(2,".github/workflows/unsafe.yml");
+  const extra = f.pull(3,"excluded-change");
+  assert.match(f.run("owner-prepare",[control],undefined,base).stderr,/Protected CI/);
+  const candidate = f.prepare([good],base);
+  f.result(candidate,"success");
+
+  const workflowEvidence = f.endpoints[repoPath + "/contents/" + workflow + "?ref=" + candidate] as {sha:string};
+  const approvedBlob = workflowEvidence.sha;
+  workflowEvidence.sha = git(f.remote,"rev-parse",f.base + ":" + workflow);
+  assert.match(f.run("owner-publish",[good],candidate,base).stdout,/Unapproved workflow blob/);
+  assert.equal(git(f.remote,"rev-parse","main"),base);
+  workflowEvidence.sha = approvedBlob;
+  const published = f.run("owner-publish",[good],candidate,base);
+  assert.equal(published.status,0,published.stderr);
+  assert.equal(git(f.remote,"rev-parse","main"),candidate);
+  assert.equal(git(f.remote,"show","-s","--format=%P",candidate),base + " " + good.head);
+  assert.equal(git(f.remote,"merge-base",candidate,extra.head),base);
+  assert.throws(() => readFileSync(f.profileFile+".tip.json"),{code:"ENOENT"});
+  assert.match(f.run("owner-publish",[good],candidate,base).stderr,/Integration base moved/);
 });

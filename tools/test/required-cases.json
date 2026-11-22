@@ -128,7 +128,8 @@
   ],
   "owner-train.test.ts": [
     "owner train exercises preparation, CI, diagnosis and exact publication through the CLI",
-    "owner train holds unsafe or changed admission before publication"
+    "owner train holds unsafe or changed admission before publication",
+    "owner train merges default-branch PRs after an ordinary advance without repinning workflows"
   ],
   "recovery-contract.test.ts": [
     "the public recovery entry point reports its version and rejects invalid invocations",

@@ -4,6 +4,14 @@ These entries are for a project that updates its copy of the package
 ([update procedure](ADOPTION.md#updating-the-methodology)). Each version
 states what requires action in the adopting project.
 
+## 5.4.0
+
+- The owner-session train can integrate ordinary PRs into the project's default
+  branch. Use the live base for each batch and configure CI so production
+  deployment starts only through a separate operation. Move an existing
+  schedule to the [updated owner-session profile](defaults/owner-gh-train.md)
+  after verifying the two push routes and recording the required checks.
+
 ## 5.3.4
 
 - Add or keep the skill loading paragraph in the active root instructions

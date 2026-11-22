@@ -49,17 +49,17 @@ function readLocal(path: string) {
 function profile(path: string): Profile {
   const c: Profile = readLocal(path);
   need(c && typeof c.repository === "string" && /^[A-Za-z0-9-]+\/[A-Za-z0-9_-][A-Za-z0-9._-]*$/.test(c.repository) &&
-    typeof c.ownerLogin === "string" && /^[A-Za-z0-9-]+$/.test(c.ownerLogin) && c.branch === "integration/nightly",
-    "Specify a github.com owner login and repository, and the integration/nightly test branch");
-  oid(c.controlBase);
-  oid(c.defaultControlBase);
-  need(gates(c.checks, true) && c.checks.every(g => g.workflow?.publicRead !== true),
-    "Pin the mandatory PR checks and their trusted publishers");
+    typeof c.ownerLogin === "string" && /^[A-Za-z0-9-]+$/.test(c.ownerLogin) && line(c.branch),
+    "Specify a github.com owner login, repository and target branch");
+  if (c.branch === "integration/nightly") {
+    oid(c.controlBase);
+    oid(c.defaultControlBase);
+  }
+  c.checks ??= [];
+  need(Array.isArray(c.checks), "Specify PR checks as an array");
   need(Array.isArray(c.protectedPaths), "Specify the protected project CI and deployment control paths");
   c.protectedPaths = [".github", ...c.protectedPaths.map(p => gitPath(p, true))];
   need(Array.isArray(c.workflows) && c.workflows.length, "Specify mandatory candidate workflows");
-  c.workflows = c.workflows.map(validateOwnerWorkflow);
-  need(new Set(c.workflows.map(w => w.id)).size === c.workflows.length, "Duplicate candidate workflow");
   return c;
 }
 function confirmedTip(path: string, c: Profile): string {
@@ -129,15 +129,17 @@ class OwnerObjects extends Objects {
   }
 }
 
-function admit(gh: OwnerReader, o: OwnerObjects, c: Profile, b: Batch) {
+function admit(gh: OwnerReader, o: OwnerObjects, c: Profile, b: Batch, checks: Gate[]) {
   const admitted = new Set<number>();
   for (const item of b.pulls) {
     const p = gh.get(item.pr);
     need(gh.eligible(p) && p.number === item.pr && p.head === item.head && p.ref === item.review.ref &&
       p.baseSha === b.base && !p.ref.startsWith("methodology-candidates/"), "PR eligibility or reviewed revision changed: #" + item.pr);
-    const results = gh.results(p, c.checks);
-    const failed = c.checks.filter((_, i) => results[i].exitCode !== 0);
-    need(!failed.length, "Missing or unsuccessful checks on #" + p.number + ": " + failed.map(g => g.name).join(", "));
+    if (checks.length) {
+      const results = gh.results(p, checks);
+      const failed = checks.filter((_, i) => results[i].exitCode !== 0);
+      need(!failed.length, "Missing or unsuccessful checks on #" + p.number + ": " + failed.map(g => g.name).join(", "));
+    }
     for (const dep of item.dependencies) {
       if (admitted.has(dep)) continue;
       const previous = gh.get(dep);
@@ -165,27 +167,42 @@ export async function ownerTrain(op: Operation, profilePath: string, batchPath: 
     const viewer = gh.api<{login:string}>("/user");
     need(viewer.login?.toLowerCase() === c.ownerLogin.toLowerCase(), "Active gh login differs from the commissioned owner");
     const meta = gh.api<{full_name:string; default_branch:string}>("/repos/" + c.repository);
-    need(meta.full_name === c.repository && line(meta.default_branch) && meta.default_branch !== c.branch &&
-      !meta.default_branch.startsWith("methodology-candidates/"), "Repository or default branch is unsafe for the owner train");
+    const legacy = c.branch === "integration/nightly";
+    need(meta.full_name === c.repository && line(meta.default_branch) &&
+      !meta.default_branch.startsWith("methodology-candidates/") &&
+      (legacy ? meta.default_branch !== c.branch : meta.default_branch === c.branch),
+    "The owner train target must be the default branch or the legacy integration/nightly test branch");
     const o = new OwnerObjects(dir, "https://github.com/" + c.repository + ".git", c.branch, deadline);
     o.init();
     const checkpoint = profilePath + ".tip.json";
     function verifyTip() {
-      const confirmed = confirmedTip(checkpoint, c);
+      const confirmed = legacy ? confirmedTip(checkpoint, c) : b.base;
       let live;
       try { live = o.base(); }
       catch { throw new Error("Cannot read the integration branch; reconcile the remote ref and owner access"); }
       need(live === b.base && b.base === confirmed,
-        "Integration base moved or differs from the last confirmed tip; reconcile the branch and obtain fresh review");
+        legacy ? "Integration base moved or differs from the last confirmed tip; reconcile the branch and obtain fresh review"
+          : "Integration base moved during this batch; use the current default-branch tip and rebuild the batch");
     }
     verifyTip();
-    need(o.git(["merge-base", "--is-ancestor", c.controlBase, b.base], [0,1,128]).code === 0,
-      "Integration base is outside the commissioned control baseline");
-    controls(c, o.delta(c.controlBase, b.base));
-    for (const w of c.workflows) {
-      need(o.git(["rev-parse", b.base + ":" + w.path]).out === w.blob, "Unapproved candidate workflow: " + w.path);
+    function bindWorkflow<T extends { path: string; blob: string }>(w: T): T {
+      need(w && typeof w.path === "string" && /^\.github\/workflows\/[a-zA-Z0-9._-]+\.ya?ml$/.test(w.path),
+        "Specify a GitHub Actions workflow path");
+      const blob = oid(o.git(["rev-parse", "--verify", b.base + ":" + w.path]).out);
+      need(!legacy || blob === w.blob, "Unapproved workflow: " + w.path);
+      return { ...w, blob };
     }
-    admit(gh, o, c, b);
+    const workflows = c.workflows.map(w => validateOwnerWorkflow(bindWorkflow(w)));
+    need(new Set(workflows.map(w => w.id)).size === workflows.length, "Duplicate candidate workflow");
+    const checks = c.checks.map(g => !legacy && g?.workflow ? { ...g, workflow: bindWorkflow(g.workflow) } : g);
+    need(gates(checks, legacy) && checks.every(g => g.workflow?.publicRead !== true),
+      "Specify the PR checks and their trusted publishers");
+    if (legacy) {
+      need(o.git(["merge-base", "--is-ancestor", c.controlBase, b.base], [0,1,128]).code === 0,
+        "Integration base is outside the commissioned control baseline");
+      controls(c, o.delta(c.controlBase, b.base));
+    }
+    admit(gh, o, c, b, checks);
     // Rebuilding from the same immutable inputs gives the same commit, including its timestamp.
     o.stamp = o.git(["show", "-s", "--format=%cI", b.base]).out;
     let candidate = b.base;
@@ -197,11 +214,12 @@ export async function ownerTrain(op: Operation, profilePath: string, batchPath: 
       need(merged !== candidate, "Already included PR head: #" + p.pr);
       candidate = merged;
     }
-    controls(c, o.delta(c.controlBase, candidate));
+    controls(c, o.delta(b.base, candidate));
     const candidateBranch = "methodology-candidates/" + candidate;
     const receipt = { repository: c.repository, branch: c.branch, base: b.base, candidate, candidateBranch,
       pulls: b.pulls.map(p => p.pr) };
     function checkDefaultControls() {
+      if (!legacy) return;
       const current = o.fetch("refs/heads/" + meta.default_branch);
       need(o.git(["merge-base", "--is-ancestor", c.defaultControlBase, current], [0,1,128]).code === 0,
         "Default branch is outside the commissioned control baseline");
@@ -220,11 +238,11 @@ export async function ownerTrain(op: Operation, profilePath: string, batchPath: 
     }
     need(expected === candidate && o.fetch("refs/heads/" + candidateBranch) === candidate,
       "Tested candidate does not match reconstructed batch or candidate branch");
-    const ci = candidateCi(gh, c.repository, candidateBranch, candidate, c.workflows);
+    const ci = candidateCi(gh, c.repository, candidateBranch, candidate, workflows);
     if (ci.status !== "pass" || op === "owner-check") return { ...receipt, ...ci };
     // A public PR head remains mutable. Re-read all admission evidence before the base lease;
     // GitHub cannot atomically lock the PR metadata and the target with the owner's Free account.
-    admit(gh, o, c, b);
+    admit(gh, o, c, b, checks);
     checkDefaultControls();
     const release = authorityLock(profilePath, false);
     try {
@@ -232,7 +250,7 @@ export async function ownerTrain(op: Operation, profilePath: string, batchPath: 
       const excluded = checkUnselected();
       const target = { repository: c.repository, branch: c.branch };
       // A killed process or uncertain push leaves its intent for explicit reconciliation.
-      save(checkpoint, { ...target, tip: b.base, pending: candidate });
+      if (legacy) save(checkpoint, { ...target, tip: b.base, pending: candidate });
       o.authorityFd = release.fd;
       o.publish(b.base, candidate);
       try {
@@ -260,7 +278,7 @@ export async function ownerTrain(op: Operation, profilePath: string, batchPath: 
           if (after.open && after.target === c.branch) verifyUnselectedHead(o, after, candidate);
         }
         need(o.base() === candidate, "Integration branch moved during PR reconciliation");
-        save(checkpoint, { ...target, tip: candidate });
+        if (legacy) save(checkpoint, { ...target, tip: candidate });
       } catch (error) {
         throw new Error("Publication occurred; reconcile before any retry or deployment: " + (error as Error).message);
       }

@@ -4,6 +4,15 @@ These entries are for a project that updates its copy of the package
 ([update procedure](ADOPTION.md#updating-the-methodology)). Each version
 states what requires action in the adopting project.
 
+## 5.4.1
+
+- Set the merge train cadence in the project profile. For hourly operation,
+  update the existing Codex schedule to start at the top of each hour.
+  Follow the [owner-session instructions](defaults/owner-gh-train.md#commission-the-built-in-schedule)
+  to hold one Linux lock throughout each pass and skip a start when another
+  pass is active. Install the new guide and tools using the
+  [update procedure](ADOPTION.md#updating-the-methodology).
+
 ## 5.4.0
 
 - The owner-session train can integrate ordinary PRs into the project's default

@@ -70,7 +70,7 @@ train by agreement and can investigate a direct write. [GitHub plan availability
    Record the start, end and time zone. Set a maximum duration and choose
    the interval with two full suites and diagnosis in mind. The runner accepts
    a scheduled dispatch only during an identifiable open UTC slot. Record
-   late or missing starts in the morning report. An overlap is a normal skip.
+   late or missing starts in the run report. An overlap is a normal skip.
 3. Let each invocation reach the lock attempt while a prior train is
    running. GitHub Actions `concurrency` leaves pending work or can cancel
    the active run. Use a non-blocking lock shared by scheduled, urgent and
@@ -323,7 +323,7 @@ The dispatch binds the request to the UTC hour when Codex submits it. The
 train checks that hour, the configured grace period and existing receipts
 when it starts. A request delivered in a later hour is rejected. A late
 desktop start can count only for the open slot it actually reaches. An
-earlier missed slot stays visible in the morning report.
+earlier missed slot stays visible in the run report.
 
 When moving from an older release, remove any previous GitHub Actions
 `schedule` trigger and disable any previous system cron entry for the branch
@@ -646,10 +646,12 @@ deployment and record what the train would have done.
 Also verify a clean batch with passing tests, fresh approvals, the
 expected final ref and PR states, and the test revision when configured.
 
-## Morning report
+<a id="morning-report"></a>
 
-Use one summary for the configured night window. Keep the facts for each
-train in its run record and link to them here.
+## Run report
+
+Record the outcome after each pass. If the project uses a reporting window,
+link the individual run records from its summary.
 
 Read `ownerHolds` for the PR, its exact head and the protected paths that
 need a prior decision. A dependant names its prerequisite PR. The run's

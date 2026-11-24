@@ -157,8 +157,9 @@ base, PR head, and applicable gates before integrating.
    authority recorded in the profile and read back the deployed revision
    when required. Production needs a separate operator decision and the
    tree that passed the train.
-6. **Report.** Record each run and give the operator one morning summary
-   with pending decisions first. Use the [report form](../defaults/merge-train.md#morning-report).
+6. **Report.** Record each run using the
+   [report form](../defaults/merge-train.md#run-report). Put pending decisions
+   first and use a consolidated summary when the project has a reporting window.
 
 The [profile](../PROJECT-PROFILE.md#merge-train) and
 [GitHub default](../defaults/merge-train.md) specify the runner and controls.

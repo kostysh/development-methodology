@@ -146,7 +146,10 @@ Use the same lock for every scheduled and manual start on that host. The
 lock covers the worker from its first queue read through CI, publication
 and reporting. On exit 75, record that the slot was busy and finish.
 Keep the worker in the foreground until its work is complete so the lock
-is released only when the pass ends.
+is released only when the pass ends. The worker loads the CLI configuration.
+If the operator already uses a named CLI profile for the train, pass it with
+`--profile`. Reuse the access already approved for the train and report any
+operation that still requires interaction.
 
 Keep the approved profile, review and dependency sources, run budget and
 report location in the worker prompt. Run the procedure above in the

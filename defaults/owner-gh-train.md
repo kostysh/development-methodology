@@ -3,7 +3,7 @@
 Use the existing Codex schedule and the owner's signed-in GitHub CLI. The
 train reads ordinary PRs targeting the repository's default branch, verifies
 a combined candidate and integrates that exact commit into the same branch.
-The scheduled agent obtains independent reviews and writes the morning report.
+The scheduled agent obtains independent reviews and writes the run report.
 GitHub records pushes under the owner's account.
 
 ## Setup
@@ -55,8 +55,8 @@ can follow the [previous procedure](https://github.com/kostysh/development-metho
 ## Process one scheduled run
 
 1. Read the live default-branch tip as the base for this run. Record the
-   slot, base and production observations. Use one active coordinator per
-   target.
+   slot, base and production observations. Start this step only after the
+   run has acquired the lock described below.
 2. List open PRs targeting the default branch. For `master`, use
    `gh api --paginate "repos/$repo/pulls?state=open&base=master&per_page=100"`.
    Collect the current source ref, base and head, independent review, required
@@ -118,7 +118,7 @@ methodology-train owner-publish "$profile" "$batch" "$candidate"
 
 7. After `published`, confirm the branch and PR states on GitHub. Include
    merged and held PRs, reasons, exact SHA and CI links in the
-   [morning report](merge-train.md#morning-report). Report the production
+   [run report](merge-train.md#run-report). Report the production
    deployment history for the interval. A separate release action handles
    deployment.
 8. If the base moves before publication, start from the current tip and
@@ -128,21 +128,29 @@ methodology-train owner-publish "$profile" "$batch" "$candidate"
 
 ## Commission the built-in schedule
 
-Create one local recurring Codex task on the owner's main computer. Keep
-the desktop running and select the trusted operator workspace. Record the
-time zone, next scheduled start, run budget, profile path, and evidence sources
-in the task. Limit scheduled writes to the approved CLI
-and its private batch and receipt files. Carry out review and queue reads
-without executing candidate code on the signed-in computer.
+Use one local recurring Codex task on the owner's main computer. Set the
+interval in the project profile. For an hourly train, set the task to start
+at the top of each hour. Update the existing task when changing the interval.
+Keep the desktop running and use the trusted operator workspace.
 
-A starting instruction for the scheduled task:
+On Linux, use the existing private operator directory for the lock and the
+worker prompt. Give the launcher the absolute directory path. Run this one
+command in the foreground and wait for it to exit.
 
-> Process the approved repository's open default-branch PRs using the installed
-> owner-session procedure and fixed operator profile. Read the independent
-> review and dependency sources, and record the reason for each hold. Verify
-> each combined candidate, remove diagnosed failures and their dependants,
-> and publish only the passing candidate. Leave a morning report in the agreed location with the
-> run links and the observed production deployment interval.
+```sh
+flock --no-fork --nonblock --conflict-exit-code 75 "$operator/train-run.lock" \
+  codex exec --cd "$operator" --skip-git-repo-check - < "$operator/train-prompt.md"
+```
+
+Use the same lock for every scheduled and manual start on that host. The
+lock covers the worker from its first queue read through CI, publication
+and reporting. On exit 75, record that the slot was busy and finish.
+Keep the worker in the foreground until its work is complete so the lock
+is released only when the pass ends.
+
+Keep the approved profile, review and dependency sources, run budget and
+report location in the worker prompt. Run the procedure above in the
+worker. Execute candidate tests in isolated CI.
 
 Observe the first real built-in scheduled start with eligible and held work.
 Verify the scheduled chat, selected PRs, exact merged SHA, report and production history for that window. A manual command

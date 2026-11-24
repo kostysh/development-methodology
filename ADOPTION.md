@@ -302,9 +302,9 @@ Keep the checkpoint report in the task or PR for its reader.
 
 Choose the writer before commissioning the train. For an owner-operated desktop,
 follow [Run the train with the owner’s GitHub CLI](defaults/owner-gh-train.md).
-Exercise one actual built-in scheduled start with independent review, candidate
-CI, a test deployment and the morning report. Record the observed time window
-and the production references checked in it.
+Use the project cadence and full-run lock in that guide. Observe an ordinary
+scheduled start with independent review, candidate CI and a run report. Record
+the integrated revision and the production references checked in that window.
 
 For the App writer, select the integration branch and its [writer policy](defaults/merge-train.md#choose-the-branch-policy).
 For a private repository on GitHub Free, record the owner-approved starting
@@ -317,7 +317,7 @@ If the built-in scheduler is unavailable, use the opt-in
 [Linux host schedule](defaults/merge-train.md#schedule-on-a-linux-host).
 Enable one scheduler for the branch. Verify an actual start without operator
 interaction, then check the branch, test deployment, held PRs and
-the morning report. Record the owner, trigger, time zone and observed slot
+the run report. Record the owner, trigger, time zone and observed slot
 in the profile. [Verify the scheduled start](defaults/merge-train.md#verify-the-scheduled-start)
 · [Operational metrics](defaults/process-metrics.md#train-observations)
 

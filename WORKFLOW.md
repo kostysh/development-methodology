@@ -13,14 +13,14 @@ the helper's recovery note path in its [delegation package](method/12-agents.md#
 
 In solo mode, act on the [choices already delegated](method/12-agents.md#team-composition). For choices outside that authority, present the alternatives and consequences and record the owner's reply from the project conversation. Apply the project's existing approval for publication where required. Correct a returned train submission on the editable branch and submit its new revision under the [integration procedure](method/07-integration.md#merge-train).
 
-At night the scheduled train processes ready submissions without a live
-operator. Select the [owner's GitHub CLI](defaults/owner-gh-train.md) or
-the [App writer](defaults/merge-train.md#schedule-with-codex). Verify the
-exact combined commit before updating the test branch. A pending owner decision
-holds the affected PR and its dependants.
-On a private Free repository, a different observed integration commit holds
-the run. The owner pauses the schedule while investigating the change.
-The [morning report](defaults/merge-train.md#morning-report) lists the outcome.
+The scheduled train processes ready submissions at the project cadence. Use
+the [owner's GitHub CLI](defaults/owner-gh-train.md) or the
+[App writer](defaults/merge-train.md#schedule-with-codex). Skip a slot while a
+pass is active. Verify the exact combined commit before updating the target
+branch. A pending owner decision holds the affected PR and its dependants.
+With the App writer on a private Free repository, an unexpected integration
+commit holds the run. The owner pauses the schedule while investigating.
+The [run report](defaults/merge-train.md#run-report) lists the outcome.
 
 ## Small change — low risk
 
